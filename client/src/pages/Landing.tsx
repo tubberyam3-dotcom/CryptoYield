@@ -6,6 +6,11 @@ export default function Landing() {
     window.location.href = "/api/login";
   };
 
+  const handleLearnMore = () => {
+    // Scroll to features section
+    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -17,7 +22,11 @@ export default function Landing() {
             </div>
             <span className="text-xl font-bold">CryptoVault</span>
           </div>
-          <Button onClick={handleLogin} data-testid="button-login">
+          <Button 
+            onClick={handleLogin} 
+            className="hover:scale-105 transition-transform"
+            data-testid="button-login"
+          >
             Sign In
           </Button>
         </div>
@@ -38,18 +47,19 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 onClick={handleLogin}
-                className="text-lg px-8 py-6"
+                className="text-lg px-8 py-6 hover:scale-105 transition-transform cursor-pointer"
                 data-testid="button-get-started"
               >
-                Get Started
+                🚀 Get Started
               </Button>
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="text-lg px-8 py-6"
+                className="text-lg px-8 py-6 hover:scale-105 transition-transform cursor-pointer"
+                onClick={handleLearnMore}
                 data-testid="button-learn-more"
               >
-                Learn More
+                📚 Learn More
               </Button>
             </div>
           </div>
@@ -57,7 +67,7 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section className="py-20 px-4 bg-muted/30">
+      <section id="features" className="py-20 px-4 bg-muted/30">
         <div className="container mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">Platform Features</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
