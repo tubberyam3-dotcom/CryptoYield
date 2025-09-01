@@ -38,7 +38,7 @@ export function StreakCounter() {
   const totalStreak = streaks.reduce((sum, streak) => sum + streak.current, 0);
 
   return (
-    <Card data-testid="streak-counter">
+    <Card data-testid="streak-counter" className="text-sm md:text-base">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -53,10 +53,10 @@ export function StreakCounter() {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="p-3 md:p-6">
+        <div className="space-y-2 md:space-y-4">
           {streaks.map((streak) => (
-            <div key={streak.id} className="space-y-2" data-testid={`streak-${streak.id}`}>
+            <div key={streak.id} className="space-y-1 md:space-y-2" data-testid={`streak-${streak.id}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className={`${streak.color}`}>
@@ -87,7 +87,7 @@ export function StreakCounter() {
         </div>
         
         {totalStreak >= 10 && (
-          <div className="mt-4 p-3 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 rounded-lg border border-orange-200 dark:border-orange-800">
+          <div className="mt-2 md:mt-4 p-2 md:p-3 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 rounded-lg border border-orange-200 dark:border-orange-800 text-xs md:text-sm">
             <div className="flex items-center gap-2">
               <Flame className="w-5 h-5 text-orange-500" />
               <div>

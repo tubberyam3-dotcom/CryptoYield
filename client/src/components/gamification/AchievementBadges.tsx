@@ -124,20 +124,20 @@ export function AchievementBadges() {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <CardContent className="p-3 md:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
           {achievements.map((achievement) => (
             <div
               key={achievement.id}
-              className={`p-3 rounded-lg border transition-all duration-200 ${
+              className={`p-2 md:p-3 rounded-lg border transition-all duration-200 text-xs md:text-sm ${
                 achievement.unlocked
                   ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800 shadow-sm"
                   : "bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-800 opacity-75"
               }`}
               data-testid={`achievement-${achievement.id}`}
             >
-              <div className="flex items-start gap-3">
-                <div className={`p-2 rounded-full ${
+              <div className="flex items-start gap-2 md:gap-3">
+                <div className={`p-1.5 md:p-2 rounded-full ${
                   achievement.unlocked
                     ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
                     : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600"

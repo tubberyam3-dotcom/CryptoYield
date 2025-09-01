@@ -56,7 +56,7 @@ export default function Dashboard() {
       <div className="ml-0 lg:ml-64 min-h-screen">
         <TopBar title="Dashboard" onMenuClick={() => setSidebarOpen(true)} />
         
-        <main className="p-6 space-y-6 pb-20 lg:pb-6">
+        <main className="p-3 md:p-6 space-y-3 md:space-y-6 pb-20 lg:pb-6">
           <GamifiedStats />
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

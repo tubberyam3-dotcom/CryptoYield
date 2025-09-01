@@ -74,7 +74,7 @@ export function LevelSystem() {
   ];
 
   return (
-    <Card data-testid="level-system">
+    <Card data-testid="level-system" className="text-sm md:text-base">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -96,7 +96,7 @@ export function LevelSystem() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-3 md:space-y-6 p-3 md:p-6">
         {/* Level Progress */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
@@ -113,10 +113,10 @@ export function LevelSystem() {
         </div>
 
         {/* XP Breakdown */}
-        <div className="space-y-3">
+        <div className="space-y-2 md:space-y-3">
           <h4 className="font-medium text-sm">XP Sources</h4>
           {getXPSources().map((source, index) => (
-            <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+            <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-xs md:text-sm">
               <div className="flex items-center gap-2">
                 <div className="text-muted-foreground">
                   {source.icon}
@@ -134,7 +134,7 @@ export function LevelSystem() {
         </div>
 
         {/* Level Perks Preview */}
-        <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg border border-blue-200 dark:border-blue-800">
+        <div className="p-2 md:p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg border border-blue-200 dark:border-blue-800 text-xs md:text-sm">
           <h4 className="font-medium text-sm mb-2 text-blue-800 dark:text-blue-200">
             🎁 Next Level Rewards (Level {currentLevel + 1})
           </h4>

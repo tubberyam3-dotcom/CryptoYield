@@ -49,7 +49,7 @@ export function InteractiveElements() {
   ];
 
   return (
-    <div className="space-y-6" data-testid="interactive-elements">
+    <div className="space-y-3 md:space-y-6" data-testid="interactive-elements">
       {/* Daily Bonus Card */}
       <Card className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10" />
@@ -69,7 +69,7 @@ export function InteractiveElements() {
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="relative">
+        <CardContent className="relative p-3 md:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">+{todaysBonus.xp} XP</p>
@@ -129,15 +129,15 @@ export function InteractiveElements() {
             Limited time bonuses and rewards
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="p-3 md:p-6">
+          <div className="space-y-2 md:space-y-3">
             {quickActions.map((action, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`p-4 rounded-lg border transition-all duration-200 ${
+                className={`p-2 md:p-4 rounded-lg border transition-all duration-200 text-xs md:text-sm ${
                   action.active
                     ? "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800"
                     : "bg-muted/50 border-muted"

@@ -19,9 +19,9 @@ export function GamifiedStats() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="p-6 animate-pulse">
+          <Card key={i} className="p-3 md:p-6 animate-pulse">
             <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
             <div className="h-8 bg-muted rounded w-1/2 mb-2"></div>
             <div className="h-3 bg-muted rounded w-2/3"></div>
@@ -42,7 +42,7 @@ export function GamifiedStats() {
       value: `$${portfolioValue.toLocaleString()}`,
       change: "+12.4% this month",
       changeColor: "text-green-500",
-      icon: <TrendingUp className="w-6 h-6" />,
+      icon: <TrendingUp className="w-4 h-4 md:w-6 md:h-6" />,
       iconBg: "bg-gradient-to-br from-green-500 to-emerald-600",
       iconColor: "text-white",
       progress: Math.min((portfolioValue / 10000) * 100, 100),
@@ -55,7 +55,7 @@ export function GamifiedStats() {
       value: `$${stakingValue.toLocaleString()}`,
       change: "8.5% APY average",
       changeColor: "text-blue-500",
-      icon: <Zap className="w-6 h-6" />,
+      icon: <Zap className="w-4 h-4 md:w-6 md:h-6" />,
       iconBg: "bg-gradient-to-br from-blue-500 to-indigo-600",
       iconColor: "text-white",
       progress: Math.min((stakingValue / 5000) * 100, 100),
@@ -68,7 +68,7 @@ export function GamifiedStats() {
       value: `${challenges} Active`,
       change: "2 completed this week",
       changeColor: "text-yellow-500",
-      icon: <Trophy className="w-6 h-6" />,
+      icon: <Trophy className="w-4 h-4 md:w-6 md:h-6" />,
       iconBg: "bg-gradient-to-br from-yellow-500 to-orange-600",
       iconColor: "text-white",
       progress: Math.min((challenges / 5) * 100, 100),
@@ -81,7 +81,7 @@ export function GamifiedStats() {
       value: `$${balance.toLocaleString()}`,
       change: "Ready to deploy",
       changeColor: "text-muted-foreground",
-      icon: <DollarSign className="w-6 h-6" />,
+      icon: <DollarSign className="w-4 h-4 md:w-6 md:h-6" />,
       iconBg: "bg-gradient-to-br from-emerald-500 to-teal-600",
       iconColor: "text-white",
       progress: Math.min((balance / 2000) * 100, 100),
@@ -92,7 +92,7 @@ export function GamifiedStats() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="gamified-stats">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6" data-testid="gamified-stats">
       {statsData.map((stat, index) => (
         <motion.div
           key={index}
@@ -102,7 +102,7 @@ export function GamifiedStats() {
           whileHover={{ scale: 1.02, y: -4 }}
           className="relative"
         >
-          <Card className="p-6 hover-lift relative overflow-hidden group cursor-pointer" data-testid={`gamified-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Card className="p-3 md:p-6 hover-lift relative overflow-hidden group cursor-pointer" data-testid={`gamified-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             {/* Celebration sparkles */}
             {stat.celebration && (
               <div className="absolute top-2 right-2">
@@ -119,9 +119,9 @@ export function GamifiedStats() {
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-xl ${stat.iconBg} shadow-lg`}>
+              <div className="flex items-center justify-between mb-2 md:mb-4">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className={`p-2 md:p-3 rounded-lg md:rounded-xl ${stat.iconBg} shadow-lg`}>
                     <div className={stat.iconColor}>
                       {stat.icon}
                     </div>
@@ -135,9 +135,9 @@ export function GamifiedStats() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 <div>
-                  <h3 className="text-2xl font-bold tracking-tight">{stat.value}</h3>
+                  <h3 className="text-lg md:text-2xl font-bold tracking-tight">{stat.value}</h3>
                   <p className={`text-sm ${stat.changeColor} font-medium`}>
                     {stat.change}
                   </p>
