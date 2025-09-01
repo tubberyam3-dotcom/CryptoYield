@@ -27,7 +27,7 @@ export default function Portfolios() {
     queryKey: ["/api/portfolios"],
   });
 
-  const { data: userPortfolios } = useQuery({
+  const { data: userPortfolios } = useQuery<any[]>({
     queryKey: ["/api/user/portfolios"],
   });
 
@@ -141,11 +141,11 @@ export default function Portfolios() {
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
           {/* My Investments */}
-          {userPortfolios && userPortfolios.length > 0 && (
+          {userPortfolios && Array.isArray(userPortfolios) && userPortfolios.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">My Investments</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {userPortfolios.map((investment: any) => (
+                {Array.isArray(userPortfolios) ? userPortfolios.map((investment: any) => (
                   <Card key={investment.id} className="p-6" data-testid={`card-my-investment-${investment.id}`}>
                     <h3 className="font-semibold mb-2">{investment.portfolio.name}</h3>
                     <div className="space-y-2 text-sm">
@@ -163,7 +163,7 @@ export default function Portfolios() {
                       </div>
                     </div>
                   </Card>
-                ))}
+                )) : null}
               </div>
             </div>
           )}

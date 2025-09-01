@@ -101,7 +101,7 @@ export function CommunityChalllenges() {
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {challenges?.map((challenge) => {
-          const progress = calculateProgress(challenge.currentAmount, challenge.targetAmount);
+          const progress = calculateProgress(challenge.currentAmount || '0', challenge.targetAmount);
           return (
             <Card key={challenge.id} className="p-6 hover-lift" data-testid={`card-challenge-${challenge.id}`}>
               <div className="flex items-center justify-between mb-4">
@@ -109,7 +109,7 @@ export function CommunityChalllenges() {
                   {challenge.status}
                 </Badge>
                 <div className="text-sm text-muted-foreground" data-testid={`text-challenge-time-${challenge.id}`}>
-                  {formatTimeLeft(challenge.endDate)}
+                  {formatTimeLeft(challenge.endDate.toString())}
                 </div>
               </div>
               
@@ -124,7 +124,7 @@ export function CommunityChalllenges() {
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span>Progress</span>
                   <span className="font-medium" data-testid={`text-challenge-progress-${challenge.id}`}>
-                    ${parseFloat(challenge.currentAmount).toLocaleString()} / ${parseFloat(challenge.targetAmount).toLocaleString()}
+                    ${parseFloat(challenge.currentAmount || '0').toLocaleString()} / ${parseFloat(challenge.targetAmount).toLocaleString()}
                   </span>
                 </div>
                 <Progress value={progress} className="h-2" data-testid={`progress-challenge-${challenge.id}`} />

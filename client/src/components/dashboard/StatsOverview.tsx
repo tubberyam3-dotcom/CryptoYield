@@ -1,8 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 
+interface DashboardStats {
+  totalPortfolioValue: string;
+  activeStakes: string;
+  activeChallenges: number;
+  availableBalance: string;
+}
+
 export function StatsOverview() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
   });
 

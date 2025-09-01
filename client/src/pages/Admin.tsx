@@ -481,11 +481,11 @@ export default function Admin() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Current</span>
-                        <span>${parseFloat(challenge.currentAmount).toLocaleString()}</span>
+                        <span>${parseFloat(challenge.currentAmount || '0').toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Progress</span>
-                        <span>{Math.round((parseFloat(challenge.currentAmount) / parseFloat(challenge.targetAmount)) * 100)}%</span>
+                        <span>{Math.round((parseFloat(challenge.currentAmount || '0') / parseFloat(challenge.targetAmount)) * 100)}%</span>
                       </div>
                     </div>
                   </Card>

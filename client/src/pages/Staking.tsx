@@ -161,7 +161,7 @@ export default function Staking() {
                         {staking.status}
                       </Badge>
                       <div className="text-sm text-muted-foreground">
-                        {calculateTimeRemaining(staking.endDate)}
+                        {calculateTimeRemaining(staking.endDate.toString())}
                       </div>
                     </div>
                     
@@ -188,10 +188,10 @@ export default function Staking() {
                       <div className="pt-2">
                         <div className="flex justify-between text-xs mb-1">
                           <span>Progress</span>
-                          <span>{Math.round(calculateProgress(staking.startDate, staking.endDate))}%</span>
+                          <span>{Math.round(calculateProgress(staking.startDate?.toString() || '', staking.endDate?.toString() || ''))}%</span>
                         </div>
                         <Progress 
-                          value={calculateProgress(staking.startDate, staking.endDate)} 
+                          value={calculateProgress(staking.startDate?.toString() || '', staking.endDate?.toString() || '')} 
                           className="h-2"
                         />
                       </div>

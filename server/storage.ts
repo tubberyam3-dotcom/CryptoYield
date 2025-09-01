@@ -22,7 +22,7 @@ import {
   type InsertChallengeMember,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sum, count } from "drizzle-orm";
+import { eq, desc, and, sum, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -210,8 +210,7 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(communityChallenges)
       .set({ 
-        currentAmount: sql`${communityChallenges.currentAmount} + ${amount}`,
-        updatedAt: new Date()
+        currentAmount: sql`${communityChallenges.currentAmount} + ${amount}`
       })
       .where(eq(communityChallenges.id, challengeId));
   }
