@@ -1,0 +1,130 @@
+You are building a **Crypto Brokerage SaaS platform**. The platform allows users to bulk invest in curated crypto portfolios (managed by admin), stake assets for fixed terms, join community challenges, and optionally transfer assets to self-custody wallets.
+
+Follow these instructions to generate a **full-stack application** with **React (frontend), Node.js + Express (backend), PostgreSQL (database)**. Use clean architecture, API-first design, and modular code.
+
+---
+
+## 1. Project Setup
+
+* Use **monorepo** structure (`/frontend`, `/backend`, `/shared`).
+* Use **Docker** for containerization with separate services for frontend, backend, and PostgreSQL.
+* Backend should run on **Node.js + Express** with REST API endpoints.
+* ORM: **Prisma** for PostgreSQL.
+* Authentication: **JWT** (with refresh tokens).
+* Use **TypeScript** everywhere for type safety.
+* Configure **ESLint + Prettier** for clean code.
+* Add **testing setup** (Jest for backend, React Testing Library for frontend).
+
+---
+
+## 2. Backend (Node.js + Express + Prisma)
+
+### Entities / Database Models
+
+* **User**
+
+  * id, email, password (hashed), KYC\_status, role (user/admin), created\_at, updated\_at
+* **Portfolio**
+
+  * id, name, description, strategy\_tag (AI, DeFi, Layer2, etc.), assets (JSON), created\_by
+* **UserPortfolio** (user ↔ portfolio subscription)
+
+  * id, user\_id, portfolio\_id, invested\_amount, returns, created\_at
+* **StakingPlan**
+
+  * id, duration (1y, 2y, 3y, 5y), apy, created\_at
+* **UserStaking**
+
+  * id, user\_id, staking\_plan\_id, amount\_locked, start\_date, end\_date, status
+* **CommunityChallenge**
+
+  * id, name, description, target\_amount, start\_date, end\_date, type (solo/group)
+* **ChallengeMember**
+
+  * id, user\_id, challenge\_id, contributed\_amount, progress
+
+### Core Backend Features
+
+* **Auth API**: register, login, refresh token, password reset.
+* **Portfolio API**: CRUD for portfolios (admin), list portfolios, subscribe, track ROI.
+* **Staking API**: view plans, lock assets, calculate rewards, unlock after term.
+* **Challenge API**: create challenges (admin), join challenge, update contributions, track progress.
+* **Wallet API**: connect external wallet (read-only), request transfer out.
+* **KYC Module**: mock endpoints for now, but structured for later 3rd-party integration.
+* **Admin API**: dashboard stats (users, AUM, portfolio performance).
+
+---
+
+## 3. Frontend (React + Vite + TailwindCSS)
+
+### Pages / Routes
+
+* **Public Pages**: Landing page, About, Pricing, Login/Register.
+* **User Dashboard**:
+
+  * Portfolio Explorer: browse curated portfolios.
+  * My Investments: track invested portfolios, ROI charts.
+  * Staking Center: view available staking plans, stake, see rewards calculator.
+  * Community Challenges: join/create group goals, see progress bars.
+  * Wallet: connect external wallet, see balances.
+  * Settings: profile, KYC upload, security.
+* **Admin Dashboard**:
+
+  * Manage users, approve KYC.
+  * Create/Edit portfolios.
+  * Create staking plans.
+  * Create community challenges.
+  * System stats & monitoring.
+
+### UI/UX
+
+* Use **shadcn/ui** + Tailwind for clean modern design.
+* Charts: **Recharts** for portfolio performance, staking rewards, challenge progress.
+* Animations: **Framer Motion**.
+* Responsive grid layout, dark/light mode toggle.
+
+---
+
+## 4. Staking & Challenge Calculators
+
+* Build a **staking calculator**: user inputs amount + duration → see projected returns.
+* Build a **challenge tracker**: group progress bars showing % completion per member.
+
+---
+
+## 5. Infrastructure
+
+* Use **Docker Compose** for local dev.
+* Add `.env` file support (secrets, DB connection).
+* Add **seed scripts** for sample portfolios, staking plans, and challenges.
+* Integrate **logging** (Winston) + request tracking middleware.
+* Prepare for **deployment on Render/Heroku** (backend) and **Vercel/Netlify** (frontend).
+* Add CI/CD pipeline (GitHub Actions).
+
+---
+
+## 6. Security & Scalability
+
+* Use **bcrypt** for password hashing.
+* JWT expiration + refresh token rotation.
+* Role-based access control (user/admin).
+* Add API rate limiting.
+* Ensure modular services for scaling later (brokerage service, staking service, community service).
+
+---
+
+## 7. Future Expansion (Stub Now)
+
+* AI-based portfolio optimization (stub endpoint).
+* Real blockchain wallet integration (stub with mock service).
+* Notifications (email + in-app).
+
+---
+
+## 🎯 Expected Output
+
+* Full working **boilerplate project** with auth, portfolios, staking, and challenges modules scaffolded.
+* Backend with all routes & models stubbed + basic logic.
+* Frontend with placeholder pages & navigation ready.
+* Database seeded with sample data (users, portfolios, staking plans, challenges).
+
