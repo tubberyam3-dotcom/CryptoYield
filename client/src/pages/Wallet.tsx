@@ -87,19 +87,7 @@ export default function Wallet() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [user, isLoading, toast]);
+  // Authentication is handled by App component routing
 
   const handleConnectWallet = () => {
     setIsWalletConnected(true);

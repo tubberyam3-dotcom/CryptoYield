@@ -77,12 +77,9 @@ export default function Admin() {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
+          description: "Please log in to continue",
           variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
         return;
       }
       toast({
@@ -116,12 +113,9 @@ export default function Admin() {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
+          description: "Please log in to continue",
           variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
         return;
       }
       toast({
@@ -132,31 +126,8 @@ export default function Admin() {
     },
   });
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-    
-    if (!isLoading && user?.role !== 'admin') {
-      toast({
-        title: "Access Denied",
-        description: "Admin access required to view this page.",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
-      return;
-    }
-  }, [user, isLoading, toast]);
+  // Authentication and admin access is handled by App component routing
+  // Admin role check could be added to the route protection level
 
   const handleCreatePortfolio = () => {
     const portfolioData = {
