@@ -66,19 +66,7 @@ export default function Staking() {
     },
   });
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [user, isLoading, toast]);
+  // Authentication is handled by App component routing
 
   const handleStake = () => {
     if (!selectedPlan || !stakeAmount) return;

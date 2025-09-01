@@ -5,6 +5,7 @@ export function useAuth() {
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     retry: false,
+    staleTime: 0, // Always check auth status
   });
 
   return {
