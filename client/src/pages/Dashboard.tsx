@@ -5,6 +5,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { StatsOverview } from "@/components/dashboard/StatsOverview";
 import { GamifiedStats } from "@/components/gamification/GamifiedStats";
+import { BalanceSummary } from "@/components/dashboard/BalanceSummary";
 import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { AssetAllocation } from "@/components/dashboard/AssetAllocation";
 import { FeaturedPortfolios } from "@/components/dashboard/FeaturedPortfolios";
@@ -57,7 +58,7 @@ export default function Dashboard() {
         <TopBar title="Dashboard" onMenuClick={() => setSidebarOpen(true)} />
         
         <main className="p-3 md:p-6 space-y-3 md:space-y-6 pb-20 lg:pb-6">
-          <GamifiedStats />
+          <BalanceSummary />
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="hidden lg:block lg:col-span-2">
