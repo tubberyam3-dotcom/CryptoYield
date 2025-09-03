@@ -6,9 +6,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { QuickInvestButton } from "@/components/investment/QuickInvestButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -17,8 +15,6 @@ import type { Portfolio } from "@shared/schema";
 
 export default function Portfolios() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [investAmount, setInvestAmount] = useState("");
-  const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null);
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -31,62 +27,7 @@ export default function Portfolios() {
     queryKey: ["/api/user/portfolios"],
   });
 
-  const investMutation = useMutation({
-    mutationFn: async ({ portfolioId, investedAmount }: { portfolioId: string; investedAmount: string }) => {
-      const response = await apiRequest("POST", "/api/user/portfolios", { 
-        portfolioId, 
-        investedAmount 
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Investment Successful",
-        description: `You've invested $${investAmount} successfully!`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/portfolios"] });
-      setSelectedPortfolio(null);
-      setInvestAmount("");
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "Please log in to continue",
-          variant: "destructive",
-        });
-        return;
-      }
-      toast({
-        title: "Investment Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   // Authentication is handled by App component routing
-
-  const handleInvest = () => {
-    if (!selectedPortfolio || !investAmount) return;
-    
-    const amount = parseFloat(investAmount);
-    const minInvestment = parseFloat(selectedPortfolio.minInvestment);
-    
-    if (amount < minInvestment) {
-      toast({
-        title: "Investment Too Low",
-        description: `Minimum investment for this portfolio is $${minInvestment.toLocaleString()}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    investMutation.mutate({ 
-      portfolioId: selectedPortfolio.id, 
-      investedAmount: investAmount 
-    });
-  };
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
@@ -204,53 +145,10 @@ export default function Portfolios() {
                       </div>
                     </div>
 
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          className="w-full"
-                          onClick={() => setSelectedPortfolio(portfolio)}
-                          data-testid={`button-invest-${portfolio.id}`}
-                        >
-                          Invest Now
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent data-testid="dialog-invest">
-                        <DialogHeader>
-                          <DialogTitle>Invest in {selectedPortfolio?.name}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="investAmount">Investment Amount</Label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
-                              <Input
-                                id="investAmount"
-                                type="number"
-                                className="pl-8"
-                                placeholder={selectedPortfolio?.minInvestment || "1000"}
-                                value={investAmount}
-                                onChange={(e) => setInvestAmount(e.target.value)}
-                                data-testid="input-invest-amount"
-                              />
-                            </div>
-                            {selectedPortfolio && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Minimum: ${parseFloat(selectedPortfolio.minInvestment).toLocaleString()}
-                              </p>
-                            )}
-                          </div>
-                          
-                          <Button 
-                            className="w-full"
-                            onClick={handleInvest}
-                            disabled={investMutation.isPending || !investAmount}
-                            data-testid="button-confirm-invest"
-                          >
-                            {investMutation.isPending ? "Processing..." : "Confirm Investment"}
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <QuickInvestButton 
+                      portfolio={portfolio}
+                      className="w-full"
+                    />
                   </Card>
                 )) || []}
               </div>

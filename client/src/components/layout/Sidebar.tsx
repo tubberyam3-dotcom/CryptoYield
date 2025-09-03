@@ -20,6 +20,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { href: "/portfolios", icon: "fas fa-briefcase", label: "Portfolios" },
     { href: "/staking", icon: "fas fa-coins", label: "Staking" },
     { href: "/challenges", icon: "fas fa-trophy", label: "Challenges" },
+    { href: "/transactions", icon: "fas fa-history", label: "Transaction History" },
     { href: "/wallet", icon: "fas fa-wallet", label: "Wallet" },
     { href: "/settings", icon: "fas fa-cog", label: "Settings" },
   ];

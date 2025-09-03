@@ -9,9 +9,8 @@ import { BalanceSummary } from "@/components/dashboard/BalanceSummary";
 import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { AssetAllocation } from "@/components/dashboard/AssetAllocation";
 import { FeaturedPortfolios } from "@/components/dashboard/FeaturedPortfolios";
-import { StakingPlans } from "@/components/dashboard/StakingPlans";
-import { StakingCalculator } from "@/components/dashboard/StakingCalculator";
-import { CommunityChalllenges } from "@/components/dashboard/CommunityChalllenges";
+import { EnhancedStakingPlans } from "@/components/staking/EnhancedStakingPlans";
+import { EnhancedChallenges } from "@/components/challenges/EnhancedChallenges";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { WalletOverview } from "@/components/dashboard/WalletOverview";
 import { AdminPanel } from "@/components/dashboard/AdminPanel";
@@ -26,16 +25,10 @@ import type { StakingPlan } from "@shared/schema";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedStakingPlan, setSelectedStakingPlan] = useState<StakingPlan>();
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationType, setCelebrationType] = useState<"investment" | "achievement" | "milestone" | "streak">("achievement");
   const [celebrationMessage, setCelebrationMessage] = useState("");
   const { user, isLoading } = useAuth();
-  const { toast } = useToast();
-
-  const { data: stakingPlans } = useQuery<StakingPlan[]>({
-    queryKey: ["/api/staking/plans"],
-  });
 
   // Authentication is handled by App component routing
 
@@ -69,19 +62,9 @@ export default function Dashboard() {
           
           <FeaturedPortfolios />
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <StakingPlans 
-              onSelectPlan={setSelectedStakingPlan}
-              selectedPlan={selectedStakingPlan}
-            />
-            <StakingCalculator 
-              plans={stakingPlans || []}
-              selectedPlan={selectedStakingPlan}
-              onPlanChange={setSelectedStakingPlan}
-            />
-          </div>
+          <EnhancedStakingPlans />
           
-          <CommunityChalllenges />
+          <EnhancedChallenges />
           
           {/* Gamification Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

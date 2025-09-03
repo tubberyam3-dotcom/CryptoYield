@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { QuickInvestButton } from "@/components/investment/QuickInvestButton";
 import type { Portfolio } from "@shared/schema";
 
 export function FeaturedPortfolios() {
@@ -85,7 +86,7 @@ export function FeaturedPortfolios() {
               {portfolio.description}
             </p>
             
-            <div className="space-y-2">
+            <div className="space-y-2 mb-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Min. Investment</span>
                 <span className="font-medium" data-testid={`text-portfolio-min-investment-${portfolio.id}`}>
@@ -99,6 +100,12 @@ export function FeaturedPortfolios() {
                 </Badge>
               </div>
             </div>
+            
+            <QuickInvestButton 
+              portfolio={portfolio}
+              size="sm"
+              className="w-full"
+            />
           </Card>
         )) || []}
       </div>

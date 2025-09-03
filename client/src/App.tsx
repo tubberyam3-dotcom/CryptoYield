@@ -11,6 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import Portfolios from "@/pages/Portfolios";
 import Staking from "@/pages/Staking";
 import Challenges from "@/pages/Challenges";
+import TransactionHistory from "@/pages/TransactionHistory";
 import Wallet from "@/pages/Wallet";
 import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
@@ -39,6 +40,7 @@ function Router() {
           <Route path="/portfolios" component={Portfolios} />
           <Route path="/staking" component={Staking} />
           <Route path="/challenges" component={Challenges} />
+          <Route path="/transactions" component={TransactionHistory} />
           <Route path="/wallet" component={Wallet} />
           <Route path="/settings" component={Settings} />
           <Route path="/admin" component={Admin} />
