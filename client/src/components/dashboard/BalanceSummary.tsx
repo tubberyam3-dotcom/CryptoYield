@@ -33,7 +33,7 @@ export function BalanceSummary() {
         </Card>
         
         {/* Smaller Cards Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
           <Card className="p-3 md:p-4 animate-pulse">
             <div className="h-4 bg-muted rounded w-2/3 mb-2"></div>
             <div className="h-8 bg-muted rounded w-1/2"></div>
@@ -102,7 +102,7 @@ export function BalanceSummary() {
       </motion.div>
 
       {/* Portfolio and Staking Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
         {/* Portfolio Card */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
