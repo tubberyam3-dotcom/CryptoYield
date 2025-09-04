@@ -18,12 +18,18 @@ export function MobileNav() {
 
   return (
     <div 
-      className="lg:hidden fixed left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-[100]" 
+      className="lg:hidden bg-card/95 backdrop-blur-sm border-t border-border z-[100]" 
       data-mobile-nav
       style={{ 
         position: 'fixed',
-        bottom: '0px',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)'
+        bottom: '8px',
+        left: '8px',
+        right: '8px',
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
+        height: 'auto',
+        borderRadius: '12px',
+        marginBottom: 'env(safe-area-inset-bottom, 0px)'
       }}
     >
       <div className="grid grid-cols-4 gap-1 p-3">

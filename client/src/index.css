@@ -128,7 +128,7 @@
 /* Ensure mobile nav stays fixed and visible */
 @media (max-width: 1023px) {
   body {
-    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); /* Add padding to prevent content from being hidden behind nav */
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); /* Add padding to prevent content from being hidden behind nav */
   }
   
   /* Force mobile nav to always be visible */
@@ -138,6 +138,20 @@
     left: 0 !important;
     right: 0 !important;
     z-index: 9999 !important;
-    transform: translateZ(0); /* Force hardware acceleration */
+    transform: translateZ(0) !important; /* Force hardware acceleration */
+    -webkit-transform: translateZ(0) !important;
+    max-height: calc(100vh - env(safe-area-inset-top, 0px));
+    will-change: transform;
+  }
+  
+  /* Prevent viewport issues on mobile browsers */
+  html {
+    height: 100%;
+    height: -webkit-fill-available;
+  }
+  
+  body {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
   }
 }
