@@ -9,7 +9,6 @@ export function MobileNav() {
     { href: "/portfolios", icon: "fas fa-briefcase", label: "Portfolios" },
     { href: "/staking", icon: "fas fa-coins", label: "Staking" },
     { href: "/challenges", icon: "fas fa-trophy", label: "Challenges" },
-    { href: "/transactions", icon: "fas fa-history", label: "History" },
   ];
 
   const isActive = (href: string) => {
@@ -19,18 +18,20 @@ export function MobileNav() {
 
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
-      <div className="grid grid-cols-5 gap-1 p-2">
+      <div className="grid grid-cols-4 gap-1 p-3">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href}>
             <a 
               className={cn(
-                "flex flex-col items-center p-2 transition-colors",
-                isActive(item.href) ? "text-primary" : "text-muted-foreground"
+                "flex items-center justify-center p-4 transition-colors rounded-lg",
+                isActive(item.href) 
+                  ? "text-primary bg-primary/10" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
               )}
               data-testid={`link-mobile-${item.label.toLowerCase()}`}
+              title={item.label}
             >
-              <i className={`${item.icon} text-lg mb-1`}></i>
-              <span className="text-xs">{item.label}</span>
+              <i className={`${item.icon} text-xl`}></i>
             </a>
           </Link>
         ))}
