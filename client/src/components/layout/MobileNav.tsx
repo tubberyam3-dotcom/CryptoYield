@@ -17,8 +17,8 @@ export function MobileNav() {
   };
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
-      <div className="grid grid-cols-4 gap-1 p-3">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-[100]" style={{ position: 'fixed' }}>
+      <div className="grid grid-cols-4 gap-1 p-3 safe-area-inset-bottom">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href}>
             <a 
