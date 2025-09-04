@@ -17,8 +17,16 @@ export function MobileNav() {
   };
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-[100]" style={{ position: 'fixed' }}>
-      <div className="grid grid-cols-4 gap-1 p-3 safe-area-inset-bottom">
+    <div 
+      className="lg:hidden fixed left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-[100]" 
+      data-mobile-nav
+      style={{ 
+        position: 'fixed',
+        bottom: '0px',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)'
+      }}
+    >
+      <div className="grid grid-cols-4 gap-1 p-3">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href}>
             <a 
