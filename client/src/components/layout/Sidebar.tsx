@@ -54,11 +54,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <span className="text-xl font-bold text-sidebar-foreground">CryptoVault</span>
           </div>
           <button 
-            className="lg:hidden text-sidebar-foreground" 
+            className="lg:hidden p-2 rounded-lg bg-sidebar-accent/20 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors" 
             onClick={onClose}
             data-testid="button-close-sidebar"
+            title="Close Menu"
           >
-            <i className="fas fa-times"></i>
+            <i className="fas fa-times text-lg"></i>
           </button>
         </div>
 

@@ -20,11 +20,12 @@ export function TopBar({ title, onMenuClick }: TopBarProps) {
     <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center space-x-4">
         <button 
-          className="lg:hidden text-muted-foreground hover:text-foreground"
+          className="lg:hidden p-2 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           onClick={onMenuClick}
           data-testid="button-toggle-sidebar"
+          title="Open Menu"
         >
-          <i className="fas fa-bars"></i>
+          <i className="fas fa-bars text-lg"></i>
         </button>
         <h1 className="text-2xl font-bold" data-testid="text-page-title">{title}</h1>
       </div>

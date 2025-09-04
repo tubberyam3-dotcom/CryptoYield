@@ -9,7 +9,7 @@ export function MobileNav() {
     { href: "/portfolios", icon: "fas fa-briefcase", label: "Portfolios" },
     { href: "/staking", icon: "fas fa-coins", label: "Staking" },
     { href: "/challenges", icon: "fas fa-trophy", label: "Challenges" },
-    { href: "/wallet", icon: "fas fa-wallet", label: "Wallet" },
+    { href: "/transactions", icon: "fas fa-history", label: "History" },
   ];
 
   const isActive = (href: string) => {
