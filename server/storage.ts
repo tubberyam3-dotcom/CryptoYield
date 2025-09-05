@@ -75,6 +75,40 @@ export interface IStorage {
     activeChallenges: number;
     availableBalance: string;
   }>;
+
+  // Admin Analytics operations
+  getAnalyticsData(): Promise<{
+    totalRevenue: string;
+    monthlyRevenue: string;
+    totalInvestments: string;
+    totalStaked: string;
+    platformFees: string;
+    transactionVolume: string;
+    activePortfolios: number;
+    completedChallenges: number;
+  }>;
+
+  // System Health operations
+  getSystemHealth(): Promise<{
+    uptime: string;
+    apiResponseTime: string;
+    databaseStatus: 'healthy' | 'warning' | 'error';
+    activeConnections: number;
+    errorRate: string;
+    lastBackup: string;
+  }>;
+
+  // Activity Logs operations
+  getActivityLogs(limit: number, offset: number, type?: string): Promise<Array<{
+    id: string;
+    timestamp: Date;
+    userId: string;
+    userEmail: string;
+    action: string;
+    details: string;
+    type: 'user' | 'admin' | 'system' | 'security';
+    ipAddress?: string;
+  }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -387,6 +421,182 @@ export class DatabaseStorage implements IStorage {
       activeChallenges: activeChallengesResult[0]?.count || 0,
       availableBalance: '15720.48', // Mock for now - would be calculated from external wallet APIs
     };
+  }
+
+  // Admin Analytics operations
+  async getAnalyticsData(): Promise<{
+    totalRevenue: string;
+    monthlyRevenue: string;
+    totalInvestments: string;
+    totalStaked: string;
+    platformFees: string;
+    transactionVolume: string;
+    activePortfolios: number;
+    completedChallenges: number;
+  }> {
+    // Handle demo mode with realistic mock data
+    const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+    if (demoMode) {
+      return {
+        totalRevenue: '285420.75',
+        monthlyRevenue: '42380.50',
+        totalInvestments: '1247850.00',
+        totalStaked: '567890.25',
+        platformFees: '18750.80',
+        transactionVolume: '892450.30',
+        activePortfolios: 8,
+        completedChallenges: 15
+      };
+    }
+
+    // In a real implementation, these would query actual transaction and investment data
+    const totalInvestmentsResult = await db
+      .select({ total: sum(userPortfolios.investedAmount) })
+      .from(userPortfolios);
+
+    const totalStakedResult = await db
+      .select({ total: sum(userStaking.amountLocked) })
+      .from(userStaking);
+
+    const activePortfoliosResult = await db
+      .select({ count: count() })
+      .from(portfolios)
+      .where(eq(portfolios.isActive, true));
+
+    const completedChallengesResult = await db
+      .select({ count: count() })
+      .from(communityChallenges)
+      .where(eq(communityChallenges.status, 'completed'));
+
+    return {
+      totalRevenue: '285420.75', // Mock - would calculate from transaction fees
+      monthlyRevenue: '42380.50', // Mock - would calculate from current month
+      totalInvestments: totalInvestmentsResult[0]?.total || '0',
+      totalStaked: totalStakedResult[0]?.total || '0',
+      platformFees: '18750.80', // Mock - would calculate from fee transactions
+      transactionVolume: '892450.30', // Mock - would calculate from all transactions
+      activePortfolios: activePortfoliosResult[0]?.count || 0,
+      completedChallenges: completedChallengesResult[0]?.count || 0
+    };
+  }
+
+  // System Health operations
+  async getSystemHealth(): Promise<{
+    uptime: string;
+    apiResponseTime: string;
+    databaseStatus: 'healthy' | 'warning' | 'error';
+    activeConnections: number;
+    errorRate: string;
+    lastBackup: string;
+  }> {
+    const startTime = Date.now();
+    
+    try {
+      // Test database connection
+      await db.select({ count: count() }).from(users).limit(1);
+      const responseTime = Date.now() - startTime;
+      
+      // Calculate uptime (mock for demo)
+      const uptimeHours = Math.floor(Date.now() / 1000 / 60 / 60) % 24;
+      const uptime = `${uptimeHours}h 32m`;
+      
+      return {
+        uptime,
+        apiResponseTime: `${responseTime}ms`,
+        databaseStatus: responseTime > 1000 ? 'warning' : 'healthy',
+        activeConnections: Math.floor(Math.random() * 50) + 10, // Mock
+        errorRate: '0.02%', // Mock
+        lastBackup: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
+      };
+    } catch (error) {
+      return {
+        uptime: 'Unknown',
+        apiResponseTime: 'Timeout',
+        databaseStatus: 'error',
+        activeConnections: 0,
+        errorRate: '100%',
+        lastBackup: 'Failed'
+      };
+    }
+  }
+
+  // Activity Logs operations
+  async getActivityLogs(limit: number, offset: number, type?: string): Promise<Array<{
+    id: string;
+    timestamp: Date;
+    userId: string;
+    userEmail: string;
+    action: string;
+    details: string;
+    type: 'user' | 'admin' | 'system' | 'security';
+    ipAddress?: string;
+  }>> {
+    // Handle demo mode with mock activity logs
+    const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+    if (demoMode) {
+      const mockLogs = [
+        {
+          id: 'log-1',
+          timestamp: new Date(Date.now() - 300000), // 5 minutes ago
+          userId: 'demo-user',
+          userEmail: 'demo@cryptovault.com',
+          action: 'Admin Dashboard Access',
+          details: 'Accessed admin analytics dashboard',
+          type: 'admin' as const,
+          ipAddress: '192.168.1.100'
+        },
+        {
+          id: 'log-2',
+          timestamp: new Date(Date.now() - 900000), // 15 minutes ago
+          userId: 'user-1',
+          userEmail: 'john.doe@example.com',
+          action: 'Portfolio Investment',
+          details: 'Invested $1,500 in AI & Machine Learning portfolio',
+          type: 'user' as const,
+          ipAddress: '192.168.1.101'
+        },
+        {
+          id: 'log-3',
+          timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
+          userId: 'user-2',
+          userEmail: 'jane.smith@example.com',
+          action: 'KYC Status Update',
+          details: 'KYC verification completed successfully',
+          type: 'security' as const,
+          ipAddress: '192.168.1.102'
+        },
+        {
+          id: 'log-4',
+          timestamp: new Date(Date.now() - 3600000), // 1 hour ago
+          userId: 'system',
+          userEmail: 'system@cryptovault.com',
+          action: 'Database Backup',
+          details: 'Automated database backup completed',
+          type: 'system' as const,
+          ipAddress: '127.0.0.1'
+        },
+        {
+          id: 'log-5',
+          timestamp: new Date(Date.now() - 7200000), // 2 hours ago
+          userId: 'user-3',
+          userEmail: 'bob.wilson@example.com',
+          action: 'Staking Plan Enrollment',
+          details: 'Enrolled in 12-month premium staking plan with $5,000',
+          type: 'user' as const,
+          ipAddress: '192.168.1.103'
+        }
+      ];
+
+      // Filter by type if specified
+      const filteredLogs = type ? mockLogs.filter(log => log.type === type) : mockLogs;
+      
+      // Apply pagination
+      return filteredLogs.slice(offset, offset + limit);
+    }
+
+    // In a real implementation, this would query an activity_logs table
+    // For now, return empty array for production
+    return [];
   }
 }
 

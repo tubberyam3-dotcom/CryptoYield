@@ -24,6 +24,26 @@ interface AdminStats {
   adminUsers: number;
 }
 
+interface AnalyticsData {
+  totalRevenue: string;
+  monthlyRevenue: string;
+  totalInvestments: string;
+  totalStaked: string;
+  platformFees: string;
+  transactionVolume: string;
+  activePortfolios: number;
+  completedChallenges: number;
+}
+
+interface SystemHealth {
+  uptime: string;
+  apiResponseTime: string;
+  databaseStatus: 'healthy' | 'warning' | 'error';
+  activeConnections: number;
+  errorRate: string;
+  lastBackup: string;
+}
+
 export default function AdminDashboard() {
   const [createPortfolioOpen, setCreatePortfolioOpen] = useState(false);
   const [createStakingPlanOpen, setCreateStakingPlanOpen] = useState(false);
@@ -65,6 +85,27 @@ export default function AdminDashboard() {
 
   const { data: userStats } = useQuery<AdminStats>({
     queryKey: ["/api/admin/users/stats"],
+  });
+
+  const { data: analytics } = useQuery<AnalyticsData>({
+    queryKey: ["/api/admin/analytics"],
+  });
+
+  const { data: systemHealth } = useQuery<SystemHealth>({
+    queryKey: ["/api/admin/system/health"],
+  });
+
+  const { data: activityLogs } = useQuery<Array<{
+    id: string;
+    timestamp: Date;
+    userId: string;
+    userEmail: string;
+    action: string;
+    details: string;
+    type: 'user' | 'admin' | 'system' | 'security';
+    ipAddress?: string;
+  }>>({
+    queryKey: ["/api/admin/logs"],
   });
 
   // Portfolio mutation
@@ -222,14 +263,14 @@ export default function AdminDashboard() {
 
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Quick Stats Overview */}
-        {userStats && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {userStats && analytics && (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   <i className="fas fa-users text-primary text-lg"></i>
                   <div>
-                    <div className="text-2xl font-bold">{userStats.totalUsers}</div>
+                    <div className="text-xl font-bold">{userStats.totalUsers}</div>
                     <p className="text-xs text-muted-foreground">Total Users</p>
                   </div>
                 </div>
@@ -238,10 +279,21 @@ export default function AdminDashboard() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <i className="fas fa-chart-line text-green-600 text-lg"></i>
+                  <i className="fas fa-dollar-sign text-green-600 text-lg"></i>
                   <div>
-                    <div className="text-2xl font-bold">{portfolios?.length || 0}</div>
-                    <p className="text-xs text-muted-foreground">Portfolios</p>
+                    <div className="text-xl font-bold">${parseFloat(analytics.totalRevenue).toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">Total Revenue</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <i className="fas fa-chart-line text-blue-600 text-lg"></i>
+                  <div>
+                    <div className="text-xl font-bold">${parseFloat(analytics.totalInvestments).toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">Investments</p>
                   </div>
                 </div>
               </CardContent>
@@ -251,8 +303,8 @@ export default function AdminDashboard() {
                 <div className="flex items-center space-x-2">
                   <i className="fas fa-lock text-yellow-600 text-lg"></i>
                   <div>
-                    <div className="text-2xl font-bold">{stakingPlans?.length || 0}</div>
-                    <p className="text-xs text-muted-foreground">Staking Plans</p>
+                    <div className="text-xl font-bold">${parseFloat(analytics.totalStaked).toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">Total Staked</p>
                   </div>
                 </div>
               </CardContent>
@@ -260,9 +312,20 @@ export default function AdminDashboard() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <i className="fas fa-trophy text-purple-600 text-lg"></i>
+                  <i className="fas fa-chart-pie text-purple-600 text-lg"></i>
                   <div>
-                    <div className="text-2xl font-bold">{challenges?.length || 0}</div>
+                    <div className="text-xl font-bold">{portfolios?.length || 0}</div>
+                    <p className="text-xs text-muted-foreground">Portfolios</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <i className="fas fa-trophy text-orange-600 text-lg"></i>
+                  <div>
+                    <div className="text-xl font-bold">{challenges?.length || 0}</div>
                     <p className="text-xs text-muted-foreground">Challenges</p>
                   </div>
                 </div>
@@ -273,8 +336,19 @@ export default function AdminDashboard() {
                 <div className="flex items-center space-x-2">
                   <i className="fas fa-user-check text-blue-600 text-lg"></i>
                   <div>
-                    <div className="text-2xl font-bold">{userStats.pendingKyc}</div>
+                    <div className="text-xl font-bold">{userStats.pendingKyc}</div>
                     <p className="text-xs text-muted-foreground">Pending KYC</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <i className="fas fa-percent text-indigo-600 text-lg"></i>
+                  <div>
+                    <div className="text-xl font-bold">${parseFloat(analytics.platformFees).toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">Platform Fees</p>
                   </div>
                 </div>
               </CardContent>
@@ -283,29 +357,259 @@ export default function AdminDashboard() {
         )}
 
         {/* Admin Management Tabs */}
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid grid-cols-4 w-full max-w-2xl h-auto">
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <TabsList className="grid grid-cols-3 lg:grid-cols-7 w-full h-auto">
+            <TabsTrigger value="analytics" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <i className="fas fa-chart-bar mr-1 sm:mr-2"></i>
+              <span className="hidden sm:inline">Analytics</span>
+              <span className="sm:hidden">📊</span>
+            </TabsTrigger>
+            <TabsTrigger value="system" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <i className="fas fa-server mr-1 sm:mr-2"></i>
+              <span className="hidden sm:inline">System</span>
+              <span className="sm:hidden">🖥️</span>
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <i className="fas fa-history mr-1 sm:mr-2"></i>
+              <span className="hidden sm:inline">Logs</span>
+              <span className="sm:hidden">📋</span>
+            </TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
               <i className="fas fa-users mr-1 sm:mr-2"></i>
-              <span className="hidden xs:inline">Users</span>
-              <span className="xs:hidden">👥</span>
+              <span className="hidden sm:inline">Users</span>
+              <span className="sm:hidden">👥</span>
             </TabsTrigger>
             <TabsTrigger value="portfolios" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
               <i className="fas fa-chart-pie mr-1 sm:mr-2"></i>
-              <span className="hidden xs:inline">Portfolios</span>
-              <span className="xs:hidden">📊</span>
+              <span className="hidden sm:inline">Portfolios</span>
+              <span className="sm:hidden">💼</span>
             </TabsTrigger>
             <TabsTrigger value="staking" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
               <i className="fas fa-lock mr-1 sm:mr-2"></i>
-              <span className="hidden xs:inline">Staking</span>
-              <span className="xs:hidden">🔒</span>
+              <span className="hidden sm:inline">Staking</span>
+              <span className="sm:hidden">🔒</span>
             </TabsTrigger>
             <TabsTrigger value="challenges" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
               <i className="fas fa-trophy mr-1 sm:mr-2"></i>
-              <span className="hidden xs:inline">Challenges</span>
-              <span className="xs:hidden">🏆</span>
+              <span className="hidden sm:inline">Challenges</span>
+              <span className="sm:hidden">🏆</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Financial Analytics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <i className="fas fa-chart-line text-green-600"></i>
+                    Financial Analytics
+                  </CardTitle>
+                  <CardDescription>Revenue and transaction metrics</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {analytics && (
+                    <>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm font-medium">Monthly Revenue</span>
+                        <span className="text-lg font-bold text-green-600">
+                          ${parseFloat(analytics.monthlyRevenue).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm font-medium">Transaction Volume</span>
+                        <span className="text-lg font-bold">
+                          ${parseFloat(analytics.transactionVolume).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm font-medium">Platform Fees</span>
+                        <span className="text-lg font-bold text-blue-600">
+                          ${parseFloat(analytics.platformFees).toLocaleString()}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Platform Analytics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <i className="fas fa-chart-pie text-purple-600"></i>
+                    Platform Analytics
+                  </CardTitle>
+                  <CardDescription>User engagement and platform usage</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {analytics && userStats && (
+                    <>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm font-medium">Active Portfolios</span>
+                        <span className="text-lg font-bold text-purple-600">
+                          {analytics.activePortfolios}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm font-medium">Completed Challenges</span>
+                        <span className="text-lg font-bold text-orange-600">
+                          {analytics.completedChallenges}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm font-medium">KYC Approval Rate</span>
+                        <span className="text-lg font-bold text-green-600">
+                          {Math.round((userStats.approvedKyc / userStats.totalUsers) * 100)}%
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* System Health Tab */}
+          <TabsContent value="system" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {systemHealth && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <i className="fas fa-heartbeat text-red-600"></i>
+                        System Status
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm">Uptime</span>
+                        <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          {systemHealth.uptime}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">API Response</span>
+                        <Badge variant="outline" className={
+                          parseInt(systemHealth.apiResponseTime) > 1000 ? 
+                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        }>
+                          {systemHealth.apiResponseTime}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Database</span>
+                        <Badge variant="outline" className={
+                          systemHealth.databaseStatus === 'healthy' ? 
+                          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          systemHealth.databaseStatus === 'warning' ?
+                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }>
+                          {systemHealth.databaseStatus}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <i className="fas fa-network-wired text-blue-600"></i>
+                        Connections
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm">Active Connections</span>
+                        <span className="font-bold text-blue-600">{systemHealth.activeConnections}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Error Rate</span>
+                        <span className="font-bold text-green-600">{systemHealth.errorRate}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <i className="fas fa-save text-purple-600"></i>
+                        Backup Status
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm">Last Backup</span>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(systemHealth.lastBackup).toLocaleString()}
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 w-full justify-center">
+                        <i className="fas fa-check mr-2"></i>
+                        Backup Successful
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Activity Logs Tab */}
+          <TabsContent value="logs" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <i className="fas fa-list text-gray-600"></i>
+                  Recent Activity Logs
+                </CardTitle>
+                <CardDescription>Monitor platform activity and user actions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {activityLogs?.map((log) => (
+                    <div 
+                      key={log.id} 
+                      className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Badge 
+                          variant="outline" 
+                          className={
+                            log.type === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                            log.type === 'user' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                            log.type === 'system' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                            'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }
+                        >
+                          {log.type}
+                        </Badge>
+                        <div>
+                          <div className="font-medium text-sm">{log.action}</div>
+                          <div className="text-xs text-muted-foreground">{log.details}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {log.userEmail} • {log.ipAddress}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                  )) || (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <i className="fas fa-inbox text-2xl mb-2"></i>
+                      <p>No activity logs available</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* User Management Tab */}
           <TabsContent value="users" className="space-y-6">

@@ -363,6 +363,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin analytics endpoint
+  app.get('/api/admin/analytics', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const analytics = await storage.getAnalyticsData();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics data" });
+    }
+  });
+
+  // Admin system health endpoint
+  app.get('/api/admin/system/health', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const health = await storage.getSystemHealth();
+      res.json(health);
+    } catch (error) {
+      console.error("Error fetching system health:", error);
+      res.status(500).json({ message: "Failed to fetch system health data" });
+    }
+  });
+
+  // Admin activity logs endpoint
+  app.get('/api/admin/logs', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { limit = 50, offset = 0, type } = req.query;
+      const logs = await storage.getActivityLogs(Number(limit), Number(offset), type as string);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching activity logs:", error);
+      res.status(500).json({ message: "Failed to fetch activity logs" });
+    }
+  });
+
   app.patch('/api/admin/users/:id/role', enhancedAuth, async (req: any, res) => {
     try {
       const user = req.user.claims;
