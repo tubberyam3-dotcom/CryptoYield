@@ -29,7 +29,7 @@ export default function Challenges() {
       <div className="ml-0 lg:ml-64 min-h-screen">
         <TopBar title="Community Challenges" onMenuClick={() => setSidebarOpen(true)} />
         
-        <main className="p-6">
+        <main className="p-3 sm:p-6 pb-24 lg:pb-6">
           <EnhancedChallenges />
         </main>
       </div>

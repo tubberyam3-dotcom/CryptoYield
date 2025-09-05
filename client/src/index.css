@@ -155,3 +155,22 @@
     min-height: -webkit-fill-available;
   }
 }
+
+/* Mobile text truncation utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Custom responsive breakpoint for very small screens */
+@media (min-width: 475px) {
+  .xs\:inline {
+    display: inline !important;
+  }
+  
+  .xs\:hidden {
+    display: none !important;
+  }
+}

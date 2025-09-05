@@ -108,14 +108,14 @@ export function EnhancedChallenges() {
           <CardDescription>Join forces with the community to achieve amazing goals</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="p-4 animate-pulse">
-                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-muted rounded w-1/2 mb-4"></div>
-                <div className="space-y-2">
-                  <div className="h-3 bg-muted rounded"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                <div className="h-3 sm:h-4 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-6 sm:h-8 bg-muted rounded w-1/2 mb-3 sm:mb-4"></div>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div className="h-2 sm:h-3 bg-muted rounded"></div>
+                  <div className="h-2 sm:h-3 bg-muted rounded w-2/3"></div>
                 </div>
               </Card>
             ))}
@@ -129,46 +129,48 @@ export function EnhancedChallenges() {
     <>
       <Card data-testid="enhanced-challenges">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Trophy className="w-5 h-5 text-yellow-600" />
                 Community Challenges
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 Join forces with the community or take on solo challenges to earn rewards
               </CardDescription>
             </div>
-            <Button variant="outline">
+            <Button variant="outline" className="self-start sm:self-auto">
               <Award className="w-4 h-4 mr-2" />
-              Create Challenge
+              <span className="hidden sm:inline">Create Challenge</span>
+              <span className="sm:hidden">Create</span>
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all" className="flex items-center gap-2">
-                <Target className="w-4 h-4" />
-                All
+            <TabsList className="grid w-full grid-cols-4 h-auto">
+              <TabsTrigger value="all" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 px-1 text-xs sm:text-sm">
+                <Target className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span>All</span>
               </TabsTrigger>
-              <TabsTrigger value="trending" className="flex items-center gap-2">
-                <Flame className="w-4 h-4" />
-                Trending
+              <TabsTrigger value="trending" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 px-1 text-xs sm:text-sm">
+                <Flame className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Trending</span>
+                <span className="xs:hidden">Hot</span>
               </TabsTrigger>
-              <TabsTrigger value="group" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Group
+              <TabsTrigger value="group" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 px-1 text-xs sm:text-sm">
+                <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span>Group</span>
               </TabsTrigger>
-              <TabsTrigger value="solo" className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4" />
-                Solo
+              <TabsTrigger value="solo" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 px-1 text-xs sm:text-sm">
+                <UserCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span>Solo</span>
               </TabsTrigger>
             </TabsList>
 
             {/* All Challenges */}
-            <TabsContent value="all" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <TabsContent value="all" className="space-y-4 sm:space-y-6 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {challenges?.map((challenge, index) => {
                   const colors = getChallengeTypeColor(challenge.type);
                   const daysLeft = getDaysLeft(challenge.endDate.toString());
@@ -202,79 +204,79 @@ export function EnhancedChallenges() {
                         {/* Background Pattern */}
                         <div className="absolute inset-0 opacity-5 bg-gradient-to-br from-white to-transparent pointer-events-none" />
 
-                        <CardContent className="p-6 relative z-10">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg bg-white dark:bg-gray-800 shadow-md`}>
+                        <CardContent className="p-4 sm:p-6 relative z-10">
+                          <div className="flex items-start justify-between mb-3 sm:mb-4">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                              <div className={`p-1.5 sm:p-2 rounded-lg bg-white dark:bg-gray-800 shadow-md flex-shrink-0`}>
                                 {challenge.type === 'group' ? 
-                                  <Users className={`w-5 h-5 ${colors.icon}`} /> :
-                                  <UserCheck className={`w-5 h-5 ${colors.icon}`} />
+                                  <Users className={`w-4 h-4 sm:w-5 sm:h-5 ${colors.icon}`} /> :
+                                  <UserCheck className={`w-4 h-4 sm:w-5 sm:h-5 ${colors.icon}`} />
                                 }
                               </div>
-                              <div>
-                                <h3 className="font-bold text-lg" data-testid={`challenge-name-${challenge.id}`}>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-bold text-base sm:text-lg leading-tight mb-1 sm:mb-2" data-testid={`challenge-name-${challenge.id}`}>
                                   {challenge.name}
                                 </h3>
-                                <Badge className={colors.badge} data-testid={`challenge-type-${challenge.id}`}>
-                                  {challenge.type === 'group' ? 'Group Challenge' : 'Solo Challenge'}
+                                <Badge className={`${colors.badge} text-xs`} data-testid={`challenge-type-${challenge.id}`}>
+                                  {challenge.type === 'group' ? 'Group' : 'Solo'}
                                 </Badge>
                               </div>
                             </div>
                           </div>
 
                           {/* Description */}
-                          <p className="text-sm text-muted-foreground mb-4" data-testid={`challenge-description-${challenge.id}`}>
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2" data-testid={`challenge-description-${challenge.id}`}>
                             {challenge.description}
                           </p>
 
                           {/* Progress */}
-                          <div className="space-y-2 mb-4">
-                            <div className="flex justify-between text-sm">
+                          <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
+                            <div className="flex justify-between text-xs sm:text-sm">
                               <span className="text-muted-foreground">Progress</span>
                               <span className="font-medium">{progress.toFixed(1)}%</span>
                             </div>
-                            <Progress value={progress} className="h-2" />
+                            <Progress value={progress} className="h-1.5 sm:h-2" />
                             <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>${parseFloat(challenge.currentAmount || "0").toLocaleString()} raised</span>
-                              <span>${parseFloat(challenge.targetAmount).toLocaleString()} target</span>
+                              <span>${parseFloat(challenge.currentAmount || "0").toLocaleString()}</span>
+                              <span>${parseFloat(challenge.targetAmount).toLocaleString()}</span>
                             </div>
                           </div>
 
                           {/* Challenge Stats */}
-                          <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span>{daysLeft} days left</span>
+                          <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                              <span className="truncate">{daysLeft}d left</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
                               <span className={difficulty.color}>{difficulty.icon}</span>
-                              <span>{difficulty.level}</span>
+                              <span className="truncate">{difficulty.level}</span>
                             </div>
                           </div>
 
                           {/* Reward */}
-                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-4">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Star className="w-4 h-4 text-yellow-600" />
-                              <span className="text-sm font-medium">Reward</span>
+                          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 mb-3 sm:mb-4">
+                            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                              <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600" />
+                              <span className="text-xs sm:text-sm font-medium">Reward</span>
                             </div>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground line-clamp-2">
                               {challenge.reward}
                             </p>
                           </div>
 
                           {/* Participants Preview */}
                           {challenge.type === 'group' && (
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="flex -space-x-2">
-                                {Array.from({ length: Math.min(4, Math.floor(progress / 10) + 1) }).map((_, i) => (
+                            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                              <div className="flex -space-x-1.5 sm:-space-x-2">
+                                {Array.from({ length: Math.min(3, Math.floor(progress / 10) + 1) }).map((_, i) => (
                                   <div 
                                     key={i}
-                                    className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full border-2 border-card"
+                                    className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full border-1.5 sm:border-2 border-card"
                                   />
                                 ))}
-                                {progress > 30 && (
-                                  <div className="w-6 h-6 bg-muted rounded-full border-2 border-card flex items-center justify-center text-xs">
+                                {progress > 20 && (
+                                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-muted rounded-full border-1.5 sm:border-2 border-card flex items-center justify-center text-xs">
                                     +{Math.floor(progress / 5)}
                                   </div>
                                 )}
@@ -288,11 +290,11 @@ export function EnhancedChallenges() {
                           {/* Join Button */}
                           <Button 
                             onClick={() => handleJoinChallenge(challenge)}
-                            className="w-full group-hover:shadow-md transition-shadow"
+                            className="w-full group-hover:shadow-md transition-shadow text-sm py-2 sm:py-2.5"
                             data-testid={`button-join-${challenge.id}`}
                           >
-                            <Trophy className="w-4 h-4 mr-2" />
-                            Join Challenge
+                            <Trophy className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                            <span>Join Challenge</span>
                           </Button>
                         </CardContent>
                       </Card>
@@ -303,8 +305,8 @@ export function EnhancedChallenges() {
             </TabsContent>
 
             {/* Trending Challenges */}
-            <TabsContent value="trending" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <TabsContent value="trending" className="space-y-4 sm:space-y-6 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {trendingChallenges.map((challenge, index) => {
                   const colors = getChallengeTypeColor(challenge.type);
                   const progress = getProgressPercentage(challenge.currentAmount || "0", challenge.targetAmount);
@@ -324,14 +326,15 @@ export function EnhancedChallenges() {
                             Hot
                           </Badge>
                         </div>
-                        <CardContent className="p-6">
-                          <h3 className="font-bold text-lg mb-2">{challenge.name}</h3>
-                          <Progress value={progress} className="mb-4" />
+                        <CardContent className="p-4 sm:p-6">
+                          <h3 className="font-bold text-base sm:text-lg mb-2 line-clamp-2">{challenge.name}</h3>
+                          <Progress value={progress} className="mb-3 sm:mb-4 h-1.5 sm:h-2" />
                           <Button 
                             onClick={() => handleJoinChallenge(challenge)}
-                            className="w-full"
+                            className="w-full text-sm py-2 sm:py-2.5"
                           >
-                            Join Trending Challenge
+                            <Flame className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                            Join Trending
                           </Button>
                         </CardContent>
                       </Card>
@@ -342,8 +345,8 @@ export function EnhancedChallenges() {
             </TabsContent>
 
             {/* Group Challenges */}
-            <TabsContent value="group" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <TabsContent value="group" className="space-y-4 sm:space-y-6 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {categorizedChallenges?.group?.map((challenge, index) => (
                   <motion.div
                     key={challenge.id}
@@ -352,19 +355,20 @@ export function EnhancedChallenges() {
                     transition={{ delay: index * 0.1 }}
                   >
                     <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800 border-2">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4 sm:p-6">
                         <div className="flex items-center gap-2 mb-3">
-                          <Users className="w-5 h-5 text-green-600" />
-                          <h3 className="font-bold">{challenge.name}</h3>
+                          <Users className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                          <h3 className="font-bold text-sm sm:text-base line-clamp-2">{challenge.name}</h3>
                         </div>
                         <Progress 
                           value={getProgressPercentage(challenge.currentAmount || "0", challenge.targetAmount)} 
-                          className="mb-4" 
+                          className="mb-3 sm:mb-4 h-1.5 sm:h-2" 
                         />
                         <Button 
                           onClick={() => handleJoinChallenge(challenge)}
-                          className="w-full"
+                          className="w-full text-sm py-2 sm:py-2.5"
                         >
+                          <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                           Join Team
                         </Button>
                       </CardContent>
@@ -375,8 +379,8 @@ export function EnhancedChallenges() {
             </TabsContent>
 
             {/* Solo Challenges */}
-            <TabsContent value="solo" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <TabsContent value="solo" className="space-y-4 sm:space-y-6 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {categorizedChallenges?.solo?.map((challenge, index) => (
                   <motion.div
                     key={challenge.id}
@@ -385,19 +389,20 @@ export function EnhancedChallenges() {
                     transition={{ delay: index * 0.1 }}
                   >
                     <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border-blue-200 dark:border-blue-800 border-2">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4 sm:p-6">
                         <div className="flex items-center gap-2 mb-3">
-                          <UserCheck className="w-5 h-5 text-blue-600" />
-                          <h3 className="font-bold">{challenge.name}</h3>
+                          <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                          <h3 className="font-bold text-sm sm:text-base line-clamp-2">{challenge.name}</h3>
                         </div>
                         <Progress 
                           value={getProgressPercentage(challenge.currentAmount || "0", challenge.targetAmount)} 
-                          className="mb-4" 
+                          className="mb-3 sm:mb-4 h-1.5 sm:h-2" 
                         />
                         <Button 
                           onClick={() => handleJoinChallenge(challenge)}
-                          className="w-full"
+                          className="w-full text-sm py-2 sm:py-2.5"
                         >
+                          <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                           Take Challenge
                         </Button>
                       </CardContent>
