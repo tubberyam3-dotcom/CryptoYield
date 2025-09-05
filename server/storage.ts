@@ -109,16 +109,6 @@ export interface IStorage {
     type: 'user' | 'admin' | 'system' | 'security';
     ipAddress?: string;
   }>>;
-
-  // Admin Investment Management operations
-  getAllUserStaking(): Promise<(UserStaking & { stakingPlan: StakingPlan; user: User })[]>;
-  updateUserStakingStatus(stakingId: string, status: 'active' | 'completed' | 'cancelled'): Promise<UserStaking>;
-  getAllUserPortfolios(): Promise<(UserPortfolio & { portfolio: Portfolio; user: User })[]>;
-  updateUserPortfolioAdmin(portfolioId: string, updates: Partial<InsertUserPortfolio>): Promise<UserPortfolio>;
-
-  // Admin Challenge Management operations
-  updateCommunityChallenge(challengeId: string, updates: Partial<InsertCommunityChallenge>): Promise<CommunityChallenge>;
-  deleteCommunityChallenge(challengeId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -607,82 +597,6 @@ export class DatabaseStorage implements IStorage {
     // In a real implementation, this would query an activity_logs table
     // For now, return empty array for production
     return [];
-  }
-
-  // Admin Investment Management operations
-  async getAllUserStaking(): Promise<(UserStaking & { stakingPlan: StakingPlan; user: User })[]> {
-    const result = await db
-      .select()
-      .from(userStaking)
-      .leftJoin(stakingPlans, eq(userStaking.stakingPlanId, stakingPlans.id))
-      .leftJoin(users, eq(userStaking.userId, users.id))
-      .orderBy(desc(userStaking.createdAt));
-
-    return result.map(row => ({
-      ...row.user_staking,
-      stakingPlan: row.staking_plans!,
-      user: row.users!
-    }));
-  }
-
-  async updateUserStakingStatus(stakingId: string, status: 'active' | 'completed' | 'cancelled'): Promise<UserStaking> {
-    const [updated] = await db
-      .update(userStaking)
-      .set({ 
-        status
-      })
-      .where(eq(userStaking.id, stakingId))
-      .returning();
-
-    return updated;
-  }
-
-  async getAllUserPortfolios(): Promise<(UserPortfolio & { portfolio: Portfolio; user: User })[]> {
-    const result = await db
-      .select()
-      .from(userPortfolios)
-      .leftJoin(portfolios, eq(userPortfolios.portfolioId, portfolios.id))
-      .leftJoin(users, eq(userPortfolios.userId, users.id))
-      .orderBy(desc(userPortfolios.createdAt));
-
-    return result.map(row => ({
-      ...row.user_portfolios,
-      portfolio: row.portfolios!,
-      user: row.users!
-    }));
-  }
-
-  async updateUserPortfolioAdmin(portfolioId: string, updates: Partial<InsertUserPortfolio>): Promise<UserPortfolio> {
-    const [updated] = await db
-      .update(userPortfolios)
-      .set(updates)
-      .where(eq(userPortfolios.id, portfolioId))
-      .returning();
-
-    return updated;
-  }
-
-  // Admin Challenge Management operations
-  async updateCommunityChallenge(challengeId: string, updates: Partial<InsertCommunityChallenge>): Promise<CommunityChallenge> {
-    const [updated] = await db
-      .update(communityChallenges)
-      .set(updates)
-      .where(eq(communityChallenges.id, challengeId))
-      .returning();
-
-    return updated;
-  }
-
-  async deleteCommunityChallenge(challengeId: string): Promise<void> {
-    // First delete all challenge members
-    await db
-      .delete(challengeMembers)
-      .where(eq(challengeMembers.challengeId, challengeId));
-
-    // Then delete the challenge
-    await db
-      .delete(communityChallenges)
-      .where(eq(communityChallenges.id, challengeId));
   }
 }
 
