@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { UserManagement } from "@/components/admin/UserManagement";
+import { ChallengeManagement } from "@/components/admin/ChallengeManagement";
 import type { Portfolio, StakingPlan, CommunityChallenge, User } from "@shared/schema";
 
 interface AdminStats {

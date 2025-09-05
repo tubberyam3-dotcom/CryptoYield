@@ -33,6 +33,39 @@ const enhancedAuth = async (req: any, res: any, next: any) => {
   return isAuthenticated(req, res, next);
 };
 
+// Admin-only authentication middleware
+const adminAuth = async (req: any, res: any, next: any) => {
+  const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+  
+  if (demoMode) {
+    // In demo mode, create admin user context
+    req.user = {
+      claims: {
+        sub: 'demo-admin',
+        email: 'admin@cryptovault.com',
+        first_name: 'Admin',
+        last_name: 'User'
+      }
+    };
+    return next();
+  }
+  
+  // Check if user is authenticated
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Admin authentication required" });
+  }
+  
+  // Check if user has admin role
+  const userId = req.user.claims.sub;
+  const user = await storage.getUser(userId);
+  
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  
+  return next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
@@ -49,9 +82,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: 'demo-user',
           email: 'demo@cryptovault.com',
           firstName: 'Demo',
-          lastName: 'Admin',
+          lastName: 'User',
           profileImageUrl: null,
-          role: 'admin',
+          role: 'user',
           kycStatus: 'approved',
           createdAt: new Date(),
           updatedAt: new Date()
@@ -70,6 +103,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Admin Auth routes
+  app.get('/api/admin/auth/user', async (req: any, res) => {
+    try {
+      const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+      
+      if (demoMode) {
+        // Return demo admin user
+        const demoAdmin = {
+          id: 'demo-admin',
+          email: 'admin@cryptovault.com',
+          firstName: 'Admin',
+          lastName: 'User',
+          profileImageUrl: null,
+          role: 'admin',
+          kycStatus: 'approved',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        return res.json(demoAdmin);
+      }
+
+      // Check authentication and admin role
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Admin authentication required" });
+      }
+      
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching admin user:", error);
+      res.status(500).json({ message: "Failed to fetch admin user" });
+    }
+  });
+
+  // Admin login route (demo mode)
+  app.post('/api/admin/auth/login', async (req: any, res) => {
+    try {
+      const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+      
+      if (demoMode) {
+        const { username, password } = req.body;
+        
+        // Simple demo admin credentials
+        if (username === 'admin' && password === 'admin123') {
+          const demoAdmin = {
+            id: 'demo-admin',
+            email: 'admin@cryptovault.com',
+            firstName: 'Admin',
+            lastName: 'User',
+            profileImageUrl: null,
+            role: 'admin',
+            kycStatus: 'approved',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+          
+          // Set session for demo admin
+          req.session.adminUser = demoAdmin;
+          return res.json(demoAdmin);
+        } else {
+          return res.status(401).json({ message: "Invalid admin credentials" });
+        }
+      }
+      
+      // In production, implement proper admin authentication
+      res.status(501).json({ message: "Admin authentication not implemented for production" });
+    } catch (error) {
+      console.error("Error in admin login:", error);
+      res.status(500).json({ message: "Admin login failed" });
+    }
+  });
+
+  // Admin logout route
+  app.post('/api/admin/auth/logout', async (req: any, res) => {
+    try {
+      if (req.session.adminUser) {
+        delete req.session.adminUser;
+      }
+      res.json({ message: "Admin logout successful" });
+    } catch (error) {
+      console.error("Error in admin logout:", error);
+      res.status(500).json({ message: "Admin logout failed" });
     }
   });
 
@@ -327,16 +451,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin User Management Routes
-  app.get('/api/admin/users', enhancedAuth, async (req: any, res) => {
+  app.get('/api/admin/users', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
-      
-      // Check if user is admin
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
       const users = await storage.getAllUsers();
       res.json(users);
     } catch (error) {
@@ -345,16 +461,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/users/stats', enhancedAuth, async (req: any, res) => {
+  app.get('/api/admin/users/stats', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
-      
-      // Check if user is admin
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
       const stats = await storage.getUserStats();
       res.json(stats);
     } catch (error) {
@@ -364,16 +472,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin analytics endpoint
-  app.get('/api/admin/analytics', enhancedAuth, async (req: any, res) => {
+  app.get('/api/admin/analytics', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
-      
-      // Check if user is admin
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
       const analytics = await storage.getAnalyticsData();
       res.json(analytics);
     } catch (error) {
@@ -383,16 +483,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin system health endpoint
-  app.get('/api/admin/system/health', enhancedAuth, async (req: any, res) => {
+  app.get('/api/admin/system/health', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
-      
-      // Check if user is admin
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
       const health = await storage.getSystemHealth();
       res.json(health);
     } catch (error) {
@@ -402,16 +494,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin activity logs endpoint
-  app.get('/api/admin/logs', enhancedAuth, async (req: any, res) => {
+  app.get('/api/admin/logs', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
-      
-      // Check if user is admin
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
       const { limit = 50, offset = 0, type } = req.query;
       const logs = await storage.getActivityLogs(Number(limit), Number(offset), type as string);
       res.json(logs);
@@ -421,17 +505,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/users/:id/role', enhancedAuth, async (req: any, res) => {
+  app.patch('/api/admin/users/:id/role', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
       const { id } = req.params;
       const { role } = req.body;
-
-      // Check if user is admin
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
 
       // Validate role
       if (!['user', 'admin'].includes(role)) {
@@ -446,17 +523,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/users/:id/kyc', enhancedAuth, async (req: any, res) => {
+  app.patch('/api/admin/users/:id/kyc', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
       const { id } = req.params;
       const { kycStatus } = req.body;
-
-      // Check if user is admin
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
 
       // Validate KYC status
       if (!['pending', 'approved', 'rejected'].includes(kycStatus)) {
@@ -468,6 +538,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating user KYC status:", error);
       res.status(500).json({ message: "Failed to update user KYC status" });
+    }
+  });
+
+  // Admin Challenge Management Routes
+  app.post('/api/admin/challenges', adminAuth, async (req: any, res) => {
+    try {
+      const challengeData = insertCommunityChalllengeSchema.parse({
+        ...req.body,
+        status: 'active',
+        currentAmount: '0'
+      });
+      
+      const challenge = await storage.createCommunityChallenge(challengeData);
+      res.json(challenge);
+    } catch (error) {
+      console.error("Error creating admin challenge:", error);
+      res.status(500).json({ message: "Failed to create challenge" });
+    }
+  });
+
+  app.get('/api/admin/challenges', adminAuth, async (req, res) => {
+    try {
+      const challenges = await storage.getCommunityChalllenges();
+      res.json(challenges);
+    } catch (error) {
+      console.error("Error fetching admin challenges:", error);
+      res.status(500).json({ message: "Failed to fetch challenges" });
+    }
+  });
+
+  app.patch('/api/admin/challenges/:id', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      // For now, we'll implement this as a direct database update
+      // In a real implementation, you'd have an updateChallenge method in storage
+      const challenge = await storage.getCommunityChallenge(id);
+      if (!challenge) {
+        return res.status(404).json({ message: "Challenge not found" });
+      }
+      
+      // Return the challenge for now - full update functionality would be implemented in storage
+      res.json({ ...challenge, ...updateData });
+    } catch (error) {
+      console.error("Error updating challenge:", error);
+      res.status(500).json({ message: "Failed to update challenge" });
+    }
+  });
+
+  app.get('/api/admin/challenges/:id/details', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const challenge = await storage.getCommunityChallenge(id);
+      if (!challenge) {
+        return res.status(404).json({ message: "Challenge not found" });
+      }
+      
+      const members = await storage.getChallengeMembers(id);
+      
+      res.json({
+        challenge,
+        members,
+        memberCount: members.length,
+        totalContributed: members.reduce((sum, member) => sum + parseFloat(member.contributedAmount || '0'), 0)
+      });
+    } catch (error) {
+      console.error("Error fetching challenge details:", error);
+      res.status(500).json({ message: "Failed to fetch challenge details" });
     }
   });
 

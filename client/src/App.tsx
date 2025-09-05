@@ -15,7 +15,35 @@ import TransactionHistory from "@/pages/TransactionHistory";
 import Wallet from "@/pages/Wallet";
 import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
+import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
+import { AdminAuthProvider, useAdminAuth } from "@/hooks/useAdminAuth";
+
+// Admin Router Component
+function AdminRouter() {
+  const { adminUser, isLoading } = useAdminAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading admin...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Switch>
+      {!adminUser ? (
+        <Route path="/admin/*" component={AdminLogin} />
+      ) : (
+        <Route path="/admin/*" component={AdminDashboard} />
+      )}
+    </Switch>
+  );
+}
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -33,6 +61,14 @@ function Router() {
 
   return (
     <Switch>
+      {/* Admin routes - separate authentication system */}
+      <Route path="/admin/*">
+        <AdminAuthProvider>
+          <AdminRouter />
+        </AdminAuthProvider>
+      </Route>
+      
+      {/* Regular user routes */}
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
@@ -44,8 +80,6 @@ function Router() {
           <Route path="/transactions" component={TransactionHistory} />
           <Route path="/wallet" component={Wallet} />
           <Route path="/settings" component={Settings} />
-          <Route path="/admin" component={Admin} />
-          <Route path="/admin-panel" component={AdminDashboard} />
         </>
       )}
       <Route component={NotFound} />
