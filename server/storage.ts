@@ -80,6 +80,22 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
+    // Handle demo user in development
+    const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+    if (demoMode && id === 'demo-user') {
+      return {
+        id: 'demo-user',
+        email: 'demo@cryptovault.com',
+        firstName: 'Demo',
+        lastName: 'Admin',
+        profileImageUrl: null,
+        role: 'admin',
+        kycStatus: 'approved',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    }
+    
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
@@ -101,6 +117,57 @@ export class DatabaseStorage implements IStorage {
 
   // Admin User Management operations
   async getAllUsers(): Promise<User[]> {
+    // Handle demo mode
+    const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+    if (demoMode) {
+      return [
+        {
+          id: 'demo-user',
+          email: 'demo@cryptovault.com',
+          firstName: 'Demo',
+          lastName: 'Admin',
+          profileImageUrl: null,
+          role: 'admin',
+          kycStatus: 'approved',
+          createdAt: new Date('2024-01-15'),
+          updatedAt: new Date()
+        },
+        {
+          id: 'user-1',
+          email: 'john.doe@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          profileImageUrl: null,
+          role: 'user',
+          kycStatus: 'approved',
+          createdAt: new Date('2024-02-20'),
+          updatedAt: new Date()
+        },
+        {
+          id: 'user-2',
+          email: 'jane.smith@example.com',
+          firstName: 'Jane',
+          lastName: 'Smith',
+          profileImageUrl: null,
+          role: 'user',
+          kycStatus: 'pending',
+          createdAt: new Date('2024-03-10'),
+          updatedAt: new Date()
+        },
+        {
+          id: 'user-3',
+          email: 'bob.wilson@example.com',
+          firstName: 'Bob',
+          lastName: 'Wilson',
+          profileImageUrl: null,
+          role: 'user',
+          kycStatus: 'rejected',
+          createdAt: new Date('2024-03-25'),
+          updatedAt: new Date()
+        }
+      ];
+    }
+    
     return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
@@ -129,6 +196,18 @@ export class DatabaseStorage implements IStorage {
     approvedKyc: number;
     adminUsers: number;
   }> {
+    // Handle demo mode
+    const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+    if (demoMode) {
+      return {
+        totalUsers: 4,
+        activeUsers: 4,
+        pendingKyc: 1,
+        approvedKyc: 2,
+        adminUsers: 1,
+      };
+    }
+    
     const totalUsersResult = await db.select({ count: count() }).from(users);
     const pendingKycResult = await db.select({ count: count() }).from(users).where(eq(users.kycStatus, 'pending'));
     const approvedKycResult = await db.select({ count: count() }).from(users).where(eq(users.kycStatus, 'approved'));

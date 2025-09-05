@@ -6,6 +6,9 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { StatsOverview } from "@/components/dashboard/StatsOverview";
 import { GamifiedStats } from "@/components/gamification/GamifiedStats";
 import { BalanceSummary } from "@/components/dashboard/BalanceSummary";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { AssetAllocation } from "@/components/dashboard/AssetAllocation";
 import { FeaturedPortfolios } from "@/components/dashboard/FeaturedPortfolios";
@@ -13,7 +16,6 @@ import { EnhancedStakingPlans } from "@/components/staking/EnhancedStakingPlans"
 import { EnhancedChallenges } from "@/components/challenges/EnhancedChallenges";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { WalletOverview } from "@/components/dashboard/WalletOverview";
-import { AdminPanel } from "@/components/dashboard/AdminPanel";
 import { AchievementBadges } from "@/components/gamification/AchievementBadges";
 import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { LevelSystem } from "@/components/gamification/LevelSystem";
@@ -82,7 +84,30 @@ export default function Dashboard() {
             <WalletOverview />
           </div>
           
-          <AdminPanel />
+          {/* Admin Access Link - Only show for admin users */}
+          {user?.role === 'admin' && (
+            <Card className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 border-purple-200 dark:border-purple-800">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                      <i className="fas fa-shield-alt text-purple-600"></i>
+                      Administrator Access
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Access the dedicated admin dashboard for platform management
+                    </p>
+                  </div>
+                  <Link href="/admin-panel">
+                    <Button className="bg-purple-600 hover:bg-purple-700">
+                      <i className="fas fa-cog mr-2"></i>
+                      Open Admin Panel
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </main>
       </div>
       

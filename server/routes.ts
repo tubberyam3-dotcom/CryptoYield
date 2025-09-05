@@ -23,7 +23,7 @@ const enhancedAuth = async (req: any, res: any, next: any) => {
         sub: 'demo-user',
         email: 'demo@cryptovault.com',
         first_name: 'Demo',
-        last_name: 'User'
+        last_name: 'Admin'
       }
     };
     return next();

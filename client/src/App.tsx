@@ -15,6 +15,7 @@ import TransactionHistory from "@/pages/TransactionHistory";
 import Wallet from "@/pages/Wallet";
 import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
+import AdminDashboard from "@/pages/AdminDashboard";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -44,6 +45,7 @@ function Router() {
           <Route path="/wallet" component={Wallet} />
           <Route path="/settings" component={Settings} />
           <Route path="/admin" component={Admin} />
+          <Route path="/admin-panel" component={AdminDashboard} />
         </>
       )}
       <Route component={NotFound} />
