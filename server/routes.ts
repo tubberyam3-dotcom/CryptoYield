@@ -49,9 +49,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: 'demo-user',
           email: 'demo@cryptovault.com',
           firstName: 'Demo',
-          lastName: 'User',
+          lastName: 'Admin',
           profileImageUrl: null,
-          role: 'user',
+          role: 'admin',
           kycStatus: 'approved',
           createdAt: new Date(),
           updatedAt: new Date()
@@ -323,6 +323,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error calculating staking rewards:", error);
       res.status(500).json({ message: "Failed to calculate staking rewards" });
+    }
+  });
+
+  // Admin User Management Routes
+  app.get('/api/admin/users', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get('/api/admin/users/stats', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const stats = await storage.getUserStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+      res.status(500).json({ message: "Failed to fetch user stats" });
+    }
+  });
+
+  app.patch('/api/admin/users/:id/role', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      const { id } = req.params;
+      const { role } = req.body;
+
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Validate role
+      if (!['user', 'admin'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      const updatedUser = await storage.updateUserRole(id, role);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  app.patch('/api/admin/users/:id/kyc', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      const { id } = req.params;
+      const { kycStatus } = req.body;
+
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Validate KYC status
+      if (!['pending', 'approved', 'rejected'].includes(kycStatus)) {
+        return res.status(400).json({ message: "Invalid KYC status" });
+      }
+
+      const updatedUser = await storage.updateUserKycStatus(id, kycStatus);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user KYC status:", error);
+      res.status(500).json({ message: "Failed to update user KYC status" });
     }
   });
 

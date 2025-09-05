@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { UserManagement } from "@/components/admin/UserManagement";
 import type { Portfolio, StakingPlan, CommunityChallenge } from "@shared/schema";
 
 export default function Admin() {
@@ -167,30 +168,42 @@ export default function Admin() {
       <div className="ml-0 lg:ml-64 min-h-screen">
         <TopBar title="Admin Panel" onMenuClick={() => setSidebarOpen(true)} />
         
-        <main className="p-6 space-y-6 pb-20 lg:pb-6">
+        <main className="p-3 sm:p-6 space-y-4 sm:space-y-6 pb-24 lg:pb-6">
           
           {/* Admin Header */}
-          <div className="bg-gradient-to-r from-accent/10 to-primary/10 p-6 rounded-xl border border-accent/20">
-            <div className="flex items-center justify-between">
+          <div className="bg-gradient-to-r from-accent/10 to-primary/10 p-4 sm:p-6 rounded-xl border border-accent/20">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-bold">Platform Administration</h2>
-                <p className="text-muted-foreground">Manage portfolios, staking plans, and platform settings</p>
+                <h2 className="text-xl sm:text-2xl font-bold">Platform Administration</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">Manage portfolios, staking plans, and platform settings</p>
               </div>
-              <Badge className="bg-accent text-accent-foreground">
+              <Badge className="bg-accent text-accent-foreground self-start sm:self-auto">
                 Admin Access
               </Badge>
             </div>
           </div>
 
-          <Tabs defaultValue="portfolios" className="space-y-6">
-            <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-              <TabsTrigger value="portfolios" data-testid="tab-portfolios">Portfolios</TabsTrigger>
-              <TabsTrigger value="staking" data-testid="tab-staking">Staking</TabsTrigger>
-              <TabsTrigger value="challenges" data-testid="tab-challenges">Challenges</TabsTrigger>
-              <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
+          <Tabs defaultValue="users" className="space-y-4 sm:space-y-6">
+            <TabsList className="grid grid-cols-4 w-full max-w-2xl h-auto">
+              <TabsTrigger value="users" data-testid="tab-users" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+                <span className="hidden xs:inline">Users</span>
+                <span className="xs:hidden">👥</span>
+              </TabsTrigger>
+              <TabsTrigger value="portfolios" data-testid="tab-portfolios" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+                <span className="hidden xs:inline">Portfolios</span>
+                <span className="xs:hidden">📊</span>
+              </TabsTrigger>
+              <TabsTrigger value="staking" data-testid="tab-staking" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+                <span className="hidden xs:inline">Staking</span>
+                <span className="xs:hidden">🔒</span>
+              </TabsTrigger>
+              <TabsTrigger value="challenges" data-testid="tab-challenges" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+                <span className="hidden xs:inline">Challenges</span>
+                <span className="xs:hidden">🏆</span>
+              </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="portfolios" className="space-y-6">
+            <TabsContent value="portfolios" className="space-y-4 sm:space-y-6 mt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold">Manage Portfolios</h3>
                 
@@ -319,7 +332,7 @@ export default function Admin() {
               </div>
             </TabsContent>
             
-            <TabsContent value="staking" className="space-y-6">
+            <TabsContent value="staking" className="space-y-4 sm:space-y-6 mt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold">Manage Staking Plans</h3>
                 
@@ -425,7 +438,7 @@ export default function Admin() {
               </div>
             </TabsContent>
             
-            <TabsContent value="challenges" className="space-y-6">
+            <TabsContent value="challenges" className="space-y-4 sm:space-y-6 mt-4">
               <h3 className="text-xl font-semibold">Active Challenges</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -464,19 +477,8 @@ export default function Admin() {
               </div>
             </TabsContent>
             
-            <TabsContent value="users" className="space-y-6">
-              <Card className="p-6" data-testid="card-user-management">
-                <h3 className="text-xl font-semibold mb-6">User Management</h3>
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i className="fas fa-users text-muted-foreground text-2xl"></i>
-                  </div>
-                  <h4 className="font-semibold mb-2">User Management Coming Soon</h4>
-                  <p className="text-muted-foreground">
-                    Advanced user management features are currently in development.
-                  </p>
-                </div>
-              </Card>
+            <TabsContent value="users" className="space-y-4 sm:space-y-6 mt-4">
+              <UserManagement />
             </TabsContent>
           </Tabs>
 

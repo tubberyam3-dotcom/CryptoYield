@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 
 export function AdminPanel() {
   const { user } = useAuth();
@@ -14,37 +15,34 @@ export function AdminPanel() {
 
   const adminActions = [
     {
+      title: "Manage Users",
+      icon: "fas fa-users",
+      color: "text-primary",
+      link: "/admin#users",
+      description: "User management & KYC",
+    },
+    {
       title: "Create Portfolio",
       icon: "fas fa-plus",
-      color: "text-primary",
-      action: "createPortfolio",
+      color: "text-accent",
+      link: "/admin#portfolios",
+      description: "Add new portfolios",
     },
     {
       title: "Manage Staking",
       icon: "fas fa-cog",
-      color: "text-accent",
-      action: "manageStaking",
-    },
-    {
-      title: "Review KYC",
-      icon: "fas fa-user-check",
       color: "text-yellow-500",
-      action: "reviewKYC",
+      link: "/admin#staking",
+      description: "Staking plan management",
     },
     {
-      title: "Platform Stats",
-      icon: "fas fa-chart-bar",
+      title: "View Challenges",
+      icon: "fas fa-trophy",
       color: "text-green-500",
-      action: "viewAnalytics",
+      link: "/admin#challenges",
+      description: "Community challenges",
     },
   ];
-
-  const handleAdminAction = (action: string) => {
-    toast({
-      title: "Admin Action",
-      description: `${action} functionality coming soon!`,
-    });
-  };
 
   return (
     <div className="bg-gradient-to-r from-accent/10 to-primary/10 p-6 rounded-xl border border-accent/20" data-testid="admin-panel">
@@ -58,18 +56,24 @@ export function AdminPanel() {
         </Badge>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {adminActions.map((action) => (
-          <Button
-            key={action.action}
-            variant="outline"
-            className="p-4 h-auto flex flex-col items-center space-y-2 hover:border-primary transition-colors"
-            onClick={() => handleAdminAction(action.action)}
-            data-testid={`button-admin-${action.action}`}
-          >
-            <i className={`${action.icon} ${action.color} text-xl`}></i>
-            <span className="font-medium text-center">{action.title}</span>
-          </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {adminActions.map((action, index) => (
+          <Link key={index} href={action.link}>
+            <div 
+              className="block p-4 border border-border rounded-lg hover:border-primary transition-all duration-200 hover:shadow-md group cursor-pointer"
+              data-testid={`link-admin-${action.title.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              <div className="flex flex-col items-center space-y-3 text-center">
+                <div className={`p-3 rounded-full bg-muted group-hover:bg-primary/10 transition-colors`}>
+                  <i className={`${action.icon} ${action.color} text-xl group-hover:scale-110 transition-transform`}></i>
+                </div>
+                <div>
+                  <h3 className="font-medium text-sm mb-1">{action.title}</h3>
+                  <p className="text-xs text-muted-foreground">{action.description}</p>
+                </div>
+              </div>
+            </div>
+          </Link>
         ))}
       </div>
     </div>

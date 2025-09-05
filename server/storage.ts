@@ -29,6 +29,18 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
+  // Admin User Management operations
+  getAllUsers(): Promise<User[]>;
+  updateUserRole(userId: string, role: 'user' | 'admin'): Promise<User>;
+  updateUserKycStatus(userId: string, kycStatus: 'pending' | 'approved' | 'rejected'): Promise<User>;
+  getUserStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    pendingKyc: number;
+    approvedKyc: number;
+    adminUsers: number;
+  }>;
+  
   // Portfolio operations
   getPortfolios(): Promise<Portfolio[]>;
   getPortfolio(id: string): Promise<Portfolio | undefined>;
@@ -85,6 +97,50 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  // Admin User Management operations
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserRole(userId: string, role: 'user' | 'admin'): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updateUserKycStatus(userId: string, kycStatus: 'pending' | 'approved' | 'rejected'): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ kycStatus, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async getUserStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    pendingKyc: number;
+    approvedKyc: number;
+    adminUsers: number;
+  }> {
+    const totalUsersResult = await db.select({ count: count() }).from(users);
+    const pendingKycResult = await db.select({ count: count() }).from(users).where(eq(users.kycStatus, 'pending'));
+    const approvedKycResult = await db.select({ count: count() }).from(users).where(eq(users.kycStatus, 'approved'));
+    const adminUsersResult = await db.select({ count: count() }).from(users).where(eq(users.role, 'admin'));
+
+    return {
+      totalUsers: totalUsersResult[0]?.count || 0,
+      activeUsers: totalUsersResult[0]?.count || 0, // For now, all users are considered active
+      pendingKyc: pendingKycResult[0]?.count || 0,
+      approvedKyc: approvedKycResult[0]?.count || 0,
+      adminUsers: adminUsersResult[0]?.count || 0,
+    };
   }
 
   // Portfolio operations
