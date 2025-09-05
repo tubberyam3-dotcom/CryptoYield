@@ -1,9 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { isDemoMode } from "@/lib/authUtils";
 
 export default function Landing() {
+  const isDemo = isDemoMode();
+
   const handleLogin = () => {
     window.location.href = "/api/login";
+  };
+
+  const handleDemo = () => {
+    window.location.reload(); // Reload to trigger demo mode authentication
   };
 
   const handleLearnMore = () => {
@@ -21,14 +29,31 @@ export default function Landing() {
               <i className="fas fa-cube text-white text-lg"></i>
             </div>
             <span className="text-xl font-bold">CryptoVault</span>
+            {isDemo && (
+              <Badge variant="secondary" className="ml-2">
+                Demo Mode
+              </Badge>
+            )}
           </div>
-          <Button 
-            onClick={handleLogin} 
-            className="hover:scale-105 transition-transform"
-            data-testid="button-login"
-          >
-            Sign In
-          </Button>
+          <div className="flex gap-2">
+            {isDemo && (
+              <Button 
+                onClick={handleDemo} 
+                variant="outline"
+                className="hover:scale-105 transition-transform"
+                data-testid="button-try-demo"
+              >
+                Try Demo
+              </Button>
+            )}
+            <Button 
+              onClick={handleLogin} 
+              className="hover:scale-105 transition-transform"
+              data-testid="button-login"
+            >
+              Sign In
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -52,6 +77,17 @@ export default function Landing() {
               >
                 🚀 Get Started
               </Button>
+              {isDemo && (
+                <Button 
+                  size="lg" 
+                  variant="secondary"
+                  onClick={handleDemo}
+                  className="text-lg px-8 py-6 hover:scale-105 transition-transform cursor-pointer"
+                  data-testid="button-try-demo-main"
+                >
+                  🎮 Try Demo
+                </Button>
+              )}
               <Button 
                 size="lg" 
                 variant="outline" 

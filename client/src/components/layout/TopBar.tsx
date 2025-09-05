@@ -1,5 +1,6 @@
 import { useTheme } from "@/providers/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 
 interface TopBarProps {
   title: string;
@@ -8,7 +9,7 @@ interface TopBarProps {
 
 export function TopBar({ title, onMenuClick }: TopBarProps) {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, isDemoMode } = useAuth();
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
     const first = firstName?.charAt(0) || '';
@@ -27,7 +28,14 @@ export function TopBar({ title, onMenuClick }: TopBarProps) {
         >
           <i className="fas fa-bars text-lg"></i>
         </button>
-        <h1 className="text-2xl font-bold" data-testid="text-page-title">{title}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">{title}</h1>
+          {isDemoMode && (
+            <Badge variant="outline" className="text-xs">
+              Demo Mode
+            </Badge>
+          )}
+        </div>
       </div>
       
       <div className="flex items-center space-x-4">

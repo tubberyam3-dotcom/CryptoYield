@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+
 import {
   insertPortfolioSchema,
   insertUserPortfolioSchema,
@@ -11,13 +12,58 @@ import {
   insertChallengeMemberSchema,
 } from "@shared/schema";
 
+// Enhanced authentication middleware that supports demo mode
+const enhancedAuth = async (req: any, res: any, next: any) => {
+  const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+  
+  if (demoMode && (!req.isAuthenticated || !req.user)) {
+    // Create demo user context
+    req.user = {
+      claims: {
+        sub: 'demo-user',
+        email: 'demo@cryptovault.com',
+        first_name: 'Demo',
+        last_name: 'User'
+      }
+    };
+    return next();
+  }
+  
+  // Use regular authentication
+  return isAuthenticated(req, res, next);
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
+      // Check if demo mode is enabled
+      const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+      
+      if (demoMode && (!req.isAuthenticated || !req.user)) {
+        // Return demo user
+        const demoUser = {
+          id: 'demo-user',
+          email: 'demo@cryptovault.com',
+          firstName: 'Demo',
+          lastName: 'User',
+          profileImageUrl: null,
+          role: 'user',
+          kycStatus: 'approved',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        return res.json(demoUser);
+      }
+      
+      // Regular authentication flow
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       res.json(user);
@@ -51,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/portfolios', isAuthenticated, async (req: any, res) => {
+  app.post('/api/portfolios', enhancedAuth, async (req: any, res) => {
     try {
       const user = req.user.claims;
       
@@ -75,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Portfolio routes
-  app.get('/api/user/portfolios', isAuthenticated, async (req: any, res) => {
+  app.get('/api/user/portfolios', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const userPortfolios = await storage.getUserPortfolios(userId);
@@ -86,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/user/portfolios', isAuthenticated, async (req: any, res) => {
+  app.post('/api/user/portfolios', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const userPortfolioData = insertUserPortfolioSchema.parse({
@@ -114,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/staking/plans', isAuthenticated, async (req: any, res) => {
+  app.post('/api/staking/plans', enhancedAuth, async (req: any, res) => {
     try {
       const user = req.user.claims;
       
@@ -133,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/user/staking', isAuthenticated, async (req: any, res) => {
+  app.get('/api/user/staking', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const userStakings = await storage.getUserStaking(userId);
@@ -144,7 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/user/staking', isAuthenticated, async (req: any, res) => {
+  app.post('/api/user/staking', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { stakingPlanId, amountLocked } = req.body;
@@ -186,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/challenges', isAuthenticated, async (req: any, res) => {
+  app.post('/api/challenges', enhancedAuth, async (req: any, res) => {
     try {
       const user = req.user.claims;
       const challengeData = insertCommunityChalllengeSchema.parse({
@@ -202,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/challenges/:id/join', isAuthenticated, async (req: any, res) => {
+  app.post('/api/challenges/:id/join', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const challengeId = req.params.id;
@@ -239,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard stats
-  app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/dashboard/stats', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const stats = await storage.getDashboardStats(userId);
