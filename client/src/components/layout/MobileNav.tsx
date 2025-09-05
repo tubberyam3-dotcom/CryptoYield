@@ -18,7 +18,7 @@ export function MobileNav() {
 
   return (
     <div 
-      className="lg:hidden bg-card/95 backdrop-blur-sm border-t border-border z-[100]" 
+      className="lg:hidden bg-card border-t border-border z-[100]" 
       data-mobile-nav
       style={{ 
         position: 'fixed',
