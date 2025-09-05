@@ -1378,7 +1378,7 @@ export default function AdminDashboard() {
                               <Label htmlFor={`edit-description-${challenge.id}`}>Description</Label>
                               <Input
                                 id={`edit-description-${challenge.id}`}
-                                defaultValue={challenge.description}
+                                defaultValue={challenge.description || ""}
                                 onBlur={(e) => {
                                   if (e.target.value !== challenge.description) {
                                     updateChallengeMutation.mutate({
