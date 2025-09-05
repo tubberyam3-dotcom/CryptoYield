@@ -62,6 +62,15 @@ export default function AdminDashboard() {
     minAmount: "",
   });
 
+  const [createChallengeOpen, setCreateChallengeOpen] = useState(false);
+  const [newChallenge, setNewChallenge] = useState({
+    name: "",
+    description: "",
+    targetAmount: "",
+    type: "group" as "solo" | "group",
+    endDate: ""
+  });
+
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -106,6 +115,102 @@ export default function AdminDashboard() {
     ipAddress?: string;
   }>>({
     queryKey: ["/api/admin/logs"],
+  });
+
+  // Investment management queries
+  const { data: allUserStaking, refetch: refetchStaking } = useQuery<Array<any>>({
+    queryKey: ["/api/admin/staking"],
+  });
+
+  const { data: allUserPortfolios, refetch: refetchPortfolios } = useQuery<Array<any>>({
+    queryKey: ["/api/admin/portfolios"],
+  });
+
+  // Investment management mutations
+  const updateStakingStatusMutation = useMutation({
+    mutationFn: async ({ stakingId, status }: { stakingId: string; status: string }) => {
+      const res = await apiRequest("PATCH", `/api/admin/staking/${stakingId}/status`, { status });
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchStaking();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/staking"] });
+      toast({
+        title: "Success",
+        description: "Staking status updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePortfolioMutation = useMutation({
+    mutationFn: async ({ portfolioId, updates }: { portfolioId: string; updates: any }) => {
+      const res = await apiRequest("PATCH", `/api/admin/portfolios/${portfolioId}`, updates);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchPortfolios();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/portfolios"] });
+      toast({
+        title: "Success",
+        description: "Portfolio updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateChallengeMutation = useMutation({
+    mutationFn: async ({ challengeId, updates }: { challengeId: string; updates: any }) => {
+      const res = await apiRequest("PATCH", `/api/admin/challenges/${challengeId}`, updates);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/challenges"] });
+      toast({
+        title: "Success",
+        description: "Challenge updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteChallengeMutation = useMutation({
+    mutationFn: async (challengeId: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/challenges/${challengeId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/challenges"] });
+      toast({
+        title: "Success",
+        description: "Challenge deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Portfolio mutation
@@ -184,6 +289,44 @@ export default function AdminDashboard() {
     },
   });
 
+  // Challenge mutation
+  const createChallengeMutation = useMutation({
+    mutationFn: async (challengeData: any) => {
+      const response = await apiRequest("POST", "/api/challenges", challengeData);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Challenge Created",
+        description: "New challenge has been created successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/challenges"] });
+      setCreateChallengeOpen(false);
+      setNewChallenge({
+        name: "",
+        description: "",
+        targetAmount: "",
+        type: "group",
+        endDate: ""
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "Please log in to continue",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Failed to Create Challenge",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreatePortfolio = () => {
     const portfolioData = {
       ...newPortfolio,
@@ -198,6 +341,15 @@ export default function AdminDashboard() {
       duration: parseInt(newStakingPlan.duration),
     };
     createStakingPlanMutation.mutate(planData);
+  };
+
+  const handleCreateChallenge = () => {
+    const challengeData = {
+      ...newChallenge,
+      targetAmount: parseFloat(newChallenge.targetAmount),
+      endDate: new Date(newChallenge.endDate),
+    };
+    createChallengeMutation.mutate(challengeData);
   };
 
   // Authentication check
@@ -709,6 +861,127 @@ export default function AdminDashboard() {
               </Dialog>
             </div>
             
+            {/* User Portfolio Management */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <i className="fas fa-briefcase text-purple-600"></i>
+                  User Portfolio Management
+                </CardTitle>
+                <CardDescription>Manage and edit user portfolio investments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {allUserPortfolios?.map((userPortfolio) => (
+                    <div key={userPortfolio.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="font-medium">{userPortfolio.user?.email || userPortfolio.userId}</div>
+                          <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            {userPortfolio.portfolio?.name || 'Unknown Portfolio'}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <span className="font-medium">Invested:</span> ${parseFloat(userPortfolio.investedAmount || '0').toLocaleString()}
+                          </div>
+                          <div>
+                            <span className="font-medium">Current Value:</span> ${parseFloat(userPortfolio.currentValue || '0').toLocaleString()}
+                          </div>
+                          <div>
+                            <span className="font-medium">Returns:</span> ${parseFloat(userPortfolio.returns || '0').toLocaleString()}
+                          </div>
+                          <div>
+                            <span className="font-medium">Invested Date:</span> {new Date(userPortfolio.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              data-testid={`button-edit-portfolio-${userPortfolio.id}`}
+                            >
+                              <i className="fas fa-edit mr-1"></i>
+                              Edit
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Edit User Portfolio</DialogTitle>
+                              <DialogDescription>
+                                Update portfolio investment details for {userPortfolio.user?.email}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor={`invested-${userPortfolio.id}`}>Invested Amount ($)</Label>
+                                <Input
+                                  id={`invested-${userPortfolio.id}`}
+                                  type="number"
+                                  step="0.01"
+                                  defaultValue={userPortfolio.investedAmount}
+                                  onBlur={(e) => {
+                                    if (e.target.value !== userPortfolio.investedAmount) {
+                                      updatePortfolioMutation.mutate({
+                                        portfolioId: userPortfolio.id,
+                                        updates: { investedAmount: e.target.value }
+                                      });
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`current-${userPortfolio.id}`}>Current Value ($)</Label>
+                                <Input
+                                  id={`current-${userPortfolio.id}`}
+                                  type="number"
+                                  step="0.01"
+                                  defaultValue={userPortfolio.currentValue}
+                                  onBlur={(e) => {
+                                    if (e.target.value !== userPortfolio.currentValue) {
+                                      updatePortfolioMutation.mutate({
+                                        portfolioId: userPortfolio.id,
+                                        updates: { currentValue: e.target.value }
+                                      });
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`returns-${userPortfolio.id}`}>Returns ($)</Label>
+                                <Input
+                                  id={`returns-${userPortfolio.id}`}
+                                  type="number"
+                                  step="0.01"
+                                  defaultValue={userPortfolio.returns}
+                                  onBlur={(e) => {
+                                    if (e.target.value !== userPortfolio.returns) {
+                                      updatePortfolioMutation.mutate({
+                                        portfolioId: userPortfolio.id,
+                                        updates: { returns: e.target.value }
+                                      });
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+                  )) || (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <i className="fas fa-inbox text-2xl mb-2"></i>
+                      <p>No user portfolios found</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {portfolios?.map((portfolio) => (
                 <Card key={portfolio.id} className="hover:shadow-md transition-shadow">
@@ -749,6 +1022,94 @@ export default function AdminDashboard() {
 
           {/* Staking Management Tab */}
           <TabsContent value="staking" className="space-y-6">
+            {/* User Staking Management */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <i className="fas fa-users text-blue-600"></i>
+                  User Staking Management
+                </CardTitle>
+                <CardDescription>Manage and control user staking positions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {allUserStaking?.map((staking) => (
+                    <div key={staking.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="font-medium">{staking.user?.email || staking.userId}</div>
+                          <Badge variant="outline" className={
+                            staking.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            staking.status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                            'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }>
+                            {staking.status}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <span className="font-medium">Plan:</span> {staking.stakingPlan?.name || 'Unknown'}
+                          </div>
+                          <div>
+                            <span className="font-medium">Amount:</span> ${parseFloat(staking.amountLocked || '0').toLocaleString()}
+                          </div>
+                          <div>
+                            <span className="font-medium">APY:</span> {staking.stakingPlan?.apy || '0'}%
+                          </div>
+                          <div>
+                            <span className="font-medium">End Date:</span> {new Date(staking.endDate).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {staking.status === 'active' && (
+                          <>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => updateStakingStatusMutation.mutate({ stakingId: staking.id, status: 'completed' })}
+                              disabled={updateStakingStatusMutation.isPending}
+                              data-testid={`button-complete-staking-${staking.id}`}
+                            >
+                              <i className="fas fa-check mr-1"></i>
+                              Complete
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => updateStakingStatusMutation.mutate({ stakingId: staking.id, status: 'cancelled' })}
+                              disabled={updateStakingStatusMutation.isPending}
+                              data-testid={`button-cancel-staking-${staking.id}`}
+                            >
+                              <i className="fas fa-times mr-1"></i>
+                              Cancel
+                            </Button>
+                          </>
+                        )}
+                        {staking.status !== 'active' && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => updateStakingStatusMutation.mutate({ stakingId: staking.id, status: 'active' })}
+                            disabled={updateStakingStatusMutation.isPending}
+                            data-testid={`button-reactivate-staking-${staking.id}`}
+                          >
+                            <i className="fas fa-play mr-1"></i>
+                            Reactivate
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )) || (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <i className="fas fa-inbox text-2xl mb-2"></i>
+                      <p>No user staking positions found</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold">Manage Staking Plans</h3>
               
@@ -856,7 +1217,90 @@ export default function AdminDashboard() {
 
           {/* Challenges Management Tab */}
           <TabsContent value="challenges" className="space-y-6">
-            <h3 className="text-xl font-semibold">Active Challenges</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold">Challenge Management</h3>
+              
+              <Dialog open={createChallengeOpen} onOpenChange={setCreateChallengeOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-create-challenge">
+                    <i className="fas fa-plus mr-2"></i>
+                    Create Challenge
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Challenge</DialogTitle>
+                    <DialogDescription>
+                      Create a new investment challenge for the community
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="challengeName">Challenge Name</Label>
+                      <Input
+                        id="challengeName"
+                        placeholder="Community Investment Challenge"
+                        value={newChallenge.name}
+                        onChange={(e) => setNewChallenge({ ...newChallenge, name: e.target.value })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="challengeDescription">Description</Label>
+                      <Input
+                        id="challengeDescription"
+                        placeholder="Reach the target investment amount together"
+                        value={newChallenge.description}
+                        onChange={(e) => setNewChallenge({ ...newChallenge, description: e.target.value })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="targetAmount">Target Amount ($)</Label>
+                      <Input
+                        id="targetAmount"
+                        type="number"
+                        placeholder="10000"
+                        value={newChallenge.targetAmount}
+                        onChange={(e) => setNewChallenge({ ...newChallenge, targetAmount: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Challenge Type</Label>
+                      <Select value={newChallenge.type} onValueChange={(value: "solo" | "group") => setNewChallenge({ ...newChallenge, type: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="solo">Solo Challenge</SelectItem>
+                          <SelectItem value="group">Group Challenge</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="endDate">End Date</Label>
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={newChallenge.endDate}
+                        onChange={(e) => setNewChallenge({ ...newChallenge, endDate: e.target.value })}
+                      />
+                    </div>
+                    
+                    <Button 
+                      className="w-full"
+                      onClick={handleCreateChallenge}
+                      disabled={createChallengeMutation.isPending || !newChallenge.name || !newChallenge.targetAmount}
+                      data-testid="button-submit-challenge"
+                    >
+                      {createChallengeMutation.isPending ? "Creating..." : "Create Challenge"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {challenges?.map((challenge) => (
@@ -866,7 +1310,11 @@ export default function AdminDashboard() {
                       <Badge className={challenge.type === 'group' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}>
                         {challenge.type}
                       </Badge>
-                      <Badge className="bg-accent/10 text-accent">
+                      <Badge className={
+                        challenge.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                        challenge.status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }>
                         {challenge.status}
                       </Badge>
                     </div>
@@ -876,7 +1324,7 @@ export default function AdminDashboard() {
                       {challenge.description}
                     </p>
                     
-                    <div className="space-y-2 text-sm">
+                    <div className="space-y-2 text-sm mb-4">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Target</span>
                         <span>${parseFloat(challenge.targetAmount).toLocaleString()}</span>
@@ -889,6 +1337,113 @@ export default function AdminDashboard() {
                         <span className="text-muted-foreground">Progress</span>
                         <span>{Math.round((parseFloat(challenge.currentAmount || '0') / parseFloat(challenge.targetAmount)) * 100)}%</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">End Date</span>
+                        <span>{new Date(challenge.endDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between space-x-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" data-testid={`button-edit-challenge-${challenge.id}`}>
+                            <i className="fas fa-edit mr-1"></i>
+                            Edit
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Edit Challenge</DialogTitle>
+                            <DialogDescription>
+                              Update challenge details and settings
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor={`edit-name-${challenge.id}`}>Challenge Name</Label>
+                              <Input
+                                id={`edit-name-${challenge.id}`}
+                                defaultValue={challenge.name}
+                                onBlur={(e) => {
+                                  if (e.target.value !== challenge.name) {
+                                    updateChallengeMutation.mutate({
+                                      challengeId: challenge.id,
+                                      updates: { name: e.target.value }
+                                    });
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`edit-description-${challenge.id}`}>Description</Label>
+                              <Input
+                                id={`edit-description-${challenge.id}`}
+                                defaultValue={challenge.description}
+                                onBlur={(e) => {
+                                  if (e.target.value !== challenge.description) {
+                                    updateChallengeMutation.mutate({
+                                      challengeId: challenge.id,
+                                      updates: { description: e.target.value }
+                                    });
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`edit-target-${challenge.id}`}>Target Amount ($)</Label>
+                              <Input
+                                id={`edit-target-${challenge.id}`}
+                                type="number"
+                                defaultValue={challenge.targetAmount || ""}
+                                onBlur={(e) => {
+                                  if (e.target.value !== challenge.targetAmount) {
+                                    updateChallengeMutation.mutate({
+                                      challengeId: challenge.id,
+                                      updates: { targetAmount: e.target.value }
+                                    });
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <Label>Status</Label>
+                              <Select 
+                                defaultValue={challenge.status || "active"} 
+                                onValueChange={(value) => {
+                                  updateChallengeMutation.mutate({
+                                    challengeId: challenge.id,
+                                    updates: { status: value }
+                                  });
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="active">Active</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                  <SelectItem value="expired">Expired</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this challenge? This action cannot be undone.')) {
+                            deleteChallengeMutation.mutate(challenge.id);
+                          }
+                        }}
+                        disabled={deleteChallengeMutation.isPending}
+                        data-testid={`button-delete-challenge-${challenge.id}`}
+                      >
+                        <i className="fas fa-trash mr-1"></i>
+                        Delete
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

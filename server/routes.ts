@@ -471,6 +471,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Investment Management endpoints
+  
+  // Get all user staking for admin management
+  app.get('/api/admin/staking', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const allUserStaking = await storage.getAllUserStaking();
+      res.json(allUserStaking);
+    } catch (error) {
+      console.error("Error fetching user staking:", error);
+      res.status(500).json({ message: "Failed to fetch user staking data" });
+    }
+  });
+
+  // Update user staking status (end, complete, cancel)
+  app.patch('/api/admin/staking/:stakingId/status', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { stakingId } = req.params;
+      const { status } = req.body;
+
+      if (!['active', 'completed', 'cancelled'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const updatedStaking = await storage.updateUserStakingStatus(stakingId, status);
+      res.json(updatedStaking);
+    } catch (error) {
+      console.error("Error updating staking status:", error);
+      res.status(500).json({ message: "Failed to update staking status" });
+    }
+  });
+
+  // Get all user portfolios for admin management
+  app.get('/api/admin/portfolios', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const allUserPortfolios = await storage.getAllUserPortfolios();
+      res.json(allUserPortfolios);
+    } catch (error) {
+      console.error("Error fetching user portfolios:", error);
+      res.status(500).json({ message: "Failed to fetch user portfolios data" });
+    }
+  });
+
+  // Update user portfolio (admin edit)
+  app.patch('/api/admin/portfolios/:portfolioId', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { portfolioId } = req.params;
+      const updates = req.body;
+
+      const updatedPortfolio = await storage.updateUserPortfolioAdmin(portfolioId, updates);
+      res.json(updatedPortfolio);
+    } catch (error) {
+      console.error("Error updating user portfolio:", error);
+      res.status(500).json({ message: "Failed to update user portfolio" });
+    }
+  });
+
+  // Update challenge (admin edit)
+  app.patch('/api/admin/challenges/:challengeId', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { challengeId } = req.params;
+      const updates = req.body;
+
+      const updatedChallenge = await storage.updateCommunityChallenge(challengeId, updates);
+      res.json(updatedChallenge);
+    } catch (error) {
+      console.error("Error updating challenge:", error);
+      res.status(500).json({ message: "Failed to update challenge" });
+    }
+  });
+
+  // Delete challenge (admin only)
+  app.delete('/api/admin/challenges/:challengeId', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      // Check if user is admin
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { challengeId } = req.params;
+      await storage.deleteCommunityChallenge(challengeId);
+      res.json({ message: "Challenge deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting challenge:", error);
+      res.status(500).json({ message: "Failed to delete challenge" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
