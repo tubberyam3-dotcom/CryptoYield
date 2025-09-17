@@ -80,8 +80,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', async (req: any, res) => {
     try {
-      // No automatic demo mode - users must log in with credentials
-      
       // Check for password-based session
       if (req.session.user) {
         const userId = req.session.user.id;
