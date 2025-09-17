@@ -72,7 +72,17 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const config = await getOidcConfig();
+  let config: Awaited<ReturnType<typeof getOidcConfig>> | undefined;
+  try {
+    config = await getOidcConfig();
+  } catch (error) {
+    console.warn("Failed to setup OAuth configuration, authentication will not work:", error);
+    // In development, we'll still continue without OAuth
+    if (process.env.NODE_ENV !== 'development') {
+      throw error;
+    }
+    config = undefined;
+  }
 
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
@@ -84,29 +94,41 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  // Register strategies for both Replit domains and localhost
-  const domains = process.env.REPLIT_DOMAINS!.split(",");
-  const allDomains = [...domains, "localhost", "127.0.0.1"];
-  
-  for (const domain of allDomains) {
-    const strategy = new Strategy(
-      {
-        name: `replitauth:${domain}`,
-        config,
-        scope: "openid email profile offline_access",
-        callbackURL: domain.includes("localhost") || domain.includes("127.0.0.1") 
-          ? `http://${domain}:5000/api/callback`
-          : `https://${domain}/api/callback`,
-      },
-      verify,
-    );
-    passport.use(strategy);
+  // Only setup OAuth strategies if config is available
+  if (config) {
+    // Register strategies for both Replit domains and localhost
+    const domains = process.env.REPLIT_DOMAINS!.split(",");
+    const allDomains = [...domains, "localhost", "127.0.0.1"];
+    
+    for (const domain of allDomains) {
+      const strategy = new Strategy(
+        {
+          name: `replitauth:${domain}`,
+          config,
+          scope: "openid email profile offline_access",
+          callbackURL: domain.includes("localhost") || domain.includes("127.0.0.1") 
+            ? `http://${domain}:5000/api/callback`
+            : `https://${domain}/api/callback`,
+        },
+        verify,
+      );
+      passport.use(strategy);
+    }
   }
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
+    // In development mode without OAuth config, redirect to demo mode
+    if (process.env.NODE_ENV === 'development' && !config) {
+      return res.redirect("/?demo=true");
+    }
+    
+    if (!config) {
+      return res.status(503).json({ message: "Authentication service unavailable" });
+    }
+    
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
@@ -114,6 +136,10 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
+    if (!config) {
+      return res.redirect("/?demo=true");
+    }
+    
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
@@ -122,6 +148,10 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
+      if (!config) {
+        return res.redirect("/");
+      }
+      
       res.redirect(
         client.buildEndSessionUrl(config, {
           client_id: process.env.REPL_ID!,
