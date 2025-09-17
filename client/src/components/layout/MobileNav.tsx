@@ -34,19 +34,19 @@ export function MobileNav() {
     >
       <div className="grid grid-cols-4 gap-1 p-3">
         {navItems.map((item) => (
-          <Link key={item.href} href={item.href}>
-            <a 
-              className={cn(
-                "flex items-center justify-center p-4 transition-colors rounded-lg",
-                isActive(item.href) 
-                  ? "text-primary bg-primary/10" 
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              )}
-              data-testid={`link-mobile-${item.label.toLowerCase()}`}
-              title={item.label}
-            >
-              <i className={`${item.icon} text-xl`}></i>
-            </a>
+          <Link 
+            key={item.href} 
+            href={item.href}
+            className={cn(
+              "flex items-center justify-center p-4 transition-colors rounded-lg",
+              isActive(item.href) 
+                ? "text-primary bg-primary/10" 
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            )}
+            data-testid={`link-mobile-${item.label.toLowerCase()}`}
+            title={item.label}
+          >
+            <i className={`${item.icon} text-xl`}></i>
           </Link>
         ))}
       </div>
