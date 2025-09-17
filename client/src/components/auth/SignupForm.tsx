@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, User, Mail, Lock } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Eye, EyeOff, User, Mail, Lock, Building, Users, UserIcon } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,6 +18,9 @@ const signupSchema = z.object({
   confirmPassword: z.string().min(6, "Please confirm your password"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
+  accountType: z.enum(["personal", "business", "joint"], {
+    required_error: "Please select an account type",
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -44,6 +47,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
       confirmPassword: "",
       firstName: "",
       lastName: "",
+      accountType: "personal" as const,
     },
   });
 
@@ -86,6 +90,62 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Account Type Selection */}
+          <div className="space-y-3">
+            <Label>Account Type</Label>
+            <RadioGroup
+              value={form.watch("accountType")}
+              onValueChange={(value: "personal" | "business" | "joint") => 
+                form.setValue("accountType", value)
+              }
+              className="grid grid-cols-1 gap-3"
+            >
+              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="personal" id="personal" data-testid="radio-personal" />
+                <UserIcon className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <Label htmlFor="personal" className="cursor-pointer font-medium">
+                    Personal Account
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    For individual crypto investments and trading
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="business" id="business" data-testid="radio-business" />
+                <Building className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <Label htmlFor="business" className="cursor-pointer font-medium">
+                    Business Account
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    For company treasury and institutional investing
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="joint" id="joint" data-testid="radio-joint" />
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <Label htmlFor="joint" className="cursor-pointer font-medium">
+                    Joint Account
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    For couples and families to manage investments together
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+            {form.formState.errors.accountType && (
+              <p className="text-sm text-destructive" data-testid="error-account-type">
+                {form.formState.errors.accountType.message}
+              </p>
+            )}
+          </div>
+
           {/* Name Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
