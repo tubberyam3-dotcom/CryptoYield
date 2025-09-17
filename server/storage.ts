@@ -31,8 +31,10 @@ import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (required for Replit Auth)
+  // User operations (supports both OAuth and password auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Joint Account operations
@@ -145,6 +147,8 @@ export class DatabaseStorage implements IStorage {
         firstName: 'Demo',
         lastName: 'Admin',
         profileImageUrl: null,
+        passwordHash: null,
+        authType: 'oauth' as const,
         role: 'admin',
         kycStatus: 'approved',
         createdAt: new Date(),
@@ -153,6 +157,16 @@ export class DatabaseStorage implements IStorage {
     }
     
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
     return user;
   }
 
@@ -266,13 +280,13 @@ export class DatabaseStorage implements IStorage {
       throw new Error('User already in joint account');
     }
 
-    // Add user to the joint account with 'secondary' role
+    // Add user to the joint account with 'partner' role
     const [userJointAccount] = await db
       .insert(userJointAccounts)
       .values({
         userId,
         jointAccountId: jointAccount.id,
-        role: 'secondary',
+        role: 'partner',
       })
       .returning();
 
@@ -325,6 +339,8 @@ export class DatabaseStorage implements IStorage {
           firstName: 'Demo',
           lastName: 'Admin',
           profileImageUrl: null,
+          passwordHash: null,
+          authType: 'oauth' as const,
           role: 'admin',
           kycStatus: 'approved',
           createdAt: new Date('2024-01-15'),
@@ -336,6 +352,8 @@ export class DatabaseStorage implements IStorage {
           firstName: 'John',
           lastName: 'Doe',
           profileImageUrl: null,
+          passwordHash: null,
+          authType: 'oauth' as const,
           role: 'user',
           kycStatus: 'approved',
           createdAt: new Date('2024-02-20'),
@@ -347,6 +365,8 @@ export class DatabaseStorage implements IStorage {
           firstName: 'Jane',
           lastName: 'Smith',
           profileImageUrl: null,
+          passwordHash: null,
+          authType: 'oauth' as const,
           role: 'user',
           kycStatus: 'pending',
           createdAt: new Date('2024-03-10'),
@@ -358,6 +378,8 @@ export class DatabaseStorage implements IStorage {
           firstName: 'Bob',
           lastName: 'Wilson',
           profileImageUrl: null,
+          passwordHash: null,
+          authType: 'oauth' as const,
           role: 'user',
           kycStatus: 'rejected',
           createdAt: new Date('2024-03-25'),

@@ -12,13 +12,16 @@ import {
   insertChallengeMemberSchema,
   insertJointAccountSchema,
   insertUserJointAccountSchema,
+  users,
 } from "@shared/schema";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
 
-// Enhanced authentication middleware that supports demo mode
+// Enhanced authentication middleware that supports demo mode and password auth
 const enhancedAuth = async (req: any, res: any, next: any) => {
   const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
   
-  if (demoMode && (!req.isAuthenticated || !req.user)) {
+  if (demoMode && (!req.isAuthenticated || !req.user) && !req.session.user) {
     // Create demo user context
     req.user = {
       claims: {
@@ -31,7 +34,20 @@ const enhancedAuth = async (req: any, res: any, next: any) => {
     return next();
   }
   
-  // Use regular authentication
+  // Check for password-based session
+  if (req.session.user) {
+    // Create user context similar to OAuth
+    req.user = {
+      claims: {
+        sub: req.session.user.id,
+        email: req.session.user.email,
+        authType: 'password'
+      }
+    };
+    return next();
+  }
+  
+  // Use regular OAuth authentication
   return isAuthenticated(req, res, next);
 };
 
@@ -78,7 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if demo mode is enabled
       const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
       
-      if (demoMode && (!req.isAuthenticated || !req.user)) {
+      if (demoMode && (!req.isAuthenticated || !req.user) && !req.session.user) {
         // Return demo user
         const demoUser = {
           id: 'demo-user',
@@ -94,7 +110,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(demoUser);
       }
       
-      // Regular authentication flow
+      // Check for password-based session
+      if (req.session.user) {
+        const userId = req.session.user.id;
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(401).json({ message: "User not found" });
+        }
+        
+        // Get joint account context
+        const accountContext = await storage.getAccountContext(userId);
+        let jointAccountInfo = null;
+        let userRole = null;
+        
+        if (accountContext.isJointAccount) {
+          const jointAccount = await storage.getJointAccount(accountContext.accountId);
+          const userJointAccount = await storage.getUserJointAccount(userId);
+          userRole = userJointAccount?.role || null;
+          
+          jointAccountInfo = {
+            jointAccount,
+            userRole
+          };
+        }
+        
+        // Return user without password hash
+        const { passwordHash, ...userWithoutPassword } = user;
+        return res.json({
+          ...userWithoutPassword,
+          accountContext: {
+            isJointAccount: accountContext.isJointAccount,
+            accountId: accountContext.accountId,
+            userRole,
+            jointAccountInfo
+          }
+        });
+      }
+      
+      // Regular OAuth authentication flow
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -221,6 +274,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in admin logout:", error);
       res.status(500).json({ message: "Admin logout failed" });
+    }
+  });
+
+  // User Registration and Login routes
+  const registerSchema = z.object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+  });
+
+  const loginSchema = z.object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(1, "Password is required"),
+  });
+
+  app.post('/api/auth/register', async (req: any, res) => {
+    try {
+      const { email, password, firstName, lastName } = registerSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists with this email" });
+      }
+      
+      // Hash password
+      const saltRounds = 12;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+      
+      // Create user
+      const user = await storage.createUser({
+        email,
+        firstName,
+        lastName,
+        passwordHash,
+        authType: 'password',
+        profileImageUrl: null,
+      });
+      
+      // Create session (similar to Replit OAuth)
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        authType: 'password',
+      };
+      
+      // Return user without password hash
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  app.post('/api/auth/login', async (req: any, res) => {
+    try {
+      const { email, password } = loginSchema.parse(req.body);
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Check if user uses password authentication
+      if (user.authType !== 'password' || !user.passwordHash) {
+        return res.status(401).json({ message: "Invalid login method for this account" });
+      }
+      
+      // Verify password
+      const validPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!validPassword) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Create session
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        authType: 'password',
+      };
+      
+      // Return user without password hash
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post('/api/auth/logout', async (req: any, res) => {
+    try {
+      if (req.session.user) {
+        delete req.session.user;
+      }
+      res.json({ message: "Logout successful" });
+    } catch (error) {
+      console.error("Error in logout:", error);
+      res.status(500).json({ message: "Logout failed" });
     }
   });
 
