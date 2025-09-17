@@ -21,6 +21,11 @@ import { z } from "zod";
 const enhancedAuth = async (req: any, res: any, next: any) => {
   const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
   
+  // Check for explicit logout first
+  if (req.session.loggedOut) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
   if (demoMode && (!req.isAuthenticated || !req.user) && !req.session.user) {
     // Create demo user context
     req.user = {
@@ -54,6 +59,11 @@ const enhancedAuth = async (req: any, res: any, next: any) => {
 // Admin-only authentication middleware
 const adminAuth = async (req: any, res: any, next: any) => {
   const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+  
+  // Check for explicit logout first
+  if (req.session.loggedOut) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
   
   if (demoMode) {
     // In demo mode, create admin user context
@@ -399,6 +409,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in logout:", error);
       res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  // Clear logout state to allow demo mode re-entry
+  app.post('/api/auth/clear-logout', async (req: any, res) => {
+    try {
+      if (req.session.loggedOut) {
+        delete req.session.loggedOut;
+      }
+      res.json({ message: "Logout state cleared" });
+    } catch (error) {
+      console.error("Error clearing logout state:", error);
+      res.status(500).json({ message: "Failed to clear logout state" });
     }
   });
 

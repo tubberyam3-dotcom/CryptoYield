@@ -18,7 +18,13 @@ export default function Landing() {
   };
 
   const handleDemo = () => {
-    window.location.reload(); // Reload to trigger demo mode authentication
+    // Clear logout state and reload to enable demo mode
+    fetch('/api/auth/clear-logout', { 
+      method: 'POST', 
+      credentials: 'include' 
+    }).then(() => {
+      window.location.reload(); // Reload to trigger demo mode authentication
+    });
   };
 
   const handleLearnMore = () => {
