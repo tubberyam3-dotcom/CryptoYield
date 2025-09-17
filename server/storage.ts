@@ -41,6 +41,7 @@ export interface IStorage {
   getJointAccountByJoinCode(joinCode: string): Promise<JointAccount | undefined>;
   getUserJointAccount(userId: string): Promise<UserJointAccount | undefined>;
   joinJointAccount(userJointAccount: InsertUserJointAccount): Promise<UserJointAccount>;
+  joinJointAccountByCode(userId: string, joinCode: string): Promise<UserJointAccount>;
   getJointAccountMembers(jointAccountId: string): Promise<(UserJointAccount & { user: User })[]>;
   
   // Helper method to get account context (individual or joint)
@@ -236,6 +237,45 @@ export class DatabaseStorage implements IStorage {
 
   async joinJointAccount(userJointAccountData: InsertUserJointAccount): Promise<UserJointAccount> {
     const [userJointAccount] = await db.insert(userJointAccounts).values(userJointAccountData).returning();
+    return userJointAccount;
+  }
+
+  async joinJointAccountByCode(userId: string, joinCode: string): Promise<UserJointAccount> {
+    // Find the joint account by join code
+    const [jointAccount] = await db
+      .select()
+      .from(jointAccounts)
+      .where(eq(jointAccounts.joinCode, joinCode));
+
+    if (!jointAccount) {
+      throw new Error('Joint account not found');
+    }
+
+    // Check if user is already in this joint account
+    const [existingMembership] = await db
+      .select()
+      .from(userJointAccounts)
+      .where(
+        and(
+          eq(userJointAccounts.userId, userId),
+          eq(userJointAccounts.jointAccountId, jointAccount.id)
+        )
+      );
+
+    if (existingMembership) {
+      throw new Error('User already in joint account');
+    }
+
+    // Add user to the joint account with 'secondary' role
+    const [userJointAccount] = await db
+      .insert(userJointAccounts)
+      .values({
+        userId,
+        jointAccountId: jointAccount.id,
+        role: 'secondary',
+      })
+      .returning();
+
     return userJointAccount;
   }
 

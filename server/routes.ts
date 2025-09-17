@@ -10,6 +10,8 @@ import {
   insertUserStakingSchema,
   insertCommunityChalllengeSchema,
   insertChallengeMemberSchema,
+  insertJointAccountSchema,
+  insertUserJointAccountSchema,
 } from "@shared/schema";
 
 // Enhanced authentication middleware that supports demo mode
@@ -99,7 +101,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      res.json(user);
+      
+      // Get joint account context
+      const accountContext = await storage.getAccountContext(userId);
+      let jointAccountInfo = null;
+      let userRole = null;
+      
+      if (accountContext.isJointAccount) {
+        const jointAccount = await storage.getJointAccount(accountContext.accountId);
+        const userJointAccount = await storage.getUserJointAccount(userId);
+        userRole = userJointAccount?.role || null;
+        
+        jointAccountInfo = {
+          jointAccount,
+          userRole
+        };
+      }
+      
+      res.json({
+        ...user,
+        accountContext: {
+          isJointAccount: accountContext.isJointAccount,
+          accountId: accountContext.accountId,
+          userRole,
+          jointAccountInfo
+        }
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -270,6 +297,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating user portfolio:", error);
       res.status(500).json({ message: "Failed to invest in portfolio" });
+    }
+  });
+
+  // Joint Account routes
+  app.post('/api/joint-accounts', enhancedAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const jointAccountData = insertJointAccountSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+      
+      const jointAccount = await storage.createJointAccount(jointAccountData);
+      res.json(jointAccount);
+    } catch (error) {
+      console.error("Error creating joint account:", error);
+      res.status(400).json({ message: "Failed to create joint account" });
+    }
+  });
+
+  app.post('/api/joint-accounts/join', enhancedAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { joinCode } = req.body;
+      
+      if (!joinCode || typeof joinCode !== 'string') {
+        return res.status(400).json({ message: "Join code is required" });
+      }
+      
+      const result = await storage.joinJointAccountByCode(userId, joinCode.toUpperCase());
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error joining joint account:", error);
+      if (error.message === 'Joint account not found') {
+        return res.status(404).json({ message: "Invalid join code" });
+      }
+      if (error.message === 'User already in joint account') {
+        return res.status(409).json({ message: "You are already part of this joint account" });
+      }
+      res.status(400).json({ message: "Failed to join joint account" });
+    }
+  });
+
+  app.get('/api/joint-accounts/:id', enhancedAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const jointAccountId = req.params.id;
+      
+      // Check if user has access to this joint account
+      const userJointAccount = await storage.getUserJointAccount(userId);
+      if (!userJointAccount || userJointAccount.jointAccountId !== jointAccountId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const jointAccount = await storage.getJointAccount(jointAccountId);
+      if (!jointAccount) {
+        return res.status(404).json({ message: "Joint account not found" });
+      }
+      
+      res.json(jointAccount);
+    } catch (error) {
+      console.error("Error fetching joint account:", error);
+      res.status(500).json({ message: "Failed to fetch joint account" });
     }
   });
 
