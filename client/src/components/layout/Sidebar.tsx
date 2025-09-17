@@ -68,20 +68,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <ul className="space-y-2">
             {navigationItems.map((item) => (
               <li key={item.href}>
-                <Link href={item.href}>
-                  <a 
-                    className={cn(
-                      "flex items-center space-x-3 px-3 py-2 rounded-lg font-medium transition-colors",
-                      isActive(item.href)
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    )}
-                    onClick={onClose}
-                    data-testid={`link-nav-${item.label.toLowerCase()}`}
-                  >
-                    <i className={`${item.icon} w-5`}></i>
-                    <span>{item.label}</span>
-                  </a>
+                <Link 
+                  href={item.href}
+                  className={cn(
+                    "flex items-center space-x-3 px-3 py-2 rounded-lg font-medium transition-colors",
+                    isActive(item.href)
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                  onClick={onClose}
+                  data-testid={`link-nav-${item.label.toLowerCase()}`}
+                >
+                  <i className={`${item.icon} w-5`}></i>
+                  <span>{item.label}</span>
                 </Link>
               </li>
             ))}
@@ -91,20 +90,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <ul className="space-y-2">
               {user?.role === 'admin' && (
                 <li>
-                  <Link href="/admin">
-                    <a 
-                      className={cn(
-                        "flex items-center space-x-3 px-3 py-2 rounded-lg font-medium transition-colors",
-                        isActive("/admin")
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      )}
-                      onClick={onClose}
-                      data-testid="link-admin-panel"
-                    >
-                      <i className="fas fa-shield-alt w-5"></i>
-                      <span>Admin Panel</span>
-                    </a>
+                  <Link 
+                    href="/admin"
+                    className={cn(
+                      "flex items-center space-x-3 px-3 py-2 rounded-lg font-medium transition-colors",
+                      isActive("/admin")
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )}
+                    onClick={onClose}
+                    data-testid="link-admin-panel"
+                  >
+                    <i className="fas fa-shield-alt w-5"></i>
+                    <span>Admin Panel</span>
                   </Link>
                 </li>
               )}
