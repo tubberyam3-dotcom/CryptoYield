@@ -104,8 +104,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if demo mode is enabled
       const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
       
+      // Debug logging
+      console.log('Auth check - loggedOut:', req.session.loggedOut, 'hasUser:', !!req.session.user, 'isAuth:', req.isAuthenticated?.());
+      
       // Check for explicit logout in session
       if (req.session.loggedOut) {
+        console.log('Returning 401 due to loggedOut flag');
         return res.status(401).json({ message: "Unauthorized" });
       }
       
