@@ -135,20 +135,40 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.get("/api/callback", (req, res, next) => {
+  app.get("/api/callback", (req: any, res, next) => {
     if (!config) {
       return res.redirect("/?demo=true");
     }
     
     passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
+    })((req: any, res: any, next: any) => {
+      // Clear logout flag on successful OAuth login
+      if (req.session) {
+        delete req.session.loggedOut;
+      }
+      return res.redirect("/");
     })(req, res, next);
   });
 
-  app.get("/api/logout", (req, res) => {
+  app.get("/api/logout", (req: any, res) => {
+    // Clear password-based session if it exists
+    if (req.session.user) {
+      delete req.session.user;
+    }
+    
+    // Clear admin session if it exists
+    if (req.session.adminUser) {
+      delete req.session.adminUser;
+    }
+    
+    // Mark as logged out to prevent demo mode from auto-authenticating
+    req.session.loggedOut = true;
+    
+    // Handle OAuth logout
     req.logout(() => {
-      if (!config) {
+      // In demo mode or when OAuth is not configured, just redirect to landing page
+      if (!config || process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development') {
         return res.redirect("/");
       }
       

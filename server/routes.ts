@@ -94,6 +94,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if demo mode is enabled
       const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
       
+      // Check for explicit logout in session
+      if (req.session.loggedOut) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       if (demoMode && (!req.isAuthenticated || !req.user) && !req.session.user) {
         // Return demo user
         const demoUser = {
@@ -321,6 +326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authType: 'password',
       };
       
+      // Clear logout flag
+      delete req.session.loggedOut;
+      
       // Return user without password hash
       const { passwordHash: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -363,6 +371,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         authType: 'password',
       };
+      
+      // Clear logout flag
+      delete req.session.loggedOut;
       
       // Return user without password hash
       const { passwordHash: _, ...userWithoutPassword } = user;
