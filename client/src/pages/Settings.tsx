@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/providers/ThemeProvider";
+import { JointAccountManager } from "@/components/account/JointAccountManager";
 
 export default function Settings() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -190,6 +191,9 @@ export default function Settings() {
                     </Button>
                   )}
                 </Card>
+
+                {/* Joint Account Management */}
+                <JointAccountManager />
               </TabsContent>
               
               <TabsContent value="notifications" className="space-y-6">
