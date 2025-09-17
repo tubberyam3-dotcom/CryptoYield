@@ -6,6 +6,8 @@ import {
   userStaking,
   communityChallenges,
   challengeMembers,
+  jointAccounts,
+  userJointAccounts,
   type User,
   type UpsertUser,
   type Portfolio,
@@ -20,14 +22,33 @@ import {
   type InsertCommunityChallenge,
   type ChallengeMember,
   type InsertChallengeMember,
+  type JointAccount,
+  type InsertJointAccount,
+  type UserJointAccount,
+  type InsertUserJointAccount,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sum, count, sql } from "drizzle-orm";
+import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Joint Account operations
+  createJointAccount(jointAccount: InsertJointAccount): Promise<JointAccount>;
+  getJointAccount(id: string): Promise<JointAccount | undefined>;
+  getJointAccountByJoinCode(joinCode: string): Promise<JointAccount | undefined>;
+  getUserJointAccount(userId: string): Promise<UserJointAccount | undefined>;
+  joinJointAccount(userJointAccount: InsertUserJointAccount): Promise<UserJointAccount>;
+  getJointAccountMembers(jointAccountId: string): Promise<(UserJointAccount & { user: User })[]>;
+  
+  // Helper method to get account context (individual or joint)
+  getAccountContext(userId: string): Promise<{
+    isJointAccount: boolean;
+    accountId: string;
+    jointAccount?: JointAccount;
+  }>;
   
   // Admin User Management operations
   getAllUsers(): Promise<User[]>;
@@ -147,6 +168,109 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  // Joint Account operations
+  async createJointAccount(jointAccountData: InsertJointAccount): Promise<JointAccount> {
+    // Generate a cryptographically secure 8-character join code
+    const generateSecureJoinCode = (): string => {
+      const crypto = require('crypto');
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let result = '';
+      const bytes = crypto.randomBytes(8);
+      for (let i = 0; i < 8; i++) {
+        result += chars[bytes[i] % chars.length];
+      }
+      return result;
+    };
+
+    // Retry on unique constraint violation
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const [jointAccount] = await db
+          .insert(jointAccounts)
+          .values({
+            ...jointAccountData,
+            joinCode: generateSecureJoinCode(),
+          })
+          .returning();
+
+        // Create the mapping for the creator
+        await db.insert(userJointAccounts).values({
+          userId: jointAccountData.createdBy,
+          jointAccountId: jointAccount.id,
+          role: 'primary',
+        });
+
+        return jointAccount;
+      } catch (error: any) {
+        if (error.code === '23505' && error.constraint?.includes('join_code') && attempts < maxAttempts - 1) {
+          // Unique constraint violation on join code, retry
+          attempts++;
+          continue;
+        }
+        throw error;
+      }
+    }
+    
+    throw new Error('Failed to generate unique join code after multiple attempts');
+  }
+
+  async getJointAccount(id: string): Promise<JointAccount | undefined> {
+    const [jointAccount] = await db.select().from(jointAccounts).where(eq(jointAccounts.id, id));
+    return jointAccount;
+  }
+
+  async getJointAccountByJoinCode(joinCode: string): Promise<JointAccount | undefined> {
+    const [jointAccount] = await db.select().from(jointAccounts).where(eq(jointAccounts.joinCode, joinCode));
+    return jointAccount;
+  }
+
+  async getUserJointAccount(userId: string): Promise<UserJointAccount | undefined> {
+    const [userJointAccount] = await db.select().from(userJointAccounts).where(eq(userJointAccounts.userId, userId));
+    return userJointAccount;
+  }
+
+  async joinJointAccount(userJointAccountData: InsertUserJointAccount): Promise<UserJointAccount> {
+    const [userJointAccount] = await db.insert(userJointAccounts).values(userJointAccountData).returning();
+    return userJointAccount;
+  }
+
+  async getJointAccountMembers(jointAccountId: string): Promise<(UserJointAccount & { user: User })[]> {
+    return await db
+      .select()
+      .from(userJointAccounts)
+      .leftJoin(users, eq(userJointAccounts.userId, users.id))
+      .where(eq(userJointAccounts.jointAccountId, jointAccountId))
+      .then(rows => rows.map(row => ({
+        ...row.user_joint_accounts,
+        user: row.users!
+      })));
+  }
+
+  async getAccountContext(userId: string): Promise<{
+    isJointAccount: boolean;
+    accountId: string;
+    jointAccount?: JointAccount;
+  }> {
+    const userJointAccount = await this.getUserJointAccount(userId);
+    
+    if (userJointAccount) {
+      const jointAccount = await this.getJointAccount(userJointAccount.jointAccountId);
+      return {
+        isJointAccount: true,
+        accountId: userJointAccount.jointAccountId,
+        jointAccount,
+      };
+    }
+    
+    return {
+      isJointAccount: false,
+      accountId: userId,
+    };
   }
 
   // Admin User Management operations
@@ -286,15 +410,36 @@ export class DatabaseStorage implements IStorage {
 
   // User Portfolio operations
   async getUserPortfolios(userId: string): Promise<(UserPortfolio & { portfolio: Portfolio })[]> {
-    return await db
-      .select()
-      .from(userPortfolios)
-      .leftJoin(portfolios, eq(userPortfolios.portfolioId, portfolios.id))
-      .where(eq(userPortfolios.userId, userId))
-      .then(rows => rows.map(row => ({
-        ...row.user_portfolios,
-        portfolio: row.portfolios!
-      })));
+    const accountContext = await this.getAccountContext(userId);
+    
+    if (accountContext.isJointAccount) {
+      // Get portfolios for BOTH individual user AND joint account
+      return await db
+        .select()
+        .from(userPortfolios)
+        .leftJoin(portfolios, eq(userPortfolios.portfolioId, portfolios.id))
+        .where(
+          or(
+            eq(userPortfolios.userId, userId),
+            eq(userPortfolios.jointAccountId, accountContext.accountId)
+          )
+        )
+        .then(rows => rows.map(row => ({
+          ...row.user_portfolios,
+          portfolio: row.portfolios!
+        })));
+    } else {
+      // Get portfolios for individual user only
+      return await db
+        .select()
+        .from(userPortfolios)
+        .leftJoin(portfolios, eq(userPortfolios.portfolioId, portfolios.id))
+        .where(eq(userPortfolios.userId, userId))
+        .then(rows => rows.map(row => ({
+          ...row.user_portfolios,
+          portfolio: row.portfolios!
+        })));
+    }
   }
 
   async createUserPortfolio(userPortfolio: InsertUserPortfolio): Promise<UserPortfolio> {
@@ -327,15 +472,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserStaking(userId: string): Promise<(UserStaking & { stakingPlan: StakingPlan })[]> {
-    return await db
-      .select()
-      .from(userStaking)
-      .leftJoin(stakingPlans, eq(userStaking.stakingPlanId, stakingPlans.id))
-      .where(eq(userStaking.userId, userId))
-      .then(rows => rows.map(row => ({
-        ...row.user_staking,
-        stakingPlan: row.staking_plans!
-      })));
+    const accountContext = await this.getAccountContext(userId);
+    
+    if (accountContext.isJointAccount) {
+      // Get staking for BOTH individual user AND joint account
+      return await db
+        .select()
+        .from(userStaking)
+        .leftJoin(stakingPlans, eq(userStaking.stakingPlanId, stakingPlans.id))
+        .where(
+          or(
+            eq(userStaking.userId, userId),
+            eq(userStaking.jointAccountId, accountContext.accountId)
+          )
+        )
+        .then(rows => rows.map(row => ({
+          ...row.user_staking,
+          stakingPlan: row.staking_plans!
+        })));
+    } else {
+      // Get staking for individual user only
+      return await db
+        .select()
+        .from(userStaking)
+        .leftJoin(stakingPlans, eq(userStaking.stakingPlanId, stakingPlans.id))
+        .where(eq(userStaking.userId, userId))
+        .then(rows => rows.map(row => ({
+          ...row.user_staking,
+          stakingPlan: row.staking_plans!
+        })));
+    }
   }
 
   async createUserStaking(userStakingData: InsertUserStaking): Promise<UserStaking> {
@@ -391,29 +557,71 @@ export class DatabaseStorage implements IStorage {
     activeChallenges: number;
     availableBalance: string;
   }> {
-    // Calculate total portfolio value
-    const portfolioValueResult = await db
-      .select({ total: sum(userPortfolios.currentValue) })
-      .from(userPortfolios)
-      .where(eq(userPortfolios.userId, userId));
+    const accountContext = await this.getAccountContext(userId);
 
-    // Calculate active stakes value
-    const activeStakesResult = await db
-      .select({ total: sum(userStaking.amountLocked) })
-      .from(userStaking)
-      .where(and(eq(userStaking.userId, userId), eq(userStaking.status, 'active')));
+    let portfolioValueResult, activeStakesResult, activeChallengesResult;
 
-    // Count active challenges
-    const activeChallengesResult = await db
-      .select({ count: count() })
-      .from(challengeMembers)
-      .leftJoin(communityChallenges, eq(challengeMembers.challengeId, communityChallenges.id))
-      .where(
-        and(
-          eq(challengeMembers.userId, userId),
-          eq(communityChallenges.status, 'active')
-        )
-      );
+    if (accountContext.isJointAccount) {
+      // Calculate for BOTH individual user AND joint account
+      portfolioValueResult = await db
+        .select({ total: sum(userPortfolios.currentValue) })
+        .from(userPortfolios)
+        .where(
+          or(
+            eq(userPortfolios.userId, userId),
+            eq(userPortfolios.jointAccountId, accountContext.accountId)
+          )
+        );
+
+      activeStakesResult = await db
+        .select({ total: sum(userStaking.amountLocked) })
+        .from(userStaking)
+        .where(
+          and(
+            or(
+              eq(userStaking.userId, userId),
+              eq(userStaking.jointAccountId, accountContext.accountId)
+            ),
+            eq(userStaking.status, 'active')
+          )
+        );
+
+      activeChallengesResult = await db
+        .select({ count: count() })
+        .from(challengeMembers)
+        .leftJoin(communityChallenges, eq(challengeMembers.challengeId, communityChallenges.id))
+        .where(
+          and(
+            or(
+              eq(challengeMembers.userId, userId),
+              eq(challengeMembers.jointAccountId, accountContext.accountId)
+            ),
+            eq(communityChallenges.status, 'active')
+          )
+        );
+    } else {
+      // Calculate for individual user
+      portfolioValueResult = await db
+        .select({ total: sum(userPortfolios.currentValue) })
+        .from(userPortfolios)
+        .where(eq(userPortfolios.userId, userId));
+
+      activeStakesResult = await db
+        .select({ total: sum(userStaking.amountLocked) })
+        .from(userStaking)
+        .where(and(eq(userStaking.userId, userId), eq(userStaking.status, 'active')));
+
+      activeChallengesResult = await db
+        .select({ count: count() })
+        .from(challengeMembers)
+        .leftJoin(communityChallenges, eq(challengeMembers.challengeId, communityChallenges.id))
+        .where(
+          and(
+            eq(challengeMembers.userId, userId),
+            eq(communityChallenges.status, 'active')
+          )
+        );
+    }
 
     return {
       totalPortfolioValue: portfolioValueResult[0]?.total || '0',
