@@ -1,12 +1,19 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { isDemoMode } from "@/lib/authUtils";
+import { SignupForm } from "@/components/auth/SignupForm";
+import { LoginForm } from "@/components/auth/LoginForm";
+import { ArrowLeft } from "lucide-react";
+
+type AuthView = 'landing' | 'signup' | 'login';
 
 export default function Landing() {
+  const [authView, setAuthView] = useState<AuthView>('landing');
   const isDemo = isDemoMode();
 
-  const handleLogin = () => {
+  const handleOAuthLogin = () => {
     window.location.href = "/api/login";
   };
 
@@ -18,6 +25,53 @@ export default function Landing() {
     // Scroll to features section
     document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const handleAuthSuccess = () => {
+    // Authentication successful, page will redirect automatically
+    window.location.reload();
+  };
+
+  // If showing auth forms, render them instead of the landing page
+  if (authView === 'signup') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Button
+          variant="ghost"
+          className="absolute top-6 left-6 flex items-center gap-2"
+          onClick={() => setAuthView('landing')}
+          data-testid="button-back-to-landing"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Button>
+        <SignupForm
+          onSuccess={handleAuthSuccess}
+          onSwitchToLogin={() => setAuthView('login')}
+        />
+      </div>
+    );
+  }
+
+  if (authView === 'login') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Button
+          variant="ghost"
+          className="absolute top-6 left-6 flex items-center gap-2"
+          onClick={() => setAuthView('landing')}
+          data-testid="button-back-to-landing"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Button>
+        <LoginForm
+          onSuccess={handleAuthSuccess}
+          onSwitchToSignup={() => setAuthView('signup')}
+          onSwitchToOAuth={handleOAuthLogin}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,11 +101,19 @@ export default function Landing() {
               </Button>
             )}
             <Button 
-              onClick={handleLogin} 
+              onClick={() => setAuthView('login')} 
               className="hover:scale-105 transition-transform"
               data-testid="button-login"
             >
               Sign In
+            </Button>
+            <Button
+              onClick={() => setAuthView('signup')}
+              variant="outline"
+              className="hover:scale-105 transition-transform"
+              data-testid="button-signup"
+            >
+              Create Account
             </Button>
           </div>
         </div>
@@ -71,7 +133,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                onClick={handleLogin}
+                onClick={() => setAuthView('signup')}
                 className="text-lg px-8 py-6 hover:scale-105 transition-transform cursor-pointer"
                 data-testid="button-get-started"
               >
