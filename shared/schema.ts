@@ -38,6 +38,27 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Joint Accounts table for couples
+export const jointAccounts = pgTable("joint_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // e.g., "John & Jane's Account"
+  description: text("description"),
+  kycStatus: varchar("kyc_status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
+  joinCode: varchar("join_code").unique(), // Code for partner to join
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Mapping table for users to joint accounts
+export const userJointAccounts = pgTable("user_joint_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  jointAccountId: varchar("joint_account_id").references(() => jointAccounts.id).notNull(),
+  role: varchar("role", { enum: ['primary', 'partner'] }).notNull(), // primary created the account, partner joined
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
 export const portfolios = pgTable("portfolios", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
@@ -55,7 +76,8 @@ export const portfolios = pgTable("portfolios", {
 
 export const userPortfolios = pgTable("user_portfolios", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  jointAccountId: varchar("joint_account_id").references(() => jointAccounts.id),
   portfolioId: varchar("portfolio_id").references(() => portfolios.id).notNull(),
   investedAmount: decimal("invested_amount", { precision: 18, scale: 8 }).notNull(),
   currentValue: decimal("current_value", { precision: 18, scale: 8 }).notNull(),
@@ -75,7 +97,8 @@ export const stakingPlans = pgTable("staking_plans", {
 
 export const userStaking = pgTable("user_staking", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  jointAccountId: varchar("joint_account_id").references(() => jointAccounts.id),
   stakingPlanId: varchar("staking_plan_id").references(() => stakingPlans.id).notNull(),
   amountLocked: decimal("amount_locked", { precision: 18, scale: 8 }).notNull(),
   startDate: timestamp("start_date").defaultNow(),
@@ -102,7 +125,8 @@ export const communityChallenges = pgTable("community_challenges", {
 
 export const challengeMembers = pgTable("challenge_members", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  jointAccountId: varchar("joint_account_id").references(() => jointAccounts.id),
   challengeId: varchar("challenge_id").references(() => communityChallenges.id).notNull(),
   contributedAmount: decimal("contributed_amount", { precision: 18, scale: 8 }).default('0'),
   joinedAt: timestamp("joined_at").defaultNow(),
@@ -113,6 +137,21 @@ export const usersRelations = relations(users, ({ many }) => ({
   portfolios: many(userPortfolios),
   stakings: many(userStaking),
   challengeMembers: many(challengeMembers),
+  jointAccounts: many(userJointAccounts),
+  createdJointAccounts: many(jointAccounts),
+}));
+
+export const jointAccountsRelations = relations(jointAccounts, ({ one, many }) => ({
+  creator: one(users, { fields: [jointAccounts.createdBy], references: [users.id] }),
+  members: many(userJointAccounts),
+  portfolios: many(userPortfolios),
+  stakings: many(userStaking),
+  challengeMembers: many(challengeMembers),
+}));
+
+export const userJointAccountsRelations = relations(userJointAccounts, ({ one }) => ({
+  user: one(users, { fields: [userJointAccounts.userId], references: [users.id] }),
+  jointAccount: one(jointAccounts, { fields: [userJointAccounts.jointAccountId], references: [jointAccounts.id] }),
 }));
 
 export const portfoliosRelations = relations(portfolios, ({ one, many }) => ({
@@ -122,6 +161,7 @@ export const portfoliosRelations = relations(portfolios, ({ one, many }) => ({
 
 export const userPortfoliosRelations = relations(userPortfolios, ({ one }) => ({
   user: one(users, { fields: [userPortfolios.userId], references: [users.id] }),
+  jointAccount: one(jointAccounts, { fields: [userPortfolios.jointAccountId], references: [jointAccounts.id] }),
   portfolio: one(portfolios, { fields: [userPortfolios.portfolioId], references: [portfolios.id] }),
 }));
 
@@ -131,6 +171,7 @@ export const stakingPlansRelations = relations(stakingPlans, ({ many }) => ({
 
 export const userStakingRelations = relations(userStaking, ({ one }) => ({
   user: one(users, { fields: [userStaking.userId], references: [users.id] }),
+  jointAccount: one(jointAccounts, { fields: [userStaking.jointAccountId], references: [jointAccounts.id] }),
   stakingPlan: one(stakingPlans, { fields: [userStaking.stakingPlanId], references: [stakingPlans.id] }),
 }));
 
@@ -141,6 +182,7 @@ export const communityChallengesRelations = relations(communityChallenges, ({ on
 
 export const challengeMembersRelations = relations(challengeMembers, ({ one }) => ({
   user: one(users, { fields: [challengeMembers.userId], references: [users.id] }),
+  jointAccount: one(jointAccounts, { fields: [challengeMembers.jointAccountId], references: [jointAccounts.id] }),
   challenge: one(communityChallenges, { fields: [challengeMembers.challengeId], references: [communityChallenges.id] }),
 }));
 
@@ -182,6 +224,17 @@ export const insertChallengeMemberSchema = createInsertSchema(challengeMembers).
   joinedAt: true,
 });
 
+export const insertJointAccountSchema = createInsertSchema(jointAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserJointAccountSchema = createInsertSchema(userJointAccounts).omit({
+  id: true,
+  joinedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -197,3 +250,7 @@ export type CommunityChallenge = typeof communityChallenges.$inferSelect;
 export type InsertCommunityChallenge = z.infer<typeof insertCommunityChalllengeSchema>;
 export type ChallengeMember = typeof challengeMembers.$inferSelect;
 export type InsertChallengeMember = z.infer<typeof insertChallengeMemberSchema>;
+export type JointAccount = typeof jointAccounts.$inferSelect;
+export type InsertJointAccount = z.infer<typeof insertJointAccountSchema>;
+export type UserJointAccount = typeof userJointAccounts.$inferSelect;
+export type InsertUserJointAccount = z.infer<typeof insertUserJointAccountSchema>;
