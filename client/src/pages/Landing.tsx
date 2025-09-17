@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { isDemoMode } from "@/lib/authUtils";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { ArrowLeft } from "lucide-react";
@@ -11,19 +10,18 @@ type AuthView = 'landing' | 'signup' | 'login';
 
 export default function Landing() {
   const [authView, setAuthView] = useState<AuthView>('landing');
-  const isDemo = isDemoMode();
 
   const handleOAuthLogin = () => {
     window.location.href = "/api/login";
   };
 
   const handleDemo = () => {
-    // Clear logout state and reload to enable demo mode
-    fetch('/api/auth/clear-logout', { 
+    // Create demo user and show login form with demo credentials
+    fetch('/api/seed-demo-user', { 
       method: 'POST', 
       credentials: 'include' 
     }).then(() => {
-      window.location.reload(); // Reload to trigger demo mode authentication
+      setAuthView('login'); // Show login form where user can use demo credentials
     });
   };
 
@@ -89,23 +87,16 @@ export default function Landing() {
               <i className="fas fa-cube text-white text-lg"></i>
             </div>
             <span className="text-xl font-bold">CryptoVault</span>
-            {isDemo && (
-              <Badge variant="secondary" className="ml-2">
-                Demo Mode
-              </Badge>
-            )}
           </div>
           <div className="flex gap-2">
-            {isDemo && (
-              <Button 
-                onClick={handleDemo} 
-                variant="outline"
-                className="hover:scale-105 transition-transform"
-                data-testid="button-try-demo"
-              >
-                Try Demo
-              </Button>
-            )}
+            <Button 
+              onClick={handleDemo} 
+              variant="outline"
+              className="hover:scale-105 transition-transform"
+              data-testid="button-try-demo"
+            >
+              Try Demo
+            </Button>
             <Button 
               onClick={() => setAuthView('login')} 
               className="hover:scale-105 transition-transform"
@@ -145,17 +136,15 @@ export default function Landing() {
               >
                 🚀 Get Started
               </Button>
-              {isDemo && (
-                <Button 
-                  size="lg" 
-                  variant="secondary"
-                  onClick={handleDemo}
-                  className="text-lg px-8 py-6 hover:scale-105 transition-transform cursor-pointer"
-                  data-testid="button-try-demo-main"
-                >
-                  🎮 Try Demo
-                </Button>
-              )}
+              <Button 
+                size="lg" 
+                variant="secondary"
+                onClick={handleDemo}
+                className="text-lg px-8 py-6 hover:scale-105 transition-transform cursor-pointer"
+                data-testid="button-try-demo-main"
+              >
+                🎮 Try Demo
+              </Button>
               <Button 
                 size="lg" 
                 variant="outline" 

@@ -17,28 +17,8 @@ import {
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
-// Enhanced authentication middleware that supports demo mode and password auth
+// Enhanced authentication middleware that supports password auth
 const enhancedAuth = async (req: any, res: any, next: any) => {
-  const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
-  
-  // Check for explicit logout first
-  if (req.session.loggedOut) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  
-  if (demoMode && (!req.isAuthenticated || !req.user) && !req.session.user) {
-    // Create demo user context
-    req.user = {
-      claims: {
-        sub: 'demo-user',
-        email: 'demo@cryptovault.com',
-        first_name: 'Demo',
-        last_name: 'Admin'
-      }
-    };
-    return next();
-  }
-  
   // Check for password-based session
   if (req.session.user) {
     // Create user context similar to OAuth
@@ -56,29 +36,28 @@ const enhancedAuth = async (req: any, res: any, next: any) => {
   return isAuthenticated(req, res, next);
 };
 
-// Admin-only authentication middleware
+// Admin-only authentication middleware  
 const adminAuth = async (req: any, res: any, next: any) => {
-  const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
-  
-  // Check for explicit logout first
-  if (req.session.loggedOut) {
-    return res.status(401).json({ message: "Unauthorized" });
+  // Check for password-based session first
+  if (req.session.user) {
+    const userId = req.session.user.id;
+    const user = await storage.getUser(userId);
+    
+    if (user && user.role === 'admin') {
+      req.user = {
+        claims: {
+          sub: userId,
+          email: user.email,
+          authType: 'password'
+        }
+      };
+      return next();
+    } else {
+      return res.status(403).json({ message: "Admin access required" });
+    }
   }
   
-  if (demoMode) {
-    // In demo mode, create admin user context
-    req.user = {
-      claims: {
-        sub: 'demo-admin',
-        email: 'admin@cryptovault.com',
-        first_name: 'Admin',
-        last_name: 'User'
-      }
-    };
-    return next();
-  }
-  
-  // Check if user is authenticated
+  // Check if user is authenticated via OAuth
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Admin authentication required" });
   }
@@ -101,33 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', async (req: any, res) => {
     try {
-      // Check if demo mode is enabled
-      const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
-      
-      // Debug logging
-      console.log('Auth check - loggedOut:', req.session.loggedOut, 'hasUser:', !!req.session.user, 'isAuth:', req.isAuthenticated?.());
-      
-      // Check for explicit logout in session
-      if (req.session.loggedOut) {
-        console.log('Returning 401 due to loggedOut flag');
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      if (demoMode && (!req.isAuthenticated || !req.user) && !req.session.user) {
-        // Return demo user
-        const demoUser = {
-          id: 'demo-user',
-          email: 'demo@cryptovault.com',
-          firstName: 'Demo',
-          lastName: 'User',
-          profileImageUrl: null,
-          role: 'user',
-          kycStatus: 'approved',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        return res.json(demoUser);
-      }
+      // No automatic demo mode - users must log in with credentials
       
       // Check for password-based session
       if (req.session.user) {
@@ -416,16 +369,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clear logout state to allow demo mode re-entry
-  app.post('/api/auth/clear-logout', async (req: any, res) => {
+  // Seed demo user for testing (development only)
+  app.post('/api/seed-demo-user', async (req: any, res) => {
     try {
-      if (req.session.loggedOut) {
-        delete req.session.loggedOut;
+      if (process.env.NODE_ENV !== 'development') {
+        return res.status(403).json({ message: "Only available in development" });
       }
-      res.json({ message: "Logout state cleared" });
+      
+      const existingUser = await storage.getUserByEmail('demo@cryptovault.com');
+      if (existingUser) {
+        return res.json({ message: "Demo user already exists", user: { email: existingUser.email } });
+      }
+      
+      const saltRounds = 12;
+      const passwordHash = await bcrypt.hash('demo123', saltRounds);
+      
+      const user = await storage.createUser({
+        email: 'demo@cryptovault.com',
+        firstName: 'Demo',
+        lastName: 'User', 
+        passwordHash,
+        authType: 'password',
+        profileImageUrl: null,
+      });
+      
+      res.json({ message: "Demo user created", user: { email: user.email } });
     } catch (error) {
-      console.error("Error clearing logout state:", error);
-      res.status(500).json({ message: "Failed to clear logout state" });
+      console.error("Error creating demo user:", error);
+      res.status(500).json({ message: "Failed to create demo user" });
     }
   });
 

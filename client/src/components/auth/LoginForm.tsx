@@ -72,6 +72,13 @@ export function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToOAuth }: Logi
         <CardDescription className="text-center">
           Sign in to your CryptoVault account
         </CardDescription>
+        <div className="bg-muted/50 border border-muted rounded-lg p-3 text-sm">
+          <p className="font-medium text-center mb-2">Try the demo account:</p>
+          <div className="space-y-1 text-center">
+            <p><span className="font-mono bg-background px-2 py-1 rounded">demo@cryptovault.com</span></p>
+            <p><span className="font-mono bg-background px-2 py-1 rounded">demo123</span></p>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
