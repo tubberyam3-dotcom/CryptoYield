@@ -25,13 +25,15 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table (required for Replit Auth)
+// User storage table (supports both OAuth and password auth)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  passwordHash: varchar("password_hash"), // For password-based authentication
+  authType: varchar("auth_type", { enum: ['oauth', 'password'] }).default('oauth'), // Authentication method
   kycStatus: varchar("kyc_status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   role: varchar("role", { enum: ['user', 'admin'] }).default('user'),
   createdAt: timestamp("created_at").defaultNow(),
