@@ -7,26 +7,57 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Eye, EyeOff, User, Mail, Lock, Building, Users, UserIcon } from "lucide-react";
+import { Eye, EyeOff, User, Mail, Lock, Building, Users, UserIcon, ArrowLeft, Target, DollarSign, Heart } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-const signupSchema = z.object({
+// Base schema for all account types (without refine)
+const baseSignupObject = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Please confirm your password"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  accountType: z.enum(["personal", "business", "joint"], {
-    required_error: "Please select an account type",
-  }),
+  accountType: z.enum(["personal", "business", "joint"]),
+});
+
+// Personal account schema
+const personalSignupSchema = baseSignupObject.extend({
+  investmentGoal: z.string().min(1, "Investment goal is required"),
+  riskTolerance: z.enum(["low", "medium", "high"]),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
-type SignupFormData = z.infer<typeof signupSchema>;
+// Business account schema  
+const businessSignupSchema = baseSignupObject.extend({
+  companyName: z.string().min(1, "Company name is required"),
+  companyType: z.enum(["corporation", "llc", "partnership", "sole_proprietorship"]),
+  taxId: z.string().min(9, "Valid tax ID is required"),
+  investmentTarget: z.string().min(1, "Investment target is required"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+// Joint account schema
+const jointSignupSchema = baseSignupObject.extend({
+  spouseEmail: z.string().email("Valid spouse email is required"),
+  spouseFirstName: z.string().min(1, "Spouse first name is required"),
+  spouseLastName: z.string().min(1, "Spouse last name is required"),
+  investmentTarget: z.string().min(1, "Desired investment target is required"),
+  relationshipType: z.enum(["married", "domestic_partners", "family"]),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type PersonalSignupData = z.infer<typeof personalSignupSchema>;
+type BusinessSignupData = z.infer<typeof businessSignupSchema>;
+type JointSignupData = z.infer<typeof jointSignupSchema>;
+type AccountType = "personal" | "business" | "joint";
 
 interface SignupFormProps {
   onSuccess?: () => void;
@@ -34,26 +65,54 @@ interface SignupFormProps {
 }
 
 export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
+  const [step, setStep] = useState<"account-type" | "form">("account-type");
+  const [selectedAccountType, setSelectedAccountType] = useState<AccountType | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const form = useForm<SignupFormData>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
+  // Dynamic form based on account type
+  const getSchemaForAccountType = (accountType: AccountType) => {
+    switch (accountType) {
+      case "personal": return personalSignupSchema;
+      case "business": return businessSignupSchema;
+      case "joint": return jointSignupSchema;
+      default: return personalSignupSchema;
+    }
+  };
+
+  const getDefaultValues = (accountType: AccountType) => {
+    const base = {
       email: "",
       password: "",
       confirmPassword: "",
       firstName: "",
       lastName: "",
-      accountType: "personal" as const,
-    },
+      accountType,
+    };
+
+    switch (accountType) {
+      case "personal":
+        return { ...base, investmentGoal: "", riskTolerance: "medium" as const };
+      case "business":
+        return { ...base, companyName: "", companyType: "corporation" as const, taxId: "", investmentTarget: "" };
+      case "joint":
+        return { ...base, spouseEmail: "", spouseFirstName: "", spouseLastName: "", investmentTarget: "", relationshipType: "married" as const };
+      default:
+        return base;
+    }
+  };
+
+  const form = useForm({
+    resolver: selectedAccountType ? zodResolver(getSchemaForAccountType(selectedAccountType)) : undefined,
+    defaultValues: selectedAccountType ? getDefaultValues(selectedAccountType) : {},
   });
 
   const signupMutation = useMutation({
-    mutationFn: async (data: Omit<SignupFormData, 'confirmPassword'>) => {
-      const response = await apiRequest("POST", "/api/auth/register", data);
+    mutationFn: async (data: any) => {
+      const { confirmPassword, ...signupData } = data;
+      const response = await apiRequest("POST", "/api/auth/register", signupData);
       return response.json();
     },
     onSuccess: () => {
@@ -75,76 +134,145 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
     },
   });
 
-  const onSubmit = (data: SignupFormData) => {
-    const { confirmPassword, ...signupData } = data;
-    signupMutation.mutate(signupData);
+  const handleAccountTypeSelect = (accountType: AccountType) => {
+    setSelectedAccountType(accountType);
+    setStep("form");
   };
 
+  const onSubmit = (data: any) => {
+    signupMutation.mutate(data);
+  };
+
+  // Account type selection screen
+  if (step === "account-type") {
+    return (
+      <Card className="w-full max-w-lg mx-auto">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Choose Your Account Type</CardTitle>
+          <CardDescription className="text-center">
+            Select the account type that best fits your investment needs
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Personal Account Card */}
+          <div 
+            className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+            onClick={() => handleAccountTypeSelect("personal")}
+            data-testid="card-personal-account"
+          >
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">Personal Account</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Perfect for individual investors looking to build their crypto portfolio
+                </p>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>• Personal investment goals tracking</li>
+                  <li>• Risk tolerance customization</li>
+                  <li>• Individual portfolio management</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Business Account Card */}
+          <div 
+            className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+            onClick={() => handleAccountTypeSelect("business")}
+            data-testid="card-business-account"
+          >
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                <Building className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">Business Account</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Designed for companies managing corporate treasury and institutional investments
+                </p>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>• Company registration details</li>
+                  <li>• Corporate investment targets</li>
+                  <li>• Tax compliance features</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Joint Account Card */}
+          <div 
+            className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+            onClick={() => handleAccountTypeSelect("joint")}
+            data-testid="card-joint-account"
+          >
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">Joint Account</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Ideal for couples and families to manage shared investments together
+                </p>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>• Shared investment goals</li>
+                  <li>• Partner/spouse information</li>
+                  <li>• Collaborative decision making</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center pt-4">
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={onSwitchToLogin}
+                className="text-primary hover:underline font-medium"
+                data-testid="link-switch-to-login"
+              >
+                Sign in
+              </button>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Registration form based on selected account type
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
-        <CardDescription className="text-center">
-          Join CryptoVault to start your crypto investment journey
-        </CardDescription>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setStep("account-type")}
+            data-testid="button-back-to-account-type"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <CardTitle className="text-xl font-bold">
+              {selectedAccountType === "personal" && "Personal Account"}
+              {selectedAccountType === "business" && "Business Account"}
+              {selectedAccountType === "joint" && "Joint Account"}
+            </CardTitle>
+            <CardDescription className="text-sm">
+              {selectedAccountType === "personal" && "Set up your personal crypto investment account"}
+              {selectedAccountType === "business" && "Register your business for institutional investing"}
+              {selectedAccountType === "joint" && "Create a shared account with your partner"}
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {/* Account Type Selection */}
-          <div className="space-y-3">
-            <Label>Account Type</Label>
-            <RadioGroup
-              value={form.watch("accountType")}
-              onValueChange={(value: "personal" | "business" | "joint") => 
-                form.setValue("accountType", value)
-              }
-              className="grid grid-cols-1 gap-3"
-            >
-              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
-                <RadioGroupItem value="personal" id="personal" data-testid="radio-personal" />
-                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <Label htmlFor="personal" className="cursor-pointer font-medium">
-                    Personal Account
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    For individual crypto investments and trading
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
-                <RadioGroupItem value="business" id="business" data-testid="radio-business" />
-                <Building className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <Label htmlFor="business" className="cursor-pointer font-medium">
-                    Business Account
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    For company treasury and institutional investing
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
-                <RadioGroupItem value="joint" id="joint" data-testid="radio-joint" />
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <Label htmlFor="joint" className="cursor-pointer font-medium">
-                    Joint Account
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    For couples and families to manage investments together
-                  </p>
-                </div>
-              </div>
-            </RadioGroup>
-            {form.formState.errors.accountType && (
-              <p className="text-sm text-destructive" data-testid="error-account-type">
-                {form.formState.errors.accountType.message}
-              </p>
-            )}
-          </div>
 
           {/* Name Fields */}
           <div className="grid grid-cols-2 gap-4">
@@ -264,6 +392,246 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
               </p>
             )}
           </div>
+
+          {/* Account Type Specific Fields */}
+          {selectedAccountType === "personal" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="investmentGoal">Investment Goal</Label>
+                <div className="relative">
+                  <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="investmentGoal"
+                    placeholder="e.g., Retirement, House down payment"
+                    className="pl-10"
+                    {...form.register("investmentGoal")}
+                    data-testid="input-investment-goal"
+                  />
+                </div>
+                {form.formState.errors.investmentGoal && (
+                  <p className="text-sm text-destructive" data-testid="error-investment-goal">
+                    {form.formState.errors.investmentGoal.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Risk Tolerance</Label>
+                <Select
+                  value={form.watch("riskTolerance")}
+                  onValueChange={(value: "low" | "medium" | "high") =>
+                    form.setValue("riskTolerance", value)
+                  }
+                >
+                  <SelectTrigger data-testid="select-risk-tolerance">
+                    <SelectValue placeholder="Select your risk tolerance" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Conservative (Low Risk)</SelectItem>
+                    <SelectItem value="medium">Moderate (Medium Risk)</SelectItem>
+                    <SelectItem value="high">Aggressive (High Risk)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.riskTolerance && (
+                  <p className="text-sm text-destructive" data-testid="error-risk-tolerance">
+                    {form.formState.errors.riskTolerance.message}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {selectedAccountType === "business" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <div className="relative">
+                  <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="companyName"
+                    placeholder="Your Company Inc."
+                    className="pl-10"
+                    {...form.register("companyName")}
+                    data-testid="input-company-name"
+                  />
+                </div>
+                {form.formState.errors.companyName && (
+                  <p className="text-sm text-destructive" data-testid="error-company-name">
+                    {form.formState.errors.companyName.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Company Type</Label>
+                <Select
+                  value={form.watch("companyType")}
+                  onValueChange={(value: "corporation" | "llc" | "partnership" | "sole_proprietorship") =>
+                    form.setValue("companyType", value)
+                  }
+                >
+                  <SelectTrigger data-testid="select-company-type">
+                    <SelectValue placeholder="Select company type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="corporation">Corporation</SelectItem>
+                    <SelectItem value="llc">LLC</SelectItem>
+                    <SelectItem value="partnership">Partnership</SelectItem>
+                    <SelectItem value="sole_proprietorship">Sole Proprietorship</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.companyType && (
+                  <p className="text-sm text-destructive" data-testid="error-company-type">
+                    {form.formState.errors.companyType.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="taxId">Tax ID (EIN)</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="taxId"
+                    placeholder="12-3456789"
+                    className="pl-10"
+                    {...form.register("taxId")}
+                    data-testid="input-tax-id"
+                  />
+                </div>
+                {form.formState.errors.taxId && (
+                  <p className="text-sm text-destructive" data-testid="error-tax-id">
+                    {form.formState.errors.taxId.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="investmentTarget">Investment Target</Label>
+                <div className="relative">
+                  <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="investmentTarget"
+                    placeholder="e.g., $100,000 for treasury management"
+                    className="pl-10"
+                    {...form.register("investmentTarget")}
+                    data-testid="input-investment-target"
+                  />
+                </div>
+                {form.formState.errors.investmentTarget && (
+                  <p className="text-sm text-destructive" data-testid="error-investment-target">
+                    {form.formState.errors.investmentTarget.message}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {selectedAccountType === "joint" && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="spouseFirstName">Partner's First Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      id="spouseFirstName"
+                      placeholder="Jane"
+                      className="pl-10"
+                      {...form.register("spouseFirstName")}
+                      data-testid="input-spouse-first-name"
+                    />
+                  </div>
+                  {form.formState.errors.spouseFirstName && (
+                    <p className="text-sm text-destructive" data-testid="error-spouse-first-name">
+                      {form.formState.errors.spouseFirstName.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="spouseLastName">Partner's Last Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      id="spouseLastName"
+                      placeholder="Smith"
+                      className="pl-10"
+                      {...form.register("spouseLastName")}
+                      data-testid="input-spouse-last-name"
+                    />
+                  </div>
+                  {form.formState.errors.spouseLastName && (
+                    <p className="text-sm text-destructive" data-testid="error-spouse-last-name">
+                      {form.formState.errors.spouseLastName.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="spouseEmail">Partner's Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="spouseEmail"
+                    type="email"
+                    placeholder="jane@example.com"
+                    className="pl-10"
+                    {...form.register("spouseEmail")}
+                    data-testid="input-spouse-email"
+                  />
+                </div>
+                {form.formState.errors.spouseEmail && (
+                  <p className="text-sm text-destructive" data-testid="error-spouse-email">
+                    {form.formState.errors.spouseEmail.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Relationship Type</Label>
+                <Select
+                  value={form.watch("relationshipType")}
+                  onValueChange={(value: "married" | "domestic_partners" | "family") =>
+                    form.setValue("relationshipType", value)
+                  }
+                >
+                  <SelectTrigger data-testid="select-relationship-type">
+                    <SelectValue placeholder="Select relationship type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="married">Married</SelectItem>
+                    <SelectItem value="domestic_partners">Domestic Partners</SelectItem>
+                    <SelectItem value="family">Family</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.relationshipType && (
+                  <p className="text-sm text-destructive" data-testid="error-relationship-type">
+                    {form.formState.errors.relationshipType.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="investmentTarget">Desired Investment Target</Label>
+                <div className="relative">
+                  <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="investmentTarget"
+                    placeholder="e.g., $50,000 for shared retirement goals"
+                    className="pl-10"
+                    {...form.register("investmentTarget")}
+                    data-testid="input-joint-investment-target"
+                  />
+                </div>
+                {form.formState.errors.investmentTarget && (
+                  <p className="text-sm text-destructive" data-testid="error-joint-investment-target">
+                    {form.formState.errors.investmentTarget.message}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Submit Button */}
           <Button
