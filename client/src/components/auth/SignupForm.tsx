@@ -102,24 +102,25 @@ function AccountTypeForm({
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="space-y-1">
+    <Card className="w-full max-w-md mx-auto px-4 sm:px-0">
+      <CardHeader className="space-y-1 px-4 sm:px-6">
         <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={onBack}
             data-testid="button-back-to-account-type"
+            className="min-w-[44px] h-11 w-11 sm:h-auto sm:w-auto sm:min-w-[40px]"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1">
-            <CardTitle className="text-xl font-bold">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg sm:text-xl font-bold truncate">
               {accountType === "personal" && "Personal Account"}
               {accountType === "business" && "Business Account"}
               {accountType === "joint" && "Joint Account"}
             </CardTitle>
-            <CardDescription className="text-sm">
+            <CardDescription className="text-xs sm:text-sm">
               {accountType === "personal" && "Set up your personal crypto investment account"}
               {accountType === "business" && "Register your business for institutional investing"}
               {accountType === "joint" && "Create a shared account with your partner"}
@@ -127,13 +128,13 @@ function AccountTypeForm({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 sm:px-6">
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Register the accountType field */}
           <input type="hidden" {...form.register("accountType")} />
 
           {/* Name Fields */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
               <div className="relative">
@@ -148,7 +149,7 @@ function AccountTypeForm({
               </div>
               {form.formState.errors.firstName && (
                 <p className="text-sm text-destructive" data-testid="error-first-name">
-                  {form.formState.errors.firstName?.message}
+                  {String(form.formState.errors.firstName?.message)}
                 </p>
               )}
             </div>
@@ -166,7 +167,7 @@ function AccountTypeForm({
               </div>
               {form.formState.errors.lastName && (
                 <p className="text-sm text-destructive" data-testid="error-last-name">
-                  {form.formState.errors.lastName?.message}
+                  {String(form.formState.errors.lastName?.message)}
                 </p>
               )}
             </div>
@@ -188,7 +189,7 @@ function AccountTypeForm({
             </div>
             {form.formState.errors.email && (
               <p className="text-sm text-destructive" data-testid="error-email">
-                {form.formState.errors.email?.message}
+                {String(form.formState.errors.email?.message)}
               </p>
             )}
           </div>
@@ -217,7 +218,7 @@ function AccountTypeForm({
             </div>
             {form.formState.errors.password && (
               <p className="text-sm text-destructive" data-testid="error-password">
-                {form.formState.errors.password?.message}
+                {String(form.formState.errors.password?.message)}
               </p>
             )}
           </div>
@@ -246,7 +247,7 @@ function AccountTypeForm({
             </div>
             {form.formState.errors.confirmPassword && (
               <p className="text-sm text-destructive" data-testid="error-confirm-password">
-                {form.formState.errors.confirmPassword?.message}
+                {String(form.formState.errors.confirmPassword?.message)}
               </p>
             )}
           </div>
@@ -268,7 +269,7 @@ function AccountTypeForm({
                 </div>
                 {form.formState.errors.investmentGoal && (
                   <p className="text-sm text-destructive" data-testid="error-investment-goal">
-                    {form.formState.errors.investmentGoal?.message}
+                    {String(form.formState.errors.investmentGoal?.message)}
                   </p>
                 )}
               </div>
@@ -292,7 +293,7 @@ function AccountTypeForm({
                 </Select>
                 {form.formState.errors.riskTolerance && (
                   <p className="text-sm text-destructive" data-testid="error-risk-tolerance">
-                    {form.formState.errors.riskTolerance?.message}
+                    {String(form.formState.errors.riskTolerance?.message)}
                   </p>
                 )}
               </div>
@@ -315,7 +316,7 @@ function AccountTypeForm({
                 </div>
                 {form.formState.errors.companyName && (
                   <p className="text-sm text-destructive" data-testid="error-company-name">
-                    {form.formState.errors.companyName?.message}
+                    {String(form.formState.errors.companyName?.message)}
                   </p>
                 )}
               </div>
@@ -340,7 +341,7 @@ function AccountTypeForm({
                 </Select>
                 {form.formState.errors.companyType && (
                   <p className="text-sm text-destructive" data-testid="error-company-type">
-                    {form.formState.errors.companyType?.message}
+                    {String(form.formState.errors.companyType?.message)}
                   </p>
                 )}
               </div>
@@ -359,7 +360,7 @@ function AccountTypeForm({
                 </div>
                 {form.formState.errors.taxId && (
                   <p className="text-sm text-destructive" data-testid="error-tax-id">
-                    {form.formState.errors.taxId?.message}
+                    {String(form.formState.errors.taxId?.message)}
                   </p>
                 )}
               </div>
@@ -378,7 +379,7 @@ function AccountTypeForm({
                 </div>
                 {form.formState.errors.investmentTarget && (
                   <p className="text-sm text-destructive" data-testid="error-investment-target">
-                    {form.formState.errors.investmentTarget?.message}
+                    {String(form.formState.errors.investmentTarget?.message)}
                   </p>
                 )}
               </div>
@@ -387,7 +388,7 @@ function AccountTypeForm({
 
           {accountType === "joint" && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="spouseFirstName">Partner's First Name</Label>
                   <div className="relative">
@@ -402,7 +403,7 @@ function AccountTypeForm({
                   </div>
                   {form.formState.errors.spouseFirstName && (
                     <p className="text-sm text-destructive" data-testid="error-spouse-first-name">
-                      {form.formState.errors.spouseFirstName?.message}
+                      {String(form.formState.errors.spouseFirstName?.message)}
                     </p>
                   )}
                 </div>
@@ -420,7 +421,7 @@ function AccountTypeForm({
                   </div>
                   {form.formState.errors.spouseLastName && (
                     <p className="text-sm text-destructive" data-testid="error-spouse-last-name">
-                      {form.formState.errors.spouseLastName?.message}
+                      {String(form.formState.errors.spouseLastName?.message)}
                     </p>
                   )}
                 </div>
@@ -441,7 +442,7 @@ function AccountTypeForm({
                 </div>
                 {form.formState.errors.spouseEmail && (
                   <p className="text-sm text-destructive" data-testid="error-spouse-email">
-                    {form.formState.errors.spouseEmail?.message}
+                    {String(form.formState.errors.spouseEmail?.message)}
                   </p>
                 )}
               </div>
@@ -465,7 +466,7 @@ function AccountTypeForm({
                 </Select>
                 {form.formState.errors.relationshipType && (
                   <p className="text-sm text-destructive" data-testid="error-relationship-type">
-                    {form.formState.errors.relationshipType?.message}
+                    {String(form.formState.errors.relationshipType?.message)}
                   </p>
                 )}
               </div>
@@ -484,7 +485,7 @@ function AccountTypeForm({
                 </div>
                 {form.formState.errors.investmentTarget && (
                   <p className="text-sm text-destructive" data-testid="error-joint-investment-target">
-                    {form.formState.errors.investmentTarget?.message}
+                    {String(form.formState.errors.investmentTarget?.message)}
                   </p>
                 )}
               </div>
@@ -586,15 +587,15 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
 
   // Account type selection screen
   return (
-    <Card className="w-full max-w-lg mx-auto">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Choose Your Account Type</CardTitle>
-        <CardDescription className="text-center">
+    <Card className="w-full max-w-lg mx-auto px-4 sm:px-0">
+      <CardHeader className="space-y-1 px-4 sm:px-6">
+        <CardTitle className="text-xl sm:text-2xl font-bold text-center">Choose Your Account Type</CardTitle>
+        <CardDescription className="text-center text-sm sm:text-base">
           Select the account type that best fits your investment needs
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div role="radiogroup" aria-label="Account type selection" data-testid="radiogroup-account-type" className="space-y-4">
+      <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
+        <div role="radiogroup" aria-label="Account type selection" data-testid="radiogroup-account-type" className="space-y-3 sm:space-y-4">
           {/* Personal Account Card */}
           <button 
             type="button"
@@ -602,7 +603,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
             aria-checked={tempSelectedType === "personal"}
             aria-labelledby="personal-account-title"
             tabIndex={tempSelectedType === "personal" ? 0 : -1}
-            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
+            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-4 sm:p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
               tempSelectedType === "personal" 
                 ? "border-primary/30 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" 
                 : "border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950"
@@ -616,21 +617,21 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 <CheckCircle2 className="h-5 w-5 text-primary" />
               </div>
             )}
-            <div className="flex items-start space-x-4">
-              <div className="h-12 w-12 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
-                <UserIcon className="h-6 w-6" />
+            <div className="flex items-start space-x-3 sm:space-x-4">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
+                <UserIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 id="personal-account-title" className="text-lg font-semibold text-foreground">Personal Account</h3>
-                  <Badge variant="secondary" className="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between mb-2 sm:mb-3">
+                  <h3 id="personal-account-title" className="text-base sm:text-lg font-semibold text-foreground">Personal Account</h3>
+                  <Badge variant="secondary" className="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 text-xs sm:text-sm ml-2">
                     Most Popular
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className="text-sm text-muted-foreground mb-2 sm:mb-3">
                   Perfect for individual crypto investments
                 </p>
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
                   <Badge variant="outline" className="text-xs">
                     <Clock className="h-3 w-3 mr-1" />
                     Quick Setup
@@ -642,11 +643,11 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </div>
                 <ul className="space-y-1">
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
                     Personalized investment goals
                   </li>
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
                     Risk tolerance matching
                   </li>
                 </ul>
@@ -661,7 +662,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
             aria-checked={tempSelectedType === "business"}
             aria-labelledby="business-account-title"
             tabIndex={tempSelectedType === "business" ? 0 : -1}
-            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
+            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-4 sm:p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
               tempSelectedType === "business" 
                 ? "border-primary/30 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" 
                 : "border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950"
@@ -675,16 +676,16 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 <CheckCircle2 className="h-5 w-5 text-primary" />
               </div>
             )}
-            <div className="flex items-start space-x-4">
-              <div className="h-12 w-12 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
-                <Building className="h-6 w-6" />
+            <div className="flex items-start space-x-3 sm:space-x-4">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
+                <Building className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <div className="flex-1">
-                <h3 id="business-account-title" className="text-lg font-semibold text-foreground mb-3">Business Account</h3>
-                <p className="text-sm text-muted-foreground mb-3">
+              <div className="flex-1 min-w-0">
+                <h3 id="business-account-title" className="text-base sm:text-lg font-semibold text-foreground mb-2 sm:mb-3">Business Account</h3>
+                <p className="text-sm text-muted-foreground mb-2 sm:mb-3">
                   Corporate treasury and institutional investing
                 </p>
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
                   <Badge variant="outline" className="text-xs">
                     <Building className="h-3 w-3 mr-1" />
                     Tax Benefits
@@ -696,11 +697,11 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </div>
                 <ul className="space-y-1">
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
                     Multi-user access controls
                   </li>
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
                     Advanced reporting tools
                   </li>
                 </ul>
@@ -715,7 +716,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
             aria-checked={tempSelectedType === "joint"}
             aria-labelledby="joint-account-title"
             tabIndex={tempSelectedType === "joint" ? 0 : -1}
-            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
+            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-4 sm:p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
               tempSelectedType === "joint" 
                 ? "border-primary/30 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" 
                 : "border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950"
@@ -729,16 +730,16 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 <CheckCircle2 className="h-5 w-5 text-primary" />
               </div>
             )}
-            <div className="flex items-start space-x-4">
-              <div className="h-12 w-12 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
-                <Users className="h-6 w-6" />
+            <div className="flex items-start space-x-3 sm:space-x-4">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <div className="flex-1">
-                <h3 id="joint-account-title" className="text-lg font-semibold text-foreground mb-3">Joint Account</h3>
-                <p className="text-sm text-muted-foreground mb-3">
+              <div className="flex-1 min-w-0">
+                <h3 id="joint-account-title" className="text-base sm:text-lg font-semibold text-foreground mb-2 sm:mb-3">Joint Account</h3>
+                <p className="text-sm text-muted-foreground mb-2 sm:mb-3">
                   Shared investing for couples and families
                 </p>
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
                   <Badge variant="outline" className="text-xs">
                     <Users className="h-3 w-3 mr-1" />
                     Shared Control
@@ -750,11 +751,11 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </div>
                 <ul className="space-y-1">
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
                     Dual account access
                   </li>
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
                     Shared financial planning
                   </li>
                 </ul>
