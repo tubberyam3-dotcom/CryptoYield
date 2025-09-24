@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, User, Mail, Lock, Building, Users, UserIcon, ArrowLeft, Target, DollarSign, Heart } from "lucide-react";
+import { Eye, EyeOff, User, Mail, Lock, Building, Users, UserIcon, ArrowLeft, Target, DollarSign, Heart, CheckCircle2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -104,7 +104,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
     }
   };
 
-  const form = useForm({
+  const form = useForm<any>({
     resolver: selectedAccountType ? zodResolver(getSchemaForAccountType(selectedAccountType)) : undefined,
     defaultValues: selectedAccountType ? getDefaultValues(selectedAccountType) : {},
   });
@@ -153,78 +153,113 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
             Select the account type that best fits your investment needs
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           {/* Personal Account Card */}
-          <div 
-            className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+          <button 
+            type="button"
+            className="group relative w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 p-5 shadow-sm hover:shadow-md transition-all duration-200 ease-out motion-safe:hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left"
             onClick={() => handleAccountTypeSelect("personal")}
             data-testid="card-personal-account"
           >
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className="flex items-start space-x-4">
+              <div className="h-12 w-12 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 grid place-items-center shadow-inner">
+                <UserIcon className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg">Personal Account</h3>
-                <p className="text-sm text-muted-foreground mb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold text-foreground">Personal Account</h3>
+                  <div className="rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs px-3 py-1 border border-blue-200 dark:border-blue-800">
+                    Most Popular
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
                   Perfect for individual investors looking to build their crypto portfolio
                 </p>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li>• Personal investment goals tracking</li>
-                  <li>• Risk tolerance customization</li>
-                  <li>• Individual portfolio management</li>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Personal investment goals tracking
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Risk tolerance customization
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Individual portfolio management
+                  </li>
                 </ul>
               </div>
             </div>
-          </div>
+          </button>
 
           {/* Business Account Card */}
-          <div 
-            className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+          <button 
+            type="button"
+            className="group relative w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 p-5 shadow-sm hover:shadow-md transition-all duration-200 ease-out motion-safe:hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left"
             onClick={() => handleAccountTypeSelect("business")}
             data-testid="card-business-account"
           >
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                <Building className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <div className="flex items-start space-x-4">
+              <div className="h-12 w-12 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 grid place-items-center shadow-inner">
+                <Building className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg">Business Account</h3>
-                <p className="text-sm text-muted-foreground mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">Business Account</h3>
+                <p className="text-sm text-muted-foreground mb-3">
                   Designed for companies managing corporate treasury and institutional investments
                 </p>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li>• Company registration details</li>
-                  <li>• Corporate investment targets</li>
-                  <li>• Tax compliance features</li>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Company registration details
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Corporate investment targets
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Tax compliance features
+                  </li>
                 </ul>
               </div>
             </div>
-          </div>
+          </button>
 
           {/* Joint Account Card */}
-          <div 
-            className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+          <button 
+            type="button"
+            className="group relative w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 p-5 shadow-sm hover:shadow-md transition-all duration-200 ease-out motion-safe:hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left"
             onClick={() => handleAccountTypeSelect("joint")}
             data-testid="card-joint-account"
           >
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <div className="flex items-start space-x-4">
+              <div className="h-12 w-12 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 grid place-items-center shadow-inner">
+                <Users className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg">Joint Account</h3>
-                <p className="text-sm text-muted-foreground mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">Joint Account</h3>
+                <p className="text-sm text-muted-foreground mb-3">
                   Ideal for couples and families to manage shared investments together
                 </p>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li>• Shared investment goals</li>
-                  <li>• Partner/spouse information</li>
-                  <li>• Collaborative decision making</li>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Shared investment goals
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Partner/spouse information
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Collaborative decision making
+                  </li>
                 </ul>
               </div>
             </div>
-          </div>
+          </button>
 
           <div className="text-center pt-4">
             <p className="text-sm text-muted-foreground">
