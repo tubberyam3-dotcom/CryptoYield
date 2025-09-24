@@ -17,6 +17,7 @@ import type { AccountType } from "@shared/schema";
 interface SignupFormProps {
   onSuccess?: () => void;
   onSwitchToLogin?: () => void;
+  onBackToLanding?: () => void;
 }
 
 // Form component that is properly keyed and initialized for each account type
@@ -529,7 +530,7 @@ function AccountTypeForm({
   );
 }
 
-export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
+export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: SignupFormProps) {
   const [step, setStep] = useState<"account-type" | "form">("account-type");
   const [selectedAccountType, setSelectedAccountType] = useState<AccountType | null>(null);
   const [tempSelectedType, setTempSelectedType] = useState<AccountType | null>("personal"); // Default to first option
@@ -589,6 +590,19 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
   return (
     <Card className="w-full max-w-lg mx-auto px-4 sm:px-0">
       <CardHeader className="space-y-1 px-4 sm:px-6">
+        {onBackToLanding && (
+          <div className="flex justify-start mb-4">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2"
+              onClick={onBackToLanding}
+              data-testid="button-back-to-landing"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Home
+            </Button>
+          </div>
+        )}
         <CardTitle className="text-xl sm:text-2xl font-bold text-center">Choose Your Account Type</CardTitle>
         <CardDescription className="text-center text-sm sm:text-base">
           Select the account type that best fits your investment needs

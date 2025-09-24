@@ -39,18 +39,10 @@ export default function Landing() {
   if (authView === 'signup') {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <Button
-          variant="ghost"
-          className="absolute top-6 left-6 flex items-center gap-2"
-          onClick={() => setAuthView('landing')}
-          data-testid="button-back-to-landing"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Home
-        </Button>
         <SignupForm
           onSuccess={handleAuthSuccess}
           onSwitchToLogin={() => setAuthView('login')}
+          onBackToLanding={() => setAuthView('landing')}
         />
       </div>
     );
