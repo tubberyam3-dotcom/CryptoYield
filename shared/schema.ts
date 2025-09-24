@@ -256,3 +256,62 @@ export type JointAccount = typeof jointAccounts.$inferSelect;
 export type InsertJointAccount = z.infer<typeof insertJointAccountSchema>;
 export type UserJointAccount = typeof userJointAccounts.$inferSelect;
 export type InsertUserJointAccount = z.infer<typeof insertUserJointAccountSchema>;
+
+// Account type definition
+export type AccountType = "personal" | "business" | "joint";
+
+// Base fields for all signup schemas
+const baseFields = {
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string(),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  accountType: z.enum(["personal", "business", "joint"]),
+};
+
+// Password confirmation refinement function
+const passwordConfirmation = (data: any) => ({
+  ...data,
+  password: data.password === data.confirmPassword,
+});
+
+// Personal account signup schema
+export const personalSignupSchema = z.object({
+  ...baseFields,
+  investmentGoal: z.string().min(1, "Investment goal is required"),
+  riskTolerance: z.enum(["low", "medium", "high"]),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+// Business account signup schema
+export const businessSignupSchema = z.object({
+  ...baseFields,
+  companyName: z.string().min(1, "Company name is required"),
+  companyType: z.enum(["corporation", "llc", "partnership", "sole_proprietorship"]),
+  taxId: z.string().min(1, "Tax ID is required"),
+  investmentTarget: z.string().min(1, "Investment target is required"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+// Joint account signup schema
+export const jointSignupSchema = z.object({
+  ...baseFields,
+  spouseFirstName: z.string().min(1, "Partner's first name is required"),
+  spouseLastName: z.string().min(1, "Partner's last name is required"),
+  spouseEmail: z.string().email("Please enter a valid email address for your partner"),
+  relationshipType: z.enum(["married", "domestic_partners", "family"]),
+  investmentTarget: z.string().min(1, "Investment target is required"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+// Export signup schema types
+export type PersonalSignup = z.infer<typeof personalSignupSchema>;
+export type BusinessSignup = z.infer<typeof businessSignupSchema>;
+export type JointSignup = z.infer<typeof jointSignupSchema>;

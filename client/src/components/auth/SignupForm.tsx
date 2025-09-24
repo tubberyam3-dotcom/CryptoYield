@@ -2,77 +2,40 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { z } from "zod";
+import { Eye, EyeOff, User, Mail, Lock, Building, Target, DollarSign, ArrowLeft, UserIcon, Users, CheckCircle2, Clock, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, User, Mail, Lock, Building, Users, UserIcon, ArrowLeft, Target, DollarSign, Heart, CheckCircle2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { apiRequest } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-
-// Base schema for all account types (without refine)
-const baseSignupObject = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Please confirm your password"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  accountType: z.enum(["personal", "business", "joint"]),
-});
-
-// Personal account schema
-const personalSignupSchema = baseSignupObject.extend({
-  investmentGoal: z.string().min(1, "Investment goal is required"),
-  riskTolerance: z.enum(["low", "medium", "high"]),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-// Business account schema  
-const businessSignupSchema = baseSignupObject.extend({
-  companyName: z.string().min(1, "Company name is required"),
-  companyType: z.enum(["corporation", "llc", "partnership", "sole_proprietorship"]),
-  taxId: z.string().min(9, "Valid tax ID is required"),
-  investmentTarget: z.string().min(1, "Investment target is required"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-// Joint account schema
-const jointSignupSchema = baseSignupObject.extend({
-  spouseEmail: z.string().email("Valid spouse email is required"),
-  spouseFirstName: z.string().min(1, "Spouse first name is required"),
-  spouseLastName: z.string().min(1, "Spouse last name is required"),
-  investmentTarget: z.string().min(1, "Desired investment target is required"),
-  relationshipType: z.enum(["married", "domestic_partners", "family"]),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type PersonalSignupData = z.infer<typeof personalSignupSchema>;
-type BusinessSignupData = z.infer<typeof businessSignupSchema>;
-type JointSignupData = z.infer<typeof jointSignupSchema>;
-type AccountType = "personal" | "business" | "joint";
+import { apiRequest } from "@/lib/queryClient";
+import { personalSignupSchema, businessSignupSchema, jointSignupSchema } from "@shared/schema";
+import type { AccountType } from "@shared/schema";
 
 interface SignupFormProps {
   onSuccess?: () => void;
   onSwitchToLogin?: () => void;
 }
 
-export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
-  const [step, setStep] = useState<"account-type" | "form">("account-type");
-  const [selectedAccountType, setSelectedAccountType] = useState<AccountType | null>(null);
+// Form component that is properly keyed and initialized for each account type
+function AccountTypeForm({ 
+  accountType, 
+  onSuccess, 
+  onBack,
+  onSwitchToLogin 
+}: { 
+  accountType: AccountType; 
+  onSuccess?: () => void; 
+  onBack: () => void;
+  onSwitchToLogin?: () => void;
+}) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Dynamic form based on account type
   const getSchemaForAccountType = (accountType: AccountType) => {
     switch (accountType) {
       case "personal": return personalSignupSchema;
@@ -105,8 +68,8 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
   };
 
   const form = useForm<any>({
-    resolver: selectedAccountType ? zodResolver(getSchemaForAccountType(selectedAccountType)) : undefined,
-    defaultValues: selectedAccountType ? getDefaultValues(selectedAccountType) : {},
+    resolver: zodResolver(getSchemaForAccountType(accountType)),
+    defaultValues: getDefaultValues(accountType),
   });
 
   const signupMutation = useMutation({
@@ -134,152 +97,10 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
     },
   });
 
-  const handleAccountTypeSelect = (accountType: AccountType) => {
-    setSelectedAccountType(accountType);
-    setStep("form");
-  };
-
   const onSubmit = (data: any) => {
     signupMutation.mutate(data);
   };
 
-  // Account type selection screen
-  if (step === "account-type") {
-    return (
-      <Card className="w-full max-w-lg mx-auto">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Choose Your Account Type</CardTitle>
-          <CardDescription className="text-center">
-            Select the account type that best fits your investment needs
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Personal Account Card */}
-          <button 
-            type="button"
-            className="group relative w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 p-5 shadow-sm hover:shadow-md transition-all duration-200 ease-out motion-safe:hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left"
-            onClick={() => handleAccountTypeSelect("personal")}
-            data-testid="card-personal-account"
-          >
-            <div className="flex items-start space-x-4">
-              <div className="h-12 w-12 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 grid place-items-center shadow-inner">
-                <UserIcon className="h-6 w-6" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-foreground">Personal Account</h3>
-                  <div className="rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs px-3 py-1 border border-blue-200 dark:border-blue-800">
-                    Most Popular
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Perfect for individual investors looking to build their crypto portfolio
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Personal investment goals tracking
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Risk tolerance customization
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Individual portfolio management
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </button>
-
-          {/* Business Account Card */}
-          <button 
-            type="button"
-            className="group relative w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 p-5 shadow-sm hover:shadow-md transition-all duration-200 ease-out motion-safe:hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left"
-            onClick={() => handleAccountTypeSelect("business")}
-            data-testid="card-business-account"
-          >
-            <div className="flex items-start space-x-4">
-              <div className="h-12 w-12 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 grid place-items-center shadow-inner">
-                <Building className="h-6 w-6" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-foreground mb-2">Business Account</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Designed for companies managing corporate treasury and institutional investments
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Company registration details
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Corporate investment targets
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Tax compliance features
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </button>
-
-          {/* Joint Account Card */}
-          <button 
-            type="button"
-            className="group relative w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 p-5 shadow-sm hover:shadow-md transition-all duration-200 ease-out motion-safe:hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left"
-            onClick={() => handleAccountTypeSelect("joint")}
-            data-testid="card-joint-account"
-          >
-            <div className="flex items-start space-x-4">
-              <div className="h-12 w-12 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 grid place-items-center shadow-inner">
-                <Users className="h-6 w-6" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-foreground mb-2">Joint Account</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Ideal for couples and families to manage shared investments together
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Shared investment goals
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Partner/spouse information
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Collaborative decision making
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </button>
-
-          <div className="text-center pt-4">
-            <p className="text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={onSwitchToLogin}
-                className="text-primary hover:underline font-medium"
-                data-testid="link-switch-to-login"
-              >
-                Sign in
-              </button>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Registration form based on selected account type
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
@@ -287,27 +108,29 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setStep("account-type")}
+            onClick={onBack}
             data-testid="button-back-to-account-type"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
             <CardTitle className="text-xl font-bold">
-              {selectedAccountType === "personal" && "Personal Account"}
-              {selectedAccountType === "business" && "Business Account"}
-              {selectedAccountType === "joint" && "Joint Account"}
+              {accountType === "personal" && "Personal Account"}
+              {accountType === "business" && "Business Account"}
+              {accountType === "joint" && "Joint Account"}
             </CardTitle>
             <CardDescription className="text-sm">
-              {selectedAccountType === "personal" && "Set up your personal crypto investment account"}
-              {selectedAccountType === "business" && "Register your business for institutional investing"}
-              {selectedAccountType === "joint" && "Create a shared account with your partner"}
+              {accountType === "personal" && "Set up your personal crypto investment account"}
+              {accountType === "business" && "Register your business for institutional investing"}
+              {accountType === "joint" && "Create a shared account with your partner"}
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Register the accountType field */}
+          <input type="hidden" {...form.register("accountType")} />
 
           {/* Name Fields */}
           <div className="grid grid-cols-2 gap-4">
@@ -325,7 +148,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
               </div>
               {form.formState.errors.firstName && (
                 <p className="text-sm text-destructive" data-testid="error-first-name">
-                  {form.formState.errors.firstName.message}
+                  {form.formState.errors.firstName?.message}
                 </p>
               )}
             </div>
@@ -343,7 +166,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
               </div>
               {form.formState.errors.lastName && (
                 <p className="text-sm text-destructive" data-testid="error-last-name">
-                  {form.formState.errors.lastName.message}
+                  {form.formState.errors.lastName?.message}
                 </p>
               )}
             </div>
@@ -365,7 +188,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
             </div>
             {form.formState.errors.email && (
               <p className="text-sm text-destructive" data-testid="error-email">
-                {form.formState.errors.email.message}
+                {form.formState.errors.email?.message}
               </p>
             )}
           </div>
@@ -394,7 +217,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
             </div>
             {form.formState.errors.password && (
               <p className="text-sm text-destructive" data-testid="error-password">
-                {form.formState.errors.password.message}
+                {form.formState.errors.password?.message}
               </p>
             )}
           </div>
@@ -423,13 +246,13 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
             </div>
             {form.formState.errors.confirmPassword && (
               <p className="text-sm text-destructive" data-testid="error-confirm-password">
-                {form.formState.errors.confirmPassword.message}
+                {form.formState.errors.confirmPassword?.message}
               </p>
             )}
           </div>
 
           {/* Account Type Specific Fields */}
-          {selectedAccountType === "personal" && (
+          {accountType === "personal" && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="investmentGoal">Investment Goal</Label>
@@ -445,7 +268,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </div>
                 {form.formState.errors.investmentGoal && (
                   <p className="text-sm text-destructive" data-testid="error-investment-goal">
-                    {form.formState.errors.investmentGoal.message}
+                    {form.formState.errors.investmentGoal?.message}
                   </p>
                 )}
               </div>
@@ -469,14 +292,14 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </Select>
                 {form.formState.errors.riskTolerance && (
                   <p className="text-sm text-destructive" data-testid="error-risk-tolerance">
-                    {form.formState.errors.riskTolerance.message}
+                    {form.formState.errors.riskTolerance?.message}
                   </p>
                 )}
               </div>
             </>
           )}
 
-          {selectedAccountType === "business" && (
+          {accountType === "business" && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="companyName">Company Name</Label>
@@ -492,7 +315,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </div>
                 {form.formState.errors.companyName && (
                   <p className="text-sm text-destructive" data-testid="error-company-name">
-                    {form.formState.errors.companyName.message}
+                    {form.formState.errors.companyName?.message}
                   </p>
                 )}
               </div>
@@ -517,7 +340,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </Select>
                 {form.formState.errors.companyType && (
                   <p className="text-sm text-destructive" data-testid="error-company-type">
-                    {form.formState.errors.companyType.message}
+                    {form.formState.errors.companyType?.message}
                   </p>
                 )}
               </div>
@@ -536,7 +359,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </div>
                 {form.formState.errors.taxId && (
                   <p className="text-sm text-destructive" data-testid="error-tax-id">
-                    {form.formState.errors.taxId.message}
+                    {form.formState.errors.taxId?.message}
                   </p>
                 )}
               </div>
@@ -555,14 +378,14 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </div>
                 {form.formState.errors.investmentTarget && (
                   <p className="text-sm text-destructive" data-testid="error-investment-target">
-                    {form.formState.errors.investmentTarget.message}
+                    {form.formState.errors.investmentTarget?.message}
                   </p>
                 )}
               </div>
             </>
           )}
 
-          {selectedAccountType === "joint" && (
+          {accountType === "joint" && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -579,7 +402,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                   </div>
                   {form.formState.errors.spouseFirstName && (
                     <p className="text-sm text-destructive" data-testid="error-spouse-first-name">
-                      {form.formState.errors.spouseFirstName.message}
+                      {form.formState.errors.spouseFirstName?.message}
                     </p>
                   )}
                 </div>
@@ -597,7 +420,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                   </div>
                   {form.formState.errors.spouseLastName && (
                     <p className="text-sm text-destructive" data-testid="error-spouse-last-name">
-                      {form.formState.errors.spouseLastName.message}
+                      {form.formState.errors.spouseLastName?.message}
                     </p>
                   )}
                 </div>
@@ -618,7 +441,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </div>
                 {form.formState.errors.spouseEmail && (
                   <p className="text-sm text-destructive" data-testid="error-spouse-email">
-                    {form.formState.errors.spouseEmail.message}
+                    {form.formState.errors.spouseEmail?.message}
                   </p>
                 )}
               </div>
@@ -642,7 +465,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </Select>
                 {form.formState.errors.relationshipType && (
                   <p className="text-sm text-destructive" data-testid="error-relationship-type">
-                    {form.formState.errors.relationshipType.message}
+                    {form.formState.errors.relationshipType?.message}
                   </p>
                 )}
               </div>
@@ -661,7 +484,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
                 </div>
                 {form.formState.errors.investmentTarget && (
                   <p className="text-sm text-destructive" data-testid="error-joint-investment-target">
-                    {form.formState.errors.investmentTarget.message}
+                    {form.formState.errors.investmentTarget?.message}
                   </p>
                 )}
               </div>
@@ -700,6 +523,270 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
             </p>
           </div>
         </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
+  const [step, setStep] = useState<"account-type" | "form">("account-type");
+  const [selectedAccountType, setSelectedAccountType] = useState<AccountType | null>(null);
+  const [tempSelectedType, setTempSelectedType] = useState<AccountType | null>("personal"); // Default to first option
+
+  const handleAccountTypeSelect = (accountType: AccountType) => {
+    setTempSelectedType(accountType);
+  };
+
+  const handleContinue = () => {
+    if (tempSelectedType) {
+      setSelectedAccountType(tempSelectedType);
+      setStep("form");
+    }
+  };
+
+  const accountTypes: AccountType[] = ["personal", "business", "joint"];
+  
+  const handleKeyDown = (event: React.KeyboardEvent, accountType: AccountType) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setTempSelectedType(accountType);
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      const currentIndex = accountTypes.indexOf(accountType);
+      const nextIndex = (currentIndex + 1) % accountTypes.length;
+      setTempSelectedType(accountTypes[nextIndex]);
+      // Focus the next card
+      const nextCard = document.querySelector(`[data-testid="card-${accountTypes[nextIndex]}-account"]`) as HTMLElement;
+      nextCard?.focus();
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      const currentIndex = accountTypes.indexOf(accountType);
+      const prevIndex = currentIndex === 0 ? accountTypes.length - 1 : currentIndex - 1;
+      setTempSelectedType(accountTypes[prevIndex]);
+      // Focus the previous card
+      const prevCard = document.querySelector(`[data-testid="card-${accountTypes[prevIndex]}-account"]`) as HTMLElement;
+      prevCard?.focus();
+    }
+  };
+
+  // If form step and account type selected, render the form
+  if (step === "form" && selectedAccountType) {
+    return (
+      <AccountTypeForm
+        accountType={selectedAccountType}
+        onSuccess={onSuccess}
+        onSwitchToLogin={onSwitchToLogin}
+        onBack={() => {
+          setTempSelectedType(selectedAccountType);
+          setStep("account-type");
+        }}
+      />
+    );
+  }
+
+  // Account type selection screen
+  return (
+    <Card className="w-full max-w-lg mx-auto">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold text-center">Choose Your Account Type</CardTitle>
+        <CardDescription className="text-center">
+          Select the account type that best fits your investment needs
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div role="radiogroup" aria-label="Account type selection" data-testid="radiogroup-account-type" className="space-y-4">
+          {/* Personal Account Card */}
+          <button 
+            type="button"
+            role="radio"
+            aria-checked={tempSelectedType === "personal"}
+            aria-labelledby="personal-account-title"
+            tabIndex={tempSelectedType === "personal" ? 0 : -1}
+            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
+              tempSelectedType === "personal" 
+                ? "border-primary/30 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" 
+                : "border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950"
+            }`}
+            onClick={() => handleAccountTypeSelect("personal")}
+            onKeyDown={(e) => handleKeyDown(e, "personal")}
+            data-testid="card-personal-account"
+          >
+            {tempSelectedType === "personal" && (
+              <div className="absolute top-4 right-4">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+              </div>
+            )}
+            <div className="flex items-start space-x-4">
+              <div className="h-12 w-12 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
+                <UserIcon className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 id="personal-account-title" className="text-lg font-semibold text-foreground">Personal Account</h3>
+                  <Badge variant="secondary" className="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+                    Most Popular
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Perfect for individual crypto investments
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <Badge variant="outline" className="text-xs">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Quick Setup
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    Auto Rebalancing
+                  </Badge>
+                </div>
+                <ul className="space-y-1">
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Personalized investment goals
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Risk tolerance matching
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </button>
+
+          {/* Business Account Card */}
+          <button 
+            type="button"
+            role="radio"
+            aria-checked={tempSelectedType === "business"}
+            aria-labelledby="business-account-title"
+            tabIndex={tempSelectedType === "business" ? 0 : -1}
+            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
+              tempSelectedType === "business" 
+                ? "border-primary/30 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" 
+                : "border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950"
+            }`}
+            onClick={() => handleAccountTypeSelect("business")}
+            onKeyDown={(e) => handleKeyDown(e, "business")}
+            data-testid="card-business-account"
+          >
+            {tempSelectedType === "business" && (
+              <div className="absolute top-4 right-4">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+              </div>
+            )}
+            <div className="flex items-start space-x-4">
+              <div className="h-12 w-12 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
+                <Building className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <h3 id="business-account-title" className="text-lg font-semibold text-foreground mb-3">Business Account</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Corporate treasury and institutional investing
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <Badge variant="outline" className="text-xs">
+                    <Building className="h-3 w-3 mr-1" />
+                    Tax Benefits
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <DollarSign className="h-3 w-3 mr-1" />
+                    Higher Limits
+                  </Badge>
+                </div>
+                <ul className="space-y-1">
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Multi-user access controls
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Advanced reporting tools
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </button>
+
+          {/* Joint Account Card */}
+          <button 
+            type="button"
+            role="radio"
+            aria-checked={tempSelectedType === "joint"}
+            aria-labelledby="joint-account-title"
+            tabIndex={tempSelectedType === "joint" ? 0 : -1}
+            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
+              tempSelectedType === "joint" 
+                ? "border-primary/30 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" 
+                : "border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950"
+            }`}
+            onClick={() => handleAccountTypeSelect("joint")}
+            onKeyDown={(e) => handleKeyDown(e, "joint")}
+            data-testid="card-joint-account"
+          >
+            {tempSelectedType === "joint" && (
+              <div className="absolute top-4 right-4">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+              </div>
+            )}
+            <div className="flex items-start space-x-4">
+              <div className="h-12 w-12 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
+                <Users className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <h3 id="joint-account-title" className="text-lg font-semibold text-foreground mb-3">Joint Account</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Shared investing for couples and families
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <Badge variant="outline" className="text-xs">
+                    <Users className="h-3 w-3 mr-1" />
+                    Shared Control
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <Target className="h-3 w-3 mr-1" />
+                    Joint Goals
+                  </Badge>
+                </div>
+                <ul className="space-y-1">
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Dual account access
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    Shared financial planning
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Continue Button */}
+        <Button
+          onClick={handleContinue}
+          disabled={!tempSelectedType}
+          className="w-full"
+          data-testid="button-continue"
+        >
+          Continue
+        </Button>
+
+        {/* Switch to Login */}
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="text-primary hover:underline font-medium"
+              data-testid="link-switch-to-login"
+            >
+              Sign in
+            </button>
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
