@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { Wallet, TrendingUp, Zap, Eye, EyeOff } from "lucide-react";
+import { Wallet, TrendingUp, Zap, Eye, EyeOff, Trophy, Gift, Activity } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -167,6 +167,111 @@ export function BalanceSummary() {
                 </p>
                 <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
                   View staking plans →
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Challenges Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
+        >
+          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="challenges-summary">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 md:p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                    <Trophy className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm md:text-base">Challenges</h3>
+                    <p className="text-xs text-muted-foreground">Community goals</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {stats?.activeChallenges || 0} Active
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg md:text-2xl font-bold text-orange-600 dark:text-orange-400">
+                  3
+                </p>
+                <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                  Join challenges →
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Rewards Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
+        >
+          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="rewards-summary">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 md:p-2 bg-pink-100 dark:bg-pink-900 rounded-lg">
+                    <Gift className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm md:text-base">Rewards</h3>
+                    <p className="text-xs text-muted-foreground">Total earned</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-xs bg-pink-50 dark:bg-pink-950">
+                  New
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg md:text-2xl font-bold text-pink-600 dark:text-pink-400">
+                  {showBalance ? "$247" : "****"}
+                </p>
+                <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                  View rewards history →
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Activity Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.5 }}
+          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
+        >
+          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="activity-summary">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 md:p-2 bg-cyan-100 dark:bg-cyan-900 rounded-lg">
+                    <Activity className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm md:text-base">Activity</h3>
+                    <p className="text-xs text-muted-foreground">Recent transactions</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  12 Today
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg md:text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+                  54
+                </p>
+                <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                  View all activity →
                 </p>
               </div>
             </CardContent>
