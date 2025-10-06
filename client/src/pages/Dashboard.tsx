@@ -52,34 +52,46 @@ export default function Dashboard() {
       <div className="ml-0 lg:ml-64 min-h-screen">
         <TopBar title="Dashboard" onMenuClick={() => setSidebarOpen(true)} />
         
-        <main className="p-3 md:p-6 space-y-3 md:space-y-6 pb-20 lg:pb-6">
+        <main className="p-4 md:p-8 space-y-6 md:space-y-8 pb-24 lg:pb-8">
           <BalanceSummary />
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             <div className="hidden lg:block lg:col-span-2">
               <PortfolioChart />
             </div>
             <AssetAllocation />
           </div>
           
-          <FeaturedPortfolios />
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Featured Portfolios</h2>
+            <FeaturedPortfolios />
+          </div>
           
-          <EnhancedStakingPlans />
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Staking Plans</h2>
+            <EnhancedStakingPlans />
+          </div>
           
-          <EnhancedChallenges />
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Community Challenges</h2>
+            <EnhancedChallenges />
+          </div>
           
           {/* Gamification Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <LevelSystem />
-            <StreakCounter />
-            <div className="lg:col-span-1">
-              <InteractiveElements />
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Your Progress</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+              <LevelSystem />
+              <StreakCounter />
+              <div className="lg:col-span-1">
+                <InteractiveElements />
+              </div>
             </div>
           </div>
           
           <AchievementBadges />
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             <RecentActivity />
             <WalletOverview />
           </div>
