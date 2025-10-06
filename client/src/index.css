@@ -164,6 +164,16 @@
   overflow: hidden;
 }
 
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Custom responsive breakpoint for very small screens */
 @media (min-width: 475px) {
   .xs\:inline {

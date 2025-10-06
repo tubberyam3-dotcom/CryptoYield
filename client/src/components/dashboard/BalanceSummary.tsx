@@ -102,12 +102,13 @@ export function BalanceSummary() {
       </motion.div>
 
       {/* Portfolio and Staking Cards */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
+      <div className="flex md:grid md:grid-cols-2 gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-3 px-3 md:mx-0 md:px-0 md:overflow-visible">
         {/* Portfolio Card */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
+          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
         >
           <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="portfolio-summary">
             <CardContent className="p-0">
@@ -142,6 +143,7 @@ export function BalanceSummary() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
+          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
         >
           <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="staking-summary">
             <CardContent className="p-0">
