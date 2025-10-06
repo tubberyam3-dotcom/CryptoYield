@@ -875,6 +875,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple in-memory cache for crypto data
+  const cryptoCache = new Map<string, { data: any; timestamp: number }>();
+  const CACHE_TTL = 60 * 60 * 1000; // 1 hour cache
+
+  // Crypto data proxy endpoint to avoid CORS issues
+  app.get('/api/crypto/historical/:coinId', async (req: any, res) => {
+    try {
+      const { coinId } = req.params;
+      const { days } = req.query;
+      
+      if (!days || isNaN(Number(days))) {
+        return res.status(400).json({ message: "Invalid days parameter" });
+      }
+
+      const cacheKey = `${coinId}-${days}`;
+      const cached = cryptoCache.get(cacheKey);
+
+      // Return cached data if available and fresh
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return res.json(cached.data);
+      }
+
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=daily`
+      );
+
+      if (!response.ok) {
+        // If we have stale cache, return it on error
+        if (cached) {
+          return res.json(cached.data);
+        }
+        throw new Error(`CoinGecko API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Cache the response
+      cryptoCache.set(cacheKey, { data, timestamp: Date.now() });
+      
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching crypto data:", error);
+      res.status(500).json({ message: "Failed to fetch crypto data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
