@@ -200,43 +200,52 @@ export function CryptoCalculator() {
   const selectedAsset2Data = cryptoAssets.find(a => a.id === selectedAsset2);
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card className="border-2 shadow-2xl bg-gradient-to-br from-card to-card/50 backdrop-blur-sm" data-testid="calculator-card">
-          <CardHeader className="space-y-3 pb-6">
-            <CardTitle className="text-2xl md:text-3xl font-bold">Crypto Investment Calculator</CardTitle>
-            <CardDescription className="text-base">
-              Calculate potential returns based on historical performance
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <Card className="relative border-0 shadow-2xl bg-gradient-to-br from-background via-background/95 to-primary/5 backdrop-blur-xl overflow-hidden" data-testid="calculator-card">
+          <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)] pointer-events-none"></div>
+          <CardHeader className="space-y-4 pb-8 relative">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Compare Assets</Label>
+              <div className="space-y-2">
+                <CardTitle className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                  Investment Calculator
+                </CardTitle>
+                <CardDescription className="text-base text-muted-foreground">
+                  Calculate potential returns based on historical performance
+                </CardDescription>
+              </div>
               <Button
                 variant={compareMode ? "default" : "outline"}
-                size="sm"
+                size="default"
                 onClick={() => setCompareMode(!compareMode)}
+                className="shadow-lg"
                 data-testid="button-compare-toggle"
               >
                 {compareMode ? "Single Mode" : "Compare Mode"}
               </Button>
             </div>
+          </CardHeader>
+          <CardContent className="space-y-8 relative">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="asset">Select Crypto Asset</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label htmlFor="asset" className="text-sm font-semibold text-foreground/90">Primary Asset</Label>
                 <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-                  <SelectTrigger id="asset" data-testid="select-asset">
+                  <SelectTrigger id="asset" className="h-12 border-2 hover:border-primary/50 transition-colors" data-testid="select-asset">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {cryptoAssets.map((asset) => (
                       <SelectItem key={asset.id} value={asset.id}>
-                        {asset.symbol} - {asset.name}
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: asset.color }}></div>
+                          <span className="font-medium">{asset.symbol}</span>
+                          <span className="text-muted-foreground">- {asset.name}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -244,45 +253,57 @@ export function CryptoCalculator() {
               </div>
 
               {compareMode && (
-                <div className="space-y-2">
-                  <Label htmlFor="asset2">Compare With</Label>
+                <motion.div 
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="space-y-3"
+                >
+                  <Label htmlFor="asset2" className="text-sm font-semibold text-foreground/90">Compare With</Label>
                   <Select 
                     value={selectedAsset2} 
                     onValueChange={(value) => {
                       setSelectedAsset2(value);
                     }}
                   >
-                    <SelectTrigger id="asset2" data-testid="select-asset2">
+                    <SelectTrigger id="asset2" className="h-12 border-2 hover:border-accent/50 transition-colors" data-testid="select-asset2">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {cryptoAssets.filter(a => a.id !== selectedAsset).map((asset) => (
                         <SelectItem key={asset.id} value={asset.id}>
-                          {asset.symbol} - {asset.name}
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: asset.color }}></div>
+                            <span className="font-medium">{asset.symbol}</span>
+                            <span className="text-muted-foreground">- {asset.name}</span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </motion.div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="amount">Investment Amount (USD)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="1000"
-                  data-testid="input-amount"
-                />
+              <div className="space-y-3">
+                <Label htmlFor="amount" className="text-sm font-semibold text-foreground/90">Investment Amount</Label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="1000"
+                    className="h-12 pl-8 border-2 hover:border-primary/50 focus:border-primary transition-colors text-lg"
+                    data-testid="input-amount"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border/50">
               <div className="flex items-center justify-between">
-                <Label>Investment Duration</Label>
-                <Badge variant="secondary" data-testid="text-duration">
+                <Label className="text-sm font-semibold text-foreground/90">Investment Duration</Label>
+                <Badge variant="secondary" className="text-base px-4 py-1.5 font-bold" data-testid="text-duration">
                   {duration} {duration === 1 ? "Year" : "Years"}
                 </Badge>
               </div>
@@ -295,8 +316,11 @@ export function CryptoCalculator() {
                 className="w-full"
                 data-testid="slider-duration"
               />
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex justify-between text-sm font-medium text-muted-foreground">
                 <span>1 Year</span>
+                <span>2 Years</span>
+                <span>3 Years</span>
+                <span>4 Years</span>
                 <span>5 Years</span>
               </div>
             </div>
@@ -308,152 +332,203 @@ export function CryptoCalculator() {
             )}
 
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="flex items-center justify-center py-12">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/30 border-t-primary"></div>
+                  <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border-4 border-primary/20"></div>
+                </div>
               </div>
             ) : (
               <>
                 {result && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="bg-gradient-to-br from-primary/10 to-accent/10" data-testid="result-card-1">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          {selectedAssetData?.symbol}
-                          {getBadge(result.cagr).text && (
-                            <Badge className={`${getBadge(result.cagr).color} text-white`}>
-                              {getBadge(result.cagr).text}
-                            </Badge>
-                          )}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Projected Value</p>
-                          <p className="text-2xl font-bold text-primary" data-testid="text-projected-value">
-                            ${result.projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Profit</p>
-                            <p className="text-lg font-semibold text-green-600 dark:text-green-400" data-testid="text-profit">
-                              ${result.profit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">ROI</p>
-                            <p className="text-lg font-semibold" data-testid="text-roi">
-                              {result.profitPercentage.toFixed(1)}%
-                            </p>
-                          </div>
-                        </div>
-                        <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground">CAGR (Annual Growth)</p>
-                          <p className="text-xl font-bold" data-testid="text-cagr">
-                            {result.cagr.toFixed(2)}%
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {compareMode && result2 && (
-                      <Card className="bg-gradient-to-br from-accent/10 to-primary/10" data-testid="result-card-2">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            {selectedAsset2Data?.symbol}
-                            {getBadge(result2.cagr).text && (
-                              <Badge className={`${getBadge(result2.cagr).color} text-white`}>
-                                {getBadge(result2.cagr).text}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Card className="border-0 bg-gradient-to-br from-primary/5 via-primary/10 to-purple-500/10 shadow-xl hover:shadow-2xl transition-shadow" data-testid="result-card-1">
+                        <CardHeader className="pb-4">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-xl font-bold flex items-center gap-3">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedAssetData?.color }}></div>
+                              {selectedAssetData?.symbol}
+                            </CardTitle>
+                            {getBadge(result.cagr).text && (
+                              <Badge className={`${getBadge(result.cagr).color} text-white shadow-lg`}>
+                                {getBadge(result.cagr).text}
                               </Badge>
                             )}
-                          </CardTitle>
+                          </div>
                         </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div>
-                            <p className="text-sm text-muted-foreground">Projected Value</p>
-                            <p className="text-2xl font-bold text-accent" data-testid="text-projected-value-2">
-                              ${result2.projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        <CardContent className="space-y-5">
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Projected Value</p>
+                            <p className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent" data-testid="text-projected-value">
+                              ${result.projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </p>
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <p className="text-xs text-muted-foreground">Profit</p>
-                              <p className="text-lg font-semibold text-green-600 dark:text-green-400" data-testid="text-profit-2">
-                                ${result2.profit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground uppercase">Profit</p>
+                              <p className="text-xl font-bold text-green-600 dark:text-green-400" data-testid="text-profit">
+                                +${result.profit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                               </p>
                             </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">ROI</p>
-                              <p className="text-lg font-semibold" data-testid="text-roi-2">
-                                {result2.profitPercentage.toFixed(1)}%
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground uppercase">ROI</p>
+                              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-roi">
+                                +{result.profitPercentage.toFixed(1)}%
                               </p>
                             </div>
                           </div>
-                          <div className="pt-2 border-t">
-                            <p className="text-xs text-muted-foreground">CAGR (Annual Growth)</p>
-                            <p className="text-xl font-bold" data-testid="text-cagr-2">
-                              {result2.cagr.toFixed(2)}%
+                          <div className="pt-4 space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground uppercase">Annual Growth Rate (CAGR)</p>
+                            <p className="text-2xl font-bold text-foreground" data-testid="text-cagr">
+                              {result.cagr.toFixed(2)}%
                             </p>
                           </div>
                         </CardContent>
                       </Card>
+                    </motion.div>
+
+                    {compareMode && result2 && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
+                      >
+                        <Card className="border-0 bg-gradient-to-br from-accent/5 via-accent/10 to-pink-500/10 shadow-xl hover:shadow-2xl transition-shadow" data-testid="result-card-2">
+                          <CardHeader className="pb-4">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-xl font-bold flex items-center gap-3">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedAsset2Data?.color }}></div>
+                                {selectedAsset2Data?.symbol}
+                              </CardTitle>
+                              {getBadge(result2.cagr).text && (
+                                <Badge className={`${getBadge(result2.cagr).color} text-white shadow-lg`}>
+                                  {getBadge(result2.cagr).text}
+                                </Badge>
+                              )}
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-5">
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Projected Value</p>
+                              <p className="text-4xl font-bold bg-gradient-to-r from-accent to-pink-600 bg-clip-text text-transparent" data-testid="text-projected-value-2">
+                                ${result2.projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground uppercase">Profit</p>
+                                <p className="text-xl font-bold text-green-600 dark:text-green-400" data-testid="text-profit-2">
+                                  +${result2.profit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground uppercase">ROI</p>
+                                <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-roi-2">
+                                  +{result2.profitPercentage.toFixed(1)}%
+                                </p>
+                              </div>
+                            </div>
+                            <div className="pt-4 space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground uppercase">Annual Growth Rate (CAGR)</p>
+                              <p className="text-2xl font-bold text-foreground" data-testid="text-cagr-2">
+                                {result2.cagr.toFixed(2)}%
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
                     )}
                   </div>
                 )}
 
                 {chartData.length > 0 && (
-                  <Card data-testid="chart-container">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Historical Performance & Projection</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                          <XAxis dataKey="date" className="text-xs" />
-                          <YAxis className="text-xs" />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "hsl(var(--card))",
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "6px",
-                            }}
-                          />
-                          <Legend />
-                          <Line
-                            type="monotone"
-                            dataKey="value"
-                            stroke={selectedAssetData?.color}
-                            strokeWidth={2}
-                            name="Historical Value"
-                            dot={false}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="projected"
-                            stroke="#8b5cf6"
-                            strokeWidth={2}
-                            strokeDasharray="5 5"
-                            name="Projected (CAGR)"
-                            dot={false}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <Card className="border-0 shadow-xl bg-gradient-to-br from-card via-card to-muted/20" data-testid="chart-container">
+                      <CardHeader className="pb-6">
+                        <CardTitle className="text-xl font-bold flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <TrendingUp className="w-5 h-5 text-primary" />
+                          </div>
+                          Historical Performance & Projection
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={320}>
+                          <LineChart data={chartData}>
+                            <defs>
+                              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={selectedAssetData?.color} stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor={selectedAssetData?.color} stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
+                            <XAxis 
+                              dataKey="date" 
+                              className="text-xs" 
+                              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                            />
+                            <YAxis 
+                              className="text-xs"
+                              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "hsl(var(--card))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "12px",
+                                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                              }}
+                            />
+                            <Legend wrapperStyle={{ paddingTop: "20px" }} />
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke={selectedAssetData?.color}
+                              strokeWidth={3}
+                              name="Historical Value"
+                              dot={false}
+                              fill="url(#colorValue)"
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="projected"
+                              stroke="hsl(var(--accent))"
+                              strokeWidth={3}
+                              strokeDasharray="8 4"
+                              name="Projected (CAGR)"
+                              dot={false}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 )}
               </>
             )}
 
-            <Button 
-              className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
-              size="lg" 
-              onClick={() => window.location.href = "/signup"}
-              data-testid="button-start-investing"
-            >
-              <TrendingUp className="w-5 h-5 mr-2" />
-              Start Investing Now
-            </Button>
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary via-accent to-purple-600 rounded-2xl blur opacity-40 group-hover:opacity-75 transition duration-1000"></div>
+              <Button 
+                className="relative w-full bg-gradient-to-r from-primary via-accent to-purple-600 hover:from-primary/90 hover:via-accent/90 hover:to-purple-600/90 text-white font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-[1.02] text-lg py-7" 
+                size="lg" 
+                onClick={() => window.location.href = "/signup"}
+                data-testid="button-start-investing"
+              >
+                <TrendingUp className="w-6 h-6 mr-2" />
+                Start Investing Now
+                <ArrowUpRight className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -462,51 +537,66 @@ export function CryptoCalculator() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <Card data-testid="leaderboard-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-yellow-500" />
-                Top Performers (3-Year Returns)
-              </CardTitle>
-              <CardDescription>Based on $1,000 investment over 3 years</CardDescription>
+          <Card className="border-0 shadow-2xl bg-gradient-to-br from-yellow-500/5 via-card to-orange-500/5 overflow-hidden" data-testid="leaderboard-card">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-full blur-3xl -z-10"></div>
+            <CardHeader className="pb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 shadow-lg">
+                  <Trophy className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold">Top Performers</CardTitle>
+                  <CardDescription className="text-base">Based on $1,000 investment over 3 years</CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {leaderboard.map((item, index) => {
                   const asset = cryptoAssets.find(a => a.id === item.asset);
                   const badge = getBadge(item.cagr);
                   const BadgeIcon = badge.icon;
                   return (
-                    <div
+                    <motion.div
                       key={item.asset}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="relative group"
                       data-testid={`leaderboard-item-${index}`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                          index === 0 ? 'bg-yellow-500 text-white' :
-                          index === 1 ? 'bg-gray-400 text-white' :
-                          'bg-orange-600 text-white'
-                        }`}>
-                          {index + 1}
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="relative flex items-center justify-between p-5 rounded-2xl bg-gradient-to-r from-muted/30 to-muted/10 border border-border/50 group-hover:border-primary/30 transition-all duration-300">
+                        <div className="flex items-center gap-4">
+                          <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg ${
+                            index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
+                            index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-white' :
+                            'bg-gradient-to-br from-orange-400 to-orange-600 text-white'
+                          }`}>
+                            {index === 0 && <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-300 rounded-full animate-pulse"></div>}
+                            {index + 1}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: asset?.color }}></div>
+                            <div>
+                              <p className="font-bold text-lg">{asset?.symbol}</p>
+                              <p className="text-sm text-muted-foreground">{asset?.name}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold">{asset?.symbol}</p>
-                          <p className="text-xs text-muted-foreground">{asset?.name}</p>
+                        <div className="text-right">
+                          <p className="font-bold text-2xl bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                            ${item.projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </p>
+                          <div className="flex items-center justify-end gap-2 mt-1">
+                            <ArrowUpRight className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            <span className="text-sm font-semibold text-green-600 dark:text-green-400">{item.cagr.toFixed(1)}% CAGR</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-lg text-primary">
-                          ${item.projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        </p>
-                        <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                          <ArrowUpRight className="w-3 h-3" />
-                          <span>{item.cagr.toFixed(1)}% CAGR</span>
-                        </div>
-                      </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
