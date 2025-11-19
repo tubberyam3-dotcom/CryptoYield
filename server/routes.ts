@@ -253,6 +253,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     password: z.string().min(6, "Password must be at least 6 characters"),
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
+    accountType: z.enum(['personal', 'business', 'joint']).optional().default('personal'),
+    // Joint account fields (only required if accountType is 'joint')
+    spouseFirstName: z.string().optional(),
+    spouseLastName: z.string().optional(),
+    spouseEmail: z.string().email().optional().or(z.literal('')),
+    relationshipType: z.enum(['married', 'domestic_partners', 'family']).optional(),
+    // Business account fields (only required if accountType is 'business')
+    businessName: z.string().optional(),
+    businessType: z.string().optional(),
+    taxId: z.string().optional(),
+  }).refine((data) => {
+    // If joint account, require spouse information
+    if (data.accountType === 'joint') {
+      return data.spouseFirstName && data.spouseLastName && data.spouseEmail && data.relationshipType;
+    }
+    return true;
+  }, {
+    message: "Partner information is required for joint accounts",
+    path: ["spouseEmail"]
+  }).refine((data) => {
+    // If business account, require business information
+    if (data.accountType === 'business') {
+      return data.businessName && data.businessType;
+    }
+    return true;
+  }, {
+    message: "Business information is required for business accounts",
+    path: ["businessName"]
   });
 
   const loginSchema = z.object({
@@ -262,7 +290,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/register', async (req: any, res) => {
     try {
-      const { email, password, firstName, lastName } = registerSchema.parse(req.body);
+      const validatedData = registerSchema.parse(req.body);
+      const { 
+        email, 
+        password, 
+        firstName, 
+        lastName, 
+        accountType,
+        spouseFirstName,
+        spouseLastName,
+        spouseEmail,
+        relationshipType,
+        businessName,
+        businessType,
+        taxId
+      } = validatedData;
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
@@ -270,11 +312,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already exists with this email" });
       }
       
+      // For joint accounts, note: we allow existing emails since partners can join using the join code
+      
       // Hash password
       const saltRounds = 12;
       const passwordHash = await bcrypt.hash(password, saltRounds);
       
-      // Create user
+      // Create user with accountType
       const user = await storage.createUser({
         email,
         firstName,
@@ -282,7 +326,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         passwordHash,
         authType: 'password',
         profileImageUrl: null,
+        accountType: accountType || 'personal',
+        businessName: accountType === 'business' ? businessName : null,
+        businessType: accountType === 'business' ? businessType : null,
+        taxId: accountType === 'business' ? taxId : null,
       });
+      
+      // If joint account, create the joint account
+      let jointAccount = null;
+      if (accountType === 'joint') {
+        const jointAccountName = `${firstName} ${lastName} & ${spouseFirstName} ${spouseLastName}`;
+        const jointAccountDescription = `Joint ${relationshipType?.replace('_', ' ')} account`;
+        
+        jointAccount = await storage.createJointAccount({
+          name: jointAccountName,
+          description: jointAccountDescription,
+          createdBy: user.id,
+          partnerEmail: spouseEmail || null,
+          relationshipType: relationshipType || null,
+        });
+        
+        console.log(`Created joint account ${jointAccount.id} for user ${user.id} with join code: ${jointAccount.joinCode}`);
+        console.log(`Partner email: ${spouseEmail} - they can join using code: ${jointAccount.joinCode}`);
+      }
       
       // Create session (similar to Replit OAuth)
       req.session.user = {
@@ -294,9 +360,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear logout flag
       delete req.session.loggedOut;
       
-      // Return user without password hash
+      // Return user without password hash, include joint account info if applicable
       const { passwordHash: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      const response: any = userWithoutPassword;
+      
+      if (jointAccount) {
+        response.jointAccount = jointAccount;
+        response.message = `Joint account created! Share this join code with your partner: ${jointAccount.joinCode}`;
+      }
+      
+      res.json(response);
     } catch (error: any) {
       console.error("Registration error:", error);
       if (error.name === 'ZodError') {

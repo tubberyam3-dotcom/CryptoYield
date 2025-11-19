@@ -79,13 +79,26 @@ function AccountTypeForm({
       const response = await apiRequest("POST", "/api/auth/register", signupData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (responseData) => {
       // Invalidate auth cache to trigger re-fetch of user
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "Account Created!",
-        description: "Welcome to CryptoVault. You're now logged in.",
-      });
+      
+      // Check if this was a joint account signup
+      if (responseData.jointAccount && responseData.jointAccount.joinCode) {
+        toast({
+          title: "Joint Account Created!",
+          description: `Your join code is: ${responseData.jointAccount.joinCode}. Share this with your partner so they can join.`,
+          duration: 10000,
+        });
+        console.log("Joint Account Join Code:", responseData.jointAccount.joinCode);
+        console.log("Partner can join at Settings > Profile > Joint Account section");
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "Welcome to CryptoVault. You're now logged in.",
+        });
+      }
+      
       onSuccess?.();
     },
     onError: (error: any) => {

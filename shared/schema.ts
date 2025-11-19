@@ -34,6 +34,10 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"), // For password-based authentication
   authType: varchar("auth_type", { enum: ['oauth', 'password'] }).default('oauth'), // Authentication method
+  accountType: varchar("account_type", { enum: ['personal', 'business', 'joint'] }).default('personal'), // Account type
+  businessName: varchar("business_name"), // For business accounts
+  businessType: varchar("business_type"), // For business accounts
+  taxId: varchar("tax_id"), // For business accounts
   kycStatus: varchar("kyc_status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   role: varchar("role", { enum: ['user', 'admin'] }).default('user'),
   createdAt: timestamp("created_at").defaultNow(),
@@ -47,6 +51,8 @@ export const jointAccounts = pgTable("joint_accounts", {
   description: text("description"),
   kycStatus: varchar("kyc_status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   joinCode: varchar("join_code").unique(), // Code for partner to join
+  partnerEmail: varchar("partner_email"), // Email of intended partner (for auditing)
+  relationshipType: varchar("relationship_type", { enum: ['married', 'domestic_partners', 'family'] }), // Relationship type
   createdBy: varchar("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
