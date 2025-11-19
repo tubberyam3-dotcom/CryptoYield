@@ -18,7 +18,7 @@ export function MobileNav() {
 
   return (
     <div 
-      className="lg:hidden bg-card border-t border-border z-[100]" 
+      className="lg:hidden bg-card border-t border-border z-[100] shadow-lg" 
       data-mobile-nav
       style={{ 
         position: 'fixed',
@@ -29,7 +29,9 @@ export function MobileNav() {
         WebkitTransform: 'translateZ(0)',
         height: 'auto',
         borderRadius: '12px',
-        marginBottom: 'env(safe-area-inset-bottom, 0px)'
+        marginBottom: 'env(safe-area-inset-bottom, 0px)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none'
       }}
     >
       <div className="grid grid-cols-4 gap-1 p-3">
