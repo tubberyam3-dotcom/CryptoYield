@@ -1,8 +1,8 @@
 # Overview
 
-This is a **Crypto Brokerage SaaS platform** built as a full-stack application enabling users to invest in curated crypto portfolios, participate in staking programs, and join community challenges. The platform features a React frontend with Express.js backend, PostgreSQL database, and implements professional-grade authentication through Replit's OAuth system.
+This is **Reflux Capital**, a professional investment brokerage and advisory platform built as a full-stack application enabling users to invest in bonds, shares, and curated portfolios. The platform features a React frontend with Express.js backend, PostgreSQL database, and implements professional-grade authentication through Replit's OAuth system and password-based authentication.
 
-The application follows a clean architecture pattern with clear separation between client, server, and shared components. It provides both user and admin interfaces, with comprehensive portfolio management, staking rewards calculation, and community engagement features.
+The application follows a clean architecture pattern with clear separation between client, server, and shared components. It provides both user and admin interfaces, with comprehensive portfolio management, bond investment tracking, and community engagement features.
 
 # User Preferences
 
@@ -25,10 +25,12 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Replit OAuth integration with session management using connect-pg-simple
 
 ## Database Schema Design
-- **Users**: Core user management with KYC status and role-based access
-- **Portfolios**: Curated crypto investment packages with strategy tags and risk levels
+- **Users**: Core user management with KYC status, role-based access, and multi-account types (personal, business, joint)
+- **Joint Accounts**: Couples/family joint account support with secure join codes
+- **Portfolios**: Curated investment packages (stocks, ETFs, mutual funds) with strategy tags and risk levels
 - **UserPortfolios**: Investment tracking with returns calculation
-- **Staking System**: Multi-tier staking plans with APY rates and lock periods
+- **Bond Products**: Government, corporate, and municipal bonds with yield rates and maturity periods
+- **UserBonds**: Bond investment tracking with purchase dates and expected returns
 - **Community Challenges**: Group and solo investment challenges with progress tracking
 - **Sessions**: Secure session storage for authentication persistence
 
@@ -46,7 +48,8 @@ Preferred communication style: Simple, everyday language.
 
 ## API Structure
 - **Portfolio Management**: CRUD operations for investment portfolios with admin controls
-- **Staking Operations**: Plan management, reward calculations, and user staking tracking
+- **Bond Operations**: Product management, yield calculations, and user bond investment tracking
+- **Joint Account Management**: Account creation, join code system, and partner linking
 - **Challenge System**: Community challenge creation, joining, and progress tracking
 - **User Dashboard**: Comprehensive statistics and activity tracking
 - **Admin Panel**: Administrative controls for platform management

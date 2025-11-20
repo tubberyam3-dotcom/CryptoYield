@@ -67,12 +67,13 @@ export const userJointAccounts = pgTable("user_joint_accounts", {
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
+// Investment Portfolios (stocks, ETFs, mutual funds)
 export const portfolios = pgTable("portfolios", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
   description: text("description"),
-  strategyTag: varchar("strategy_tag"),
-  assets: jsonb("assets").notNull(),
+  strategyTag: varchar("strategy_tag"), // e.g., "growth", "value", "dividend", "balanced"
+  assets: jsonb("assets").notNull(), // Array of stocks, ETFs, mutual funds with allocations
   minInvestment: decimal("min_investment", { precision: 18, scale: 8 }).notNull(),
   riskLevel: varchar("risk_level", { enum: ['low', 'medium', 'high'] }).notNull(),
   currentReturn: decimal("current_return", { precision: 5, scale: 2 }).default('0'),
@@ -93,26 +94,30 @@ export const userPortfolios = pgTable("user_portfolios", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const stakingPlans = pgTable("staking_plans", {
+// Bond Products (government bonds, corporate bonds, municipal bonds)
+export const bondProducts = pgTable("bond_products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
-  duration: integer("duration").notNull(), // in months
-  apy: decimal("apy", { precision: 5, scale: 2 }).notNull(),
-  minAmount: decimal("min_amount", { precision: 18, scale: 8 }).notNull(),
+  name: varchar("name").notNull(), // e.g., "US Treasury 10-Year", "AAA Corporate Bond"
+  bondType: varchar("bond_type", { enum: ['government', 'corporate', 'municipal'] }).default('government'),
+  maturityMonths: integer("maturity_months").notNull(), // bond maturity period in months
+  yield: decimal("yield", { precision: 5, scale: 2 }).notNull(), // annual yield percentage
+  minInvestment: decimal("min_investment", { precision: 18, scale: 8 }).notNull(),
+  rating: varchar("rating"), // e.g., "AAA", "AA", "A", "BBB"
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const userStaking = pgTable("user_staking", {
+// User Bond Holdings
+export const userBonds = pgTable("user_bonds", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id),
   jointAccountId: varchar("joint_account_id").references(() => jointAccounts.id),
-  stakingPlanId: varchar("staking_plan_id").references(() => stakingPlans.id).notNull(),
-  amountLocked: decimal("amount_locked", { precision: 18, scale: 8 }).notNull(),
-  startDate: timestamp("start_date").defaultNow(),
-  endDate: timestamp("end_date").notNull(),
-  status: varchar("status", { enum: ['active', 'completed', 'cancelled'] }).default('active'),
-  estimatedRewards: decimal("estimated_rewards", { precision: 18, scale: 8 }).notNull(),
+  bondProductId: varchar("bond_product_id").references(() => bondProducts.id).notNull(),
+  investedAmount: decimal("invested_amount", { precision: 18, scale: 8 }).notNull(),
+  purchaseDate: timestamp("purchase_date").defaultNow(),
+  maturityDate: timestamp("maturity_date").notNull(),
+  status: varchar("status", { enum: ['active', 'matured', 'sold'] }).default('active'),
+  expectedReturn: decimal("expected_return", { precision: 18, scale: 8 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -143,7 +148,7 @@ export const challengeMembers = pgTable("challenge_members", {
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   portfolios: many(userPortfolios),
-  stakings: many(userStaking),
+  bonds: many(userBonds),
   challengeMembers: many(challengeMembers),
   jointAccounts: many(userJointAccounts),
   createdJointAccounts: many(jointAccounts),
@@ -153,7 +158,7 @@ export const jointAccountsRelations = relations(jointAccounts, ({ one, many }) =
   creator: one(users, { fields: [jointAccounts.createdBy], references: [users.id] }),
   members: many(userJointAccounts),
   portfolios: many(userPortfolios),
-  stakings: many(userStaking),
+  bonds: many(userBonds),
   challengeMembers: many(challengeMembers),
 }));
 
@@ -173,14 +178,14 @@ export const userPortfoliosRelations = relations(userPortfolios, ({ one }) => ({
   portfolio: one(portfolios, { fields: [userPortfolios.portfolioId], references: [portfolios.id] }),
 }));
 
-export const stakingPlansRelations = relations(stakingPlans, ({ many }) => ({
-  userStakings: many(userStaking),
+export const bondProductsRelations = relations(bondProducts, ({ many }) => ({
+  userBonds: many(userBonds),
 }));
 
-export const userStakingRelations = relations(userStaking, ({ one }) => ({
-  user: one(users, { fields: [userStaking.userId], references: [users.id] }),
-  jointAccount: one(jointAccounts, { fields: [userStaking.jointAccountId], references: [jointAccounts.id] }),
-  stakingPlan: one(stakingPlans, { fields: [userStaking.stakingPlanId], references: [stakingPlans.id] }),
+export const userBondsRelations = relations(userBonds, ({ one }) => ({
+  user: one(users, { fields: [userBonds.userId], references: [users.id] }),
+  jointAccount: one(jointAccounts, { fields: [userBonds.jointAccountId], references: [jointAccounts.id] }),
+  bondProduct: one(bondProducts, { fields: [userBonds.bondProductId], references: [bondProducts.id] }),
 }));
 
 export const communityChallengesRelations = relations(communityChallenges, ({ one, many }) => ({
@@ -212,12 +217,12 @@ export const insertUserPortfolioSchema = createInsertSchema(userPortfolios).omit
   createdAt: true,
 });
 
-export const insertStakingPlanSchema = createInsertSchema(stakingPlans).omit({
+export const insertBondProductSchema = createInsertSchema(bondProducts).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertUserStakingSchema = createInsertSchema(userStaking).omit({
+export const insertUserBondSchema = createInsertSchema(userBonds).omit({
   id: true,
   createdAt: true,
 });
@@ -250,10 +255,10 @@ export type Portfolio = typeof portfolios.$inferSelect;
 export type InsertPortfolio = z.infer<typeof insertPortfolioSchema>;
 export type UserPortfolio = typeof userPortfolios.$inferSelect;
 export type InsertUserPortfolio = z.infer<typeof insertUserPortfolioSchema>;
-export type StakingPlan = typeof stakingPlans.$inferSelect;
-export type InsertStakingPlan = z.infer<typeof insertStakingPlanSchema>;
-export type UserStaking = typeof userStaking.$inferSelect;
-export type InsertUserStaking = z.infer<typeof insertUserStakingSchema>;
+export type BondProduct = typeof bondProducts.$inferSelect;
+export type InsertBondProduct = z.infer<typeof insertBondProductSchema>;
+export type UserBond = typeof userBonds.$inferSelect;
+export type InsertUserBond = z.infer<typeof insertUserBondSchema>;
 export type CommunityChallenge = typeof communityChallenges.$inferSelect;
 export type InsertCommunityChallenge = z.infer<typeof insertCommunityChalllengeSchema>;
 export type ChallengeMember = typeof challengeMembers.$inferSelect;

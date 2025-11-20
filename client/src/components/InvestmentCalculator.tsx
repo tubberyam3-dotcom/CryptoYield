@@ -39,7 +39,7 @@ const cryptoAssets: CryptoAsset[] = [
   { id: "worldcoin-wld", symbol: "WLD", name: "Worldcoin", color: "#000000" },
 ];
 
-export function CryptoCalculator() {
+export function InvestmentCalculator() {
   const [selectedAsset, setSelectedAsset] = useState<string>("bitcoin");
   const [selectedAsset2, setSelectedAsset2] = useState<string>("ethereum");
   const [duration, setDuration] = useState<number>(3);

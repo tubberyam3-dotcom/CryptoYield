@@ -6,8 +6,8 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import {
   insertPortfolioSchema,
   insertUserPortfolioSchema,
-  insertStakingPlanSchema,
-  insertUserStakingSchema,
+  insertBondProductSchema,
+  insertUserBondSchema,
   insertCommunityChalllengeSchema,
   insertChallengeMemberSchema,
   insertJointAccountSchema,
@@ -610,18 +610,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Staking routes
-  app.get('/api/staking/plans', async (req, res) => {
+  // Bond routes
+  app.get('/api/bonds/products', async (req, res) => {
     try {
-      const plans = await storage.getStakingPlans();
-      res.json(plans);
+      const products = await storage.getBondProducts();
+      res.json(products);
     } catch (error) {
-      console.error("Error fetching staking plans:", error);
-      res.status(500).json({ message: "Failed to fetch staking plans" });
+      console.error("Error fetching bond products:", error);
+      res.status(500).json({ message: "Failed to fetch bond products" });
     }
   });
 
-  app.post('/api/staking/plans', enhancedAuth, async (req: any, res) => {
+  app.post('/api/bonds/products', enhancedAuth, async (req: any, res) => {
     try {
       const user = req.user.claims;
       
@@ -631,54 +631,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const planData = insertStakingPlanSchema.parse(req.body);
-      const plan = await storage.createStakingPlan(planData);
-      res.json(plan);
+      const productData = insertBondProductSchema.parse(req.body);
+      const product = await storage.createBondProduct(productData);
+      res.json(product);
     } catch (error) {
-      console.error("Error creating staking plan:", error);
-      res.status(500).json({ message: "Failed to create staking plan" });
+      console.error("Error creating bond product:", error);
+      res.status(500).json({ message: "Failed to create bond product" });
     }
   });
 
-  app.get('/api/user/staking', enhancedAuth, async (req: any, res) => {
+  app.get('/api/user/bonds', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const userStakings = await storage.getUserStaking(userId);
-      res.json(userStakings);
+      const userBonds = await storage.getUserBonds(userId);
+      res.json(userBonds);
     } catch (error) {
-      console.error("Error fetching user staking:", error);
-      res.status(500).json({ message: "Failed to fetch user staking" });
+      console.error("Error fetching user bonds:", error);
+      res.status(500).json({ message: "Failed to fetch user bonds" });
     }
   });
 
-  app.post('/api/user/staking', enhancedAuth, async (req: any, res) => {
+  app.post('/api/user/bonds', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { stakingPlanId, amountLocked } = req.body;
+      const { bondProductId, investedAmount } = req.body;
       
-      const stakingPlan = await storage.getStakingPlan(stakingPlanId);
-      if (!stakingPlan) {
-        return res.status(404).json({ message: "Staking plan not found" });
+      const bondProduct = await storage.getBondProduct(bondProductId);
+      if (!bondProduct) {
+        return res.status(404).json({ message: "Bond product not found" });
       }
 
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + stakingPlan.duration);
+      const maturityDate = new Date();
+      maturityDate.setMonth(maturityDate.getMonth() + bondProduct.maturityMonths);
       
-      const estimatedRewards = (parseFloat(amountLocked) * parseFloat(stakingPlan.apy.toString()) / 100).toString();
+      const expectedReturn = (parseFloat(investedAmount) * parseFloat(bondProduct.yield.toString()) / 100).toString();
 
-      const userStakingData = insertUserStakingSchema.parse({
+      const userBondData = insertUserBondSchema.parse({
         userId,
-        stakingPlanId,
-        amountLocked,
-        endDate,
-        estimatedRewards,
+        bondProductId,
+        investedAmount,
+        maturityDate,
+        expectedReturn,
       });
       
-      const userStakingRecord = await storage.createUserStaking(userStakingData);
-      res.json(userStakingRecord);
+      const userBondRecord = await storage.createUserBond(userBondData);
+      res.json(userBondRecord);
     } catch (error) {
-      console.error("Error creating user staking:", error);
-      res.status(500).json({ message: "Failed to create staking" });
+      console.error("Error creating user bond:", error);
+      res.status(500).json({ message: "Failed to create bond investment" });
     }
   });
 
@@ -757,33 +757,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Staking calculator
-  app.post('/api/staking/calculate', async (req, res) => {
+  // Bond calculator
+  app.post('/api/bonds/calculate', async (req, res) => {
     try {
-      const { amount, planId } = req.body;
-      const plan = await storage.getStakingPlan(planId);
+      const { amount, productId } = req.body;
+      const product = await storage.getBondProduct(productId);
       
-      if (!plan) {
-        return res.status(404).json({ message: "Staking plan not found" });
+      if (!product) {
+        return res.status(404).json({ message: "Bond product not found" });
       }
 
       const principal = parseFloat(amount);
-      const apy = parseFloat(plan.apy.toString());
-      const duration = plan.duration / 12; // Convert months to years
+      const yieldRate = parseFloat(product.yield.toString());
+      const duration = product.maturityMonths / 12; // Convert months to years
       
-      const rewards = principal * apy / 100 * duration;
-      const total = principal + rewards;
+      const returns = principal * yieldRate / 100 * duration;
+      const total = principal + returns;
 
       res.json({
         principal: principal.toFixed(2),
-        rewards: rewards.toFixed(2),
+        returns: returns.toFixed(2),
         total: total.toFixed(2),
-        apy: apy.toFixed(1),
-        duration: plan.duration,
+        yield: yieldRate.toFixed(1),
+        maturityMonths: product.maturityMonths,
       });
     } catch (error) {
-      console.error("Error calculating staking rewards:", error);
-      res.status(500).json({ message: "Failed to calculate staking rewards" });
+      console.error("Error calculating bond returns:", error);
+      res.status(500).json({ message: "Failed to calculate bond returns" });
     }
   });
 

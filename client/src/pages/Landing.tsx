@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { CryptoCalculator } from "@/components/CryptoCalculator";
-import { ArrowLeft, TrendingUp } from "lucide-react";
+import { InvestmentCalculator } from "@/components/InvestmentCalculator";
+import { ArrowLeft, TrendingUp, Briefcase, BarChart3, Trophy, LineChart } from "lucide-react";
 
 type AuthView = 'landing' | 'signup' | 'login';
 
@@ -77,9 +77,9 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
-              <i className="fas fa-cube text-white text-lg"></i>
+              <LineChart className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">CryptoVault</span>
+            <span className="text-xl font-bold">Reflux Capital</span>
           </div>
           <div className="flex gap-2">
             <Button 
@@ -117,17 +117,17 @@ export default function Landing() {
             <div className="text-center mb-12 space-y-6">
               <Badge className="px-4 py-1.5 text-sm font-semibold" variant="secondary">
                 <TrendingUp className="w-4 h-4 mr-2 inline" />
-                Historical Performance Analysis
+                Professional Investment Advisory
               </Badge>
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 bg-gradient-to-r from-primary via-purple-500 to-accent bg-clip-text text-transparent leading-tight">
-                Calculate Your Crypto Returns
+                Invest in Bonds & Shares with Confidence
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
                 See potential returns based on historical performance. Choose your asset, set your timeline, and watch your investment grow.
               </p>
             </div>
             
-            <CryptoCalculator />
+            <InvestmentCalculator />
           </div>
         </div>
       </section>
@@ -138,34 +138,34 @@ export default function Landing() {
           <div className="text-center mb-16 space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold">Platform Features</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to build and manage your crypto portfolio
+              Everything you need to build and manage your investment portfolio
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <Card className="hover-lift border-2 transition-all duration-300 hover:border-primary/50 hover:shadow-xl" data-testid="card-feature-portfolios">
               <CardHeader>
                 <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-                  <i className="fas fa-briefcase text-white text-2xl"></i>
+                  <Briefcase className="w-7 h-7 text-white" />
                 </div>
                 <CardTitle className="text-xl">Curated Portfolios</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Access professionally managed crypto portfolios with AI, DeFi, and Layer 2 strategies.
+                  Access professionally managed portfolios with stocks, ETFs, and mutual funds strategies.
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="hover-lift border-2 transition-all duration-300 hover:border-accent/50 hover:shadow-xl" data-testid="card-feature-staking">
+            <Card className="hover-lift border-2 transition-all duration-300 hover:border-accent/50 hover:shadow-xl" data-testid="card-feature-bonds">
               <CardHeader>
                 <div className="w-14 h-14 bg-gradient-to-br from-accent to-accent/60 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-                  <i className="fas fa-coins text-white text-2xl"></i>
+                  <BarChart3 className="w-7 h-7 text-white" />
                 </div>
-                <CardTitle className="text-xl">Flexible Staking</CardTitle>
+                <CardTitle className="text-xl">Bond Investments</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Lock your assets for fixed terms and earn competitive APY rewards up to 18.7%.
+                  Invest in government and corporate bonds with competitive yields and fixed maturity periods.
                 </p>
               </CardContent>
             </Card>
@@ -173,7 +173,7 @@ export default function Landing() {
             <Card className="hover-lift border-2 transition-all duration-300 hover:border-yellow-500/50 hover:shadow-xl" data-testid="card-feature-challenges">
               <CardHeader>
                 <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-                  <i className="fas fa-trophy text-white text-2xl"></i>
+                  <Trophy className="w-7 h-7 text-white" />
                 </div>
                 <CardTitle className="text-xl">Community Challenges</CardTitle>
               </CardHeader>
@@ -192,12 +192,12 @@ export default function Landing() {
         <div className="container mx-auto text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <div className="w-6 h-6 gradient-bg rounded-md flex items-center justify-center">
-              <i className="fas fa-cube text-white text-sm"></i>
+              <LineChart className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold">CryptoVault</span>
+            <span className="text-lg font-bold">Reflux Capital</span>
           </div>
           <p className="text-muted-foreground">
-            © 2025 CryptoVault. Professional crypto investment platform.
+            © 2025 Reflux Capital. Professional investment brokerage and advisory services.
           </p>
         </div>
       </footer>

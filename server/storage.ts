@@ -2,8 +2,8 @@ import {
   users,
   portfolios,
   userPortfolios,
-  stakingPlans,
-  userStaking,
+  bondProducts,
+  userBonds,
   communityChallenges,
   challengeMembers,
   jointAccounts,
@@ -14,10 +14,10 @@ import {
   type InsertPortfolio,
   type UserPortfolio,
   type InsertUserPortfolio,
-  type StakingPlan,
-  type InsertStakingPlan,
-  type UserStaking,
-  type InsertUserStaking,
+  type BondProduct,
+  type InsertBondProduct,
+  type UserBond,
+  type InsertUserBond,
   type CommunityChallenge,
   type InsertCommunityChallenge,
   type ChallengeMember,
@@ -77,12 +77,12 @@ export interface IStorage {
   createUserPortfolio(userPortfolio: InsertUserPortfolio): Promise<UserPortfolio>;
   updateUserPortfolio(id: string, updates: Partial<InsertUserPortfolio>): Promise<UserPortfolio>;
   
-  // Staking operations
-  getStakingPlans(): Promise<StakingPlan[]>;
-  getStakingPlan(id: string): Promise<StakingPlan | undefined>;
-  createStakingPlan(plan: InsertStakingPlan): Promise<StakingPlan>;
-  getUserStaking(userId: string): Promise<(UserStaking & { stakingPlan: StakingPlan })[]>;
-  createUserStaking(userStaking: InsertUserStaking): Promise<UserStaking>;
+  // Bond operations
+  getBondProducts(): Promise<BondProduct[]>;
+  getBondProduct(id: string): Promise<BondProduct | undefined>;
+  createBondProduct(product: InsertBondProduct): Promise<BondProduct>;
+  getUserBonds(userId: string): Promise<(UserBond & { bondProduct: BondProduct })[]>;
+  createUserBond(userBond: InsertUserBond): Promise<UserBond>;
   
   // Challenge operations
   getCommunityChalllenges(): Promise<CommunityChallenge[]>;
@@ -95,7 +95,7 @@ export interface IStorage {
   // Analytics
   getDashboardStats(userId: string): Promise<{
     totalPortfolioValue: string;
-    activeStakes: string;
+    activeBonds: string;
     activeChallenges: number;
     availableBalance: string;
   }>;
@@ -105,7 +105,7 @@ export interface IStorage {
     totalRevenue: string;
     monthlyRevenue: string;
     totalInvestments: string;
-    totalStaked: string;
+    totalBondsValue: string;
     platformFees: string;
     transactionVolume: string;
     activePortfolios: number;
@@ -143,7 +143,7 @@ export class DatabaseStorage implements IStorage {
     if (demoMode && id === 'demo-user') {
       return {
         id: 'demo-user',
-        email: 'demo@cryptovault.com',
+        email: 'demo@refluxcapital.com',
         firstName: 'Demo',
         lastName: 'Admin',
         profileImageUrl: null,
@@ -339,7 +339,7 @@ export class DatabaseStorage implements IStorage {
       return [
         {
           id: 'demo-user',
-          email: 'demo@cryptovault.com',
+          email: 'demo@refluxcapital.com',
           firstName: 'Demo',
           lastName: 'Admin',
           profileImageUrl: null,
@@ -538,57 +538,57 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  // Staking operations
-  async getStakingPlans(): Promise<StakingPlan[]> {
-    return await db.select().from(stakingPlans).where(eq(stakingPlans.isActive, true));
+  // Bond operations
+  async getBondProducts(): Promise<BondProduct[]> {
+    return await db.select().from(bondProducts).where(eq(bondProducts.isActive, true));
   }
 
-  async getStakingPlan(id: string): Promise<StakingPlan | undefined> {
-    const [plan] = await db.select().from(stakingPlans).where(eq(stakingPlans.id, id));
-    return plan;
+  async getBondProduct(id: string): Promise<BondProduct | undefined> {
+    const [product] = await db.select().from(bondProducts).where(eq(bondProducts.id, id));
+    return product;
   }
 
-  async createStakingPlan(plan: InsertStakingPlan): Promise<StakingPlan> {
-    const [newPlan] = await db.insert(stakingPlans).values(plan).returning();
-    return newPlan;
+  async createBondProduct(product: InsertBondProduct): Promise<BondProduct> {
+    const [newProduct] = await db.insert(bondProducts).values(product).returning();
+    return newProduct;
   }
 
-  async getUserStaking(userId: string): Promise<(UserStaking & { stakingPlan: StakingPlan })[]> {
+  async getUserBonds(userId: string): Promise<(UserBond & { bondProduct: BondProduct })[]> {
     const accountContext = await this.getAccountContext(userId);
     
     if (accountContext.isJointAccount) {
-      // Get staking for BOTH individual user AND joint account
+      // Get bonds for BOTH individual user AND joint account
       return await db
         .select()
-        .from(userStaking)
-        .leftJoin(stakingPlans, eq(userStaking.stakingPlanId, stakingPlans.id))
+        .from(userBonds)
+        .leftJoin(bondProducts, eq(userBonds.bondProductId, bondProducts.id))
         .where(
           or(
-            eq(userStaking.userId, userId),
-            eq(userStaking.jointAccountId, accountContext.accountId)
+            eq(userBonds.userId, userId),
+            eq(userBonds.jointAccountId, accountContext.accountId)
           )
         )
         .then(rows => rows.map(row => ({
-          ...row.user_staking,
-          stakingPlan: row.staking_plans!
+          ...row.user_bonds,
+          bondProduct: row.bond_products!
         })));
     } else {
-      // Get staking for individual user only
+      // Get bonds for individual user only
       return await db
         .select()
-        .from(userStaking)
-        .leftJoin(stakingPlans, eq(userStaking.stakingPlanId, stakingPlans.id))
-        .where(eq(userStaking.userId, userId))
+        .from(userBonds)
+        .leftJoin(bondProducts, eq(userBonds.bondProductId, bondProducts.id))
+        .where(eq(userBonds.userId, userId))
         .then(rows => rows.map(row => ({
-          ...row.user_staking,
-          stakingPlan: row.staking_plans!
+          ...row.user_bonds,
+          bondProduct: row.bond_products!
         })));
     }
   }
 
-  async createUserStaking(userStakingData: InsertUserStaking): Promise<UserStaking> {
-    const [newStaking] = await db.insert(userStaking).values(userStakingData).returning();
-    return newStaking;
+  async createUserBond(userBondData: InsertUserBond): Promise<UserBond> {
+    const [newBond] = await db.insert(userBonds).values(userBondData).returning();
+    return newBond;
   }
 
   // Challenge operations
@@ -635,13 +635,13 @@ export class DatabaseStorage implements IStorage {
   // Analytics
   async getDashboardStats(userId: string): Promise<{
     totalPortfolioValue: string;
-    activeStakes: string;
+    activeBonds: string;
     activeChallenges: number;
     availableBalance: string;
   }> {
     const accountContext = await this.getAccountContext(userId);
 
-    let portfolioValueResult, activeStakesResult, activeChallengesResult;
+    let portfolioValueResult, activeBondsResult, activeChallengesResult;
 
     if (accountContext.isJointAccount) {
       // Calculate for BOTH individual user AND joint account
@@ -655,16 +655,16 @@ export class DatabaseStorage implements IStorage {
           )
         );
 
-      activeStakesResult = await db
-        .select({ total: sum(userStaking.amountLocked) })
-        .from(userStaking)
+      activeBondsResult = await db
+        .select({ total: sum(userBonds.investedAmount) })
+        .from(userBonds)
         .where(
           and(
             or(
-              eq(userStaking.userId, userId),
-              eq(userStaking.jointAccountId, accountContext.accountId)
+              eq(userBonds.userId, userId),
+              eq(userBonds.jointAccountId, accountContext.accountId)
             ),
-            eq(userStaking.status, 'active')
+            eq(userBonds.status, 'active')
           )
         );
 
@@ -688,10 +688,10 @@ export class DatabaseStorage implements IStorage {
         .from(userPortfolios)
         .where(eq(userPortfolios.userId, userId));
 
-      activeStakesResult = await db
-        .select({ total: sum(userStaking.amountLocked) })
-        .from(userStaking)
-        .where(and(eq(userStaking.userId, userId), eq(userStaking.status, 'active')));
+      activeBondsResult = await db
+        .select({ total: sum(userBonds.investedAmount) })
+        .from(userBonds)
+        .where(and(eq(userBonds.userId, userId), eq(userBonds.status, 'active')));
 
       activeChallengesResult = await db
         .select({ count: count() })
@@ -707,7 +707,7 @@ export class DatabaseStorage implements IStorage {
 
     return {
       totalPortfolioValue: portfolioValueResult[0]?.total || '0',
-      activeStakes: activeStakesResult[0]?.total || '0',
+      activeBonds: activeBondsResult[0]?.total || '0',
       activeChallenges: activeChallengesResult[0]?.count || 0,
       availableBalance: '15720.48', // Mock for now - would be calculated from external wallet APIs
     };
@@ -718,7 +718,7 @@ export class DatabaseStorage implements IStorage {
     totalRevenue: string;
     monthlyRevenue: string;
     totalInvestments: string;
-    totalStaked: string;
+    totalBondsValue: string;
     platformFees: string;
     transactionVolume: string;
     activePortfolios: number;
@@ -731,7 +731,7 @@ export class DatabaseStorage implements IStorage {
         totalRevenue: '285420.75',
         monthlyRevenue: '42380.50',
         totalInvestments: '1247850.00',
-        totalStaked: '567890.25',
+        totalBondsValue: '567890.25',
         platformFees: '18750.80',
         transactionVolume: '892450.30',
         activePortfolios: 8,
@@ -744,9 +744,9 @@ export class DatabaseStorage implements IStorage {
       .select({ total: sum(userPortfolios.investedAmount) })
       .from(userPortfolios);
 
-    const totalStakedResult = await db
-      .select({ total: sum(userStaking.amountLocked) })
-      .from(userStaking);
+    const totalBondsValueResult = await db
+      .select({ total: sum(userBonds.investedAmount) })
+      .from(userBonds);
 
     const activePortfoliosResult = await db
       .select({ count: count() })
@@ -762,7 +762,7 @@ export class DatabaseStorage implements IStorage {
       totalRevenue: '285420.75', // Mock - would calculate from transaction fees
       monthlyRevenue: '42380.50', // Mock - would calculate from current month
       totalInvestments: totalInvestmentsResult[0]?.total || '0',
-      totalStaked: totalStakedResult[0]?.total || '0',
+      totalBondsValue: totalBondsValueResult[0]?.total || '0',
       platformFees: '18750.80', // Mock - would calculate from fee transactions
       transactionVolume: '892450.30', // Mock - would calculate from all transactions
       activePortfolios: activePortfoliosResult[0]?.count || 0,
@@ -829,7 +829,7 @@ export class DatabaseStorage implements IStorage {
           id: 'log-1',
           timestamp: new Date(Date.now() - 300000), // 5 minutes ago
           userId: 'demo-user',
-          userEmail: 'demo@cryptovault.com',
+          userEmail: 'demo@refluxcapital.com',
           action: 'Admin Dashboard Access',
           details: 'Accessed admin analytics dashboard',
           type: 'admin' as const,
@@ -859,7 +859,7 @@ export class DatabaseStorage implements IStorage {
           id: 'log-4',
           timestamp: new Date(Date.now() - 3600000), // 1 hour ago
           userId: 'system',
-          userEmail: 'system@cryptovault.com',
+          userEmail: 'system@refluxcapital.com',
           action: 'Database Backup',
           details: 'Automated database backup completed',
           type: 'system' as const,
