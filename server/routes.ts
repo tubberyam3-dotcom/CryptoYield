@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import yahooFinance from "yahoo-finance2";
 
 import {
   insertPortfolioSchema,
@@ -679,6 +680,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating user bond:", error);
       res.status(500).json({ message: "Failed to create bond investment" });
+    }
+  });
+
+  // Stock market data routes (using yahoo-finance2)
+  app.get('/api/stocks/quote', async (req, res) => {
+    try {
+      const { symbol } = req.query;
+      
+      if (!symbol || typeof symbol !== 'string') {
+        return res.status(400).json({ message: "Symbol parameter is required" });
+      }
+
+      const quote: any = await yahooFinance.quote(symbol.toUpperCase());
+      
+      res.json({
+        symbol: quote.symbol,
+        name: quote.longName || quote.shortName || symbol,
+        price: quote.regularMarketPrice,
+        change: quote.regularMarketChange,
+        changePercent: quote.regularMarketChangePercent,
+        previousClose: quote.regularMarketPreviousClose,
+        dayHigh: quote.regularMarketDayHigh,
+        dayLow: quote.regularMarketDayLow,
+        volume: quote.regularMarketVolume,
+        marketCap: quote.marketCap,
+      });
+    } catch (error) {
+      console.error("Error fetching stock quote:", error);
+      res.status(500).json({ message: "Failed to fetch stock quote" });
+    }
+  });
+
+  app.get('/api/stocks/quotes', async (req, res) => {
+    try {
+      const { symbols } = req.query;
+      
+      if (!symbols || typeof symbols !== 'string') {
+        return res.status(400).json({ message: "Symbols parameter is required" });
+      }
+
+      const symbolArray = symbols.toUpperCase().split(',').map(s => s.trim());
+      const quotes = await Promise.all(
+        symbolArray.map(async (symbol) => {
+          try {
+            const quote: any = await yahooFinance.quote(symbol);
+            return {
+              symbol: quote.symbol,
+              name: quote.longName || quote.shortName || symbol,
+              price: quote.regularMarketPrice,
+              change: quote.regularMarketChange,
+              changePercent: quote.regularMarketChangePercent,
+              previousClose: quote.regularMarketPreviousClose,
+              dayHigh: quote.regularMarketDayHigh,
+              dayLow: quote.regularMarketDayLow,
+              volume: quote.regularMarketVolume,
+              marketCap: quote.marketCap,
+            };
+          } catch (error) {
+            console.error(`Error fetching quote for ${symbol}:`, error);
+            return null;
+          }
+        })
+      );
+
+      res.json(quotes.filter(q => q !== null));
+    } catch (error) {
+      console.error("Error fetching stock quotes:", error);
+      res.status(500).json({ message: "Failed to fetch stock quotes" });
     }
   });
 

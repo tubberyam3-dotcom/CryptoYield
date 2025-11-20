@@ -6,198 +6,161 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { TrendingUp, ArrowUpRight, Award, Trophy, Shield } from "lucide-react";
+import { TrendingUp, Trophy, Shield, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 
-interface CryptoAsset {
-  id: string;
+interface StockAsset {
   symbol: string;
   name: string;
   color: string;
+  avgAnnualReturn: number; // Historical average annual return percentage
 }
 
-interface HistoricalData {
-  prices: [number, number][];
+interface StockQuote {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  previousClose: number;
+  dayHigh: number;
+  dayLow: number;
+  volume: number;
+  marketCap: number;
 }
 
 interface CalculationResult {
   asset: string;
+  currentPrice: number;
   investment: number;
   projectedValue: number;
   profit: number;
   profitPercentage: number;
   cagr: number;
-  historicalROI: number;
 }
 
-const cryptoAssets: CryptoAsset[] = [
-  { id: "bitcoin", symbol: "BTC", name: "Bitcoin", color: "#f7931a" },
-  { id: "ethereum", symbol: "ETH", name: "Ethereum", color: "#627eea" },
-  { id: "solana", symbol: "SOL", name: "Solana", color: "#14f195" },
-  { id: "worldcoin-wld", symbol: "WLD", name: "Worldcoin", color: "#000000" },
+const stockAssets: StockAsset[] = [
+  { symbol: "AAPL", name: "Apple Inc.", color: "#000000", avgAnnualReturn: 28.5 },
+  { symbol: "MSFT", name: "Microsoft Corporation", color: "#00A4EF", avgAnnualReturn: 26.3 },
+  { symbol: "GOOGL", name: "Alphabet Inc. (Google)", color: "#4285F4", avgAnnualReturn: 22.1 },
+  { symbol: "NVDA", name: "NVIDIA Corporation", color: "#76B900", avgAnnualReturn: 45.2 },
+  { symbol: "TSLA", name: "Tesla Inc.", color: "#CC0000", avgAnnualReturn: 38.7 },
+  { symbol: "AMZN", name: "Amazon.com Inc.", color: "#FF9900", avgAnnualReturn: 24.8 },
 ];
 
 export function InvestmentCalculator() {
-  const [selectedAsset, setSelectedAsset] = useState<string>("bitcoin");
-  const [selectedAsset2, setSelectedAsset2] = useState<string>("ethereum");
+  const [selectedAsset, setSelectedAsset] = useState<string>("AAPL");
+  const [selectedAsset2, setSelectedAsset2] = useState<string>("MSFT");
   const [duration, setDuration] = useState<number>(3);
   const [amount, setAmount] = useState<string>("1000");
   const [compareMode, setCompareMode] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [result, setResult] = useState<CalculationResult | null>(null);
-  const [result2, setResult2] = useState<CalculationResult | null>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [leaderboard, setLeaderboard] = useState<CalculationResult[]>([]);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchHistoricalData = async (coinId: string, days: number, signal?: AbortSignal): Promise<HistoricalData | null> => {
-    try {
-      const response = await fetch(
-        `/api/crypto/historical/${coinId}?days=${days * 365}`,
-        { signal }
-      );
-      if (!response.ok) throw new Error("Failed to fetch data");
-      return await response.json();
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        return null;
-      }
-      console.error("Error fetching historical data:", error);
-      throw error;
-    }
-  };
+  // Fetch live stock quotes
+  const { data: stockQuotes, isLoading: quotesLoading, refetch } = useQuery<StockQuote[]>({
+    queryKey: ['/api/stocks/quotes', { symbols: stockAssets.map(s => s.symbol).join(',') }],
+    refetchInterval: 60000, // Refresh every minute
+  });
 
-  const calculateCAGR = (startValue: number, endValue: number, years: number): number => {
-    return (Math.pow(endValue / startValue, 1 / years) - 1) * 100;
-  };
+  const calculateProjection = (
+    stockSymbol: string,
+    currentPrice: number,
+    investmentAmount: number,
+    years: number
+  ): CalculationResult | null => {
+    const stock = stockAssets.find(s => s.symbol === stockSymbol);
+    if (!stock) return null;
 
-  const calculateProjection = async (coinId: string, investmentAmount: number, years: number, signal?: AbortSignal): Promise<CalculationResult | null> => {
-    const data = await fetchHistoricalData(coinId, years, signal);
-    if (!data || !data.prices || data.prices.length < 2) return null;
-
-    const startPrice = data.prices[0][1];
-    const endPrice = data.prices[data.prices.length - 1][1];
-    
-    const historicalROI = ((endPrice - startPrice) / startPrice) * 100;
-    const cagr = calculateCAGR(startPrice, endPrice, years);
-    
+    // Use historical average annual return for projection
+    const cagr = stock.avgAnnualReturn;
     const projectedValue = investmentAmount * Math.pow(1 + cagr / 100, years);
     const profit = projectedValue - investmentAmount;
     const profitPercentage = (profit / investmentAmount) * 100;
 
     return {
-      asset: coinId,
+      asset: stockSymbol,
+      currentPrice,
       investment: investmentAmount,
       projectedValue,
       profit,
       profitPercentage,
       cagr,
-      historicalROI,
     };
   };
 
-  const generateChartData = async (coinId: string, investmentAmount: number, years: number, signal?: AbortSignal) => {
-    const data = await fetchHistoricalData(coinId, years, signal);
-    if (!data || !data.prices) return [];
-
-    const prices = data.prices;
-    const startPrice = prices[0][1];
-    const cagr = calculateCAGR(prices[0][1], prices[prices.length - 1][1], years);
-
+  const generateChartData = (
+    investmentAmount: number,
+    years: number,
+    cagr: number
+  ) => {
     const chartPoints = [];
-    const pointsCount = 12;
-    const interval = Math.floor(prices.length / pointsCount);
+    const pointsPerYear = 4; // Quarterly points
+    const totalPoints = years * pointsPerYear;
 
-    for (let i = 0; i < pointsCount; i++) {
-      const index = i * interval;
-      if (index < prices.length) {
-        const date = new Date(prices[index][0]);
-        const currentPrice = prices[index][1];
-        const value = investmentAmount * (currentPrice / startPrice);
-        
-        chartPoints.push({
-          date: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          value: Math.round(value),
-          projected: Math.round(investmentAmount * Math.pow(1 + cagr / 100, (i / pointsCount) * years)),
-        });
-      }
+    for (let i = 0; i <= totalPoints; i++) {
+      const yearsElapsed = (i / pointsPerYear);
+      const value = investmentAmount * Math.pow(1 + cagr / 100, yearsElapsed);
+      
+      const date = new Date();
+      date.setMonth(date.getMonth() + (i * 3));
+      
+      chartPoints.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        value: Math.round(value),
+      });
     }
 
     return chartPoints;
   };
 
-  const calculateLeaderboard = async () => {
-    const results: CalculationResult[] = [];
-    for (const asset of cryptoAssets) {
-      const result = await calculateProjection(asset.id, 1000, 3);
-      if (result) results.push(result);
-    }
-    results.sort((a, b) => b.cagr - a.cagr);
-    setLeaderboard(results.slice(0, 3));
+  const getQuote = (symbol: string): StockQuote | undefined => {
+    return stockQuotes?.find(q => q.symbol === symbol);
   };
 
-  const handleCalculate = async (signal: AbortSignal) => {
-    setLoading(true);
-    setError(null);
+  const selectedAssetData = stockAssets.find(a => a.symbol === selectedAsset);
+  const selectedAsset2Data = stockAssets.find(a => a.symbol === selectedAsset2);
+
+  const investmentAmount = parseFloat(amount) || 1000;
+  
+  const quote1 = getQuote(selectedAsset);
+  const quote2 = getQuote(selectedAsset2);
+  
+  const result = quote1 && selectedAssetData 
+    ? calculateProjection(selectedAsset, quote1.price, investmentAmount, duration)
+    : null;
     
-    try {
-      const investmentAmount = parseFloat(amount) || 1000;
+  const result2 = compareMode && quote2 && selectedAsset2Data
+    ? calculateProjection(selectedAsset2, quote2.price, investmentAmount, duration)
+    : null;
 
-      const calculation = await calculateProjection(selectedAsset, investmentAmount, duration, signal);
-      if (signal.aborted) return;
-      setResult(calculation);
+  const chartData = result ? generateChartData(investmentAmount, duration, result.cagr) : [];
 
-      if (compareMode) {
-        const calculation2 = await calculateProjection(selectedAsset2, investmentAmount, duration, signal);
-        if (signal.aborted) return;
-        setResult2(calculation2);
-      } else {
-        setResult2(null);
-      }
+  // Calculate leaderboard
+  const leaderboard = stockQuotes
+    ?.map(quote => {
+      const stock = stockAssets.find(s => s.symbol === quote.symbol);
+      if (!stock) return null;
+      return calculateProjection(quote.symbol, quote.price, 1000, 3);
+    })
+    .filter((r): r is CalculationResult => r !== null)
+    .sort((a, b) => b.cagr - a.cagr)
+    .slice(0, 3) || [];
 
-      const chart = await generateChartData(selectedAsset, investmentAmount, duration, signal);
-      if (signal.aborted) return;
-      setChartData(chart);
-    } catch (err: any) {
-      if (!signal.aborted) {
-        setError("Failed to fetch crypto data. Please try again.");
-        console.error("Calculation error:", err);
-      }
-    } finally {
-      if (!signal.aborted) {
-        setLoading(false);
-      }
-    }
+  const getBadge = (cagr: number) => {
+    if (cagr > 35) return { text: "High Growth", icon: Trophy, color: "bg-yellow-500" };
+    if (cagr > 20) return { text: "Strong Performer", icon: TrendingUp, color: "bg-green-500" };
+    return { text: "Stable Growth", icon: Shield, color: "bg-blue-500" };
   };
 
   useEffect(() => {
     if (compareMode && selectedAsset === selectedAsset2) {
-      const availableAssets = cryptoAssets.filter(a => a.id !== selectedAsset);
+      const availableAssets = stockAssets.filter(a => a.symbol !== selectedAsset);
       if (availableAssets.length > 0) {
-        setSelectedAsset2(availableAssets[0].id);
-        return;
+        setSelectedAsset2(availableAssets[0].symbol);
       }
     }
-    
-    const controller = new AbortController();
-    handleCalculate(controller.signal);
-    return () => controller.abort();
-  }, [selectedAsset, selectedAsset2, duration, amount, compareMode]);
-
-  useEffect(() => {
-    calculateLeaderboard();
-  }, []);
-
-  const getBadge = (cagr: number) => {
-    if (cagr > 100) return { text: "Best Performer", icon: Trophy, color: "bg-yellow-500" };
-    if (cagr > 50) return { text: "High Growth", icon: TrendingUp, color: "bg-green-500" };
-    return { text: "Most Stable", icon: Shield, color: "bg-blue-500" };
-  };
-
-  const selectedAssetData = cryptoAssets.find(a => a.id === selectedAsset);
-  const selectedAsset2Data = cryptoAssets.find(a => a.id === selectedAsset2);
+  }, [selectedAsset, selectedAsset2, compareMode]);
 
   return (
     <div className="w-full space-y-8">
@@ -212,42 +175,59 @@ export function InvestmentCalculator() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <CardTitle className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-                  Investment Calculator
+                  Stock Investment Calculator
                 </CardTitle>
                 <CardDescription className="text-base text-muted-foreground">
-                  Calculate potential returns based on historical performance
+                  Live stock prices powered by real market data
                 </CardDescription>
               </div>
-              <Button
-                variant={compareMode ? "default" : "outline"}
-                size="default"
-                onClick={() => setCompareMode(!compareMode)}
-                className="shadow-lg"
-                data-testid="button-compare-toggle"
-              >
-                {compareMode ? "Single Mode" : "Compare Mode"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => refetch()}
+                  disabled={quotesLoading}
+                  data-testid="button-refresh"
+                >
+                  <RefreshCw className={`w-4 h-4 ${quotesLoading ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button
+                  variant={compareMode ? "default" : "outline"}
+                  size="default"
+                  onClick={() => setCompareMode(!compareMode)}
+                  className="shadow-lg"
+                  data-testid="button-compare-toggle"
+                >
+                  {compareMode ? "Single Mode" : "Compare Mode"}
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-8 relative">
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label htmlFor="asset" className="text-sm font-semibold text-foreground/90">Primary Asset</Label>
+                <Label htmlFor="asset" className="text-sm font-semibold text-foreground/90">Primary Stock</Label>
                 <Select value={selectedAsset} onValueChange={setSelectedAsset}>
                   <SelectTrigger id="asset" className="h-12 border-2 hover:border-primary/50 transition-colors" data-testid="select-asset">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {cryptoAssets.map((asset) => (
-                      <SelectItem key={asset.id} value={asset.id}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: asset.color }}></div>
-                          <span className="font-medium">{asset.symbol}</span>
-                          <span className="text-muted-foreground">- {asset.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {stockAssets.map((asset) => {
+                      const quote = getQuote(asset.symbol);
+                      return (
+                        <SelectItem key={asset.symbol} value={asset.symbol}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: asset.color }}></div>
+                            <span className="font-medium">{asset.symbol}</span>
+                            <span className="text-muted-foreground">- {asset.name}</span>
+                            {quote && (
+                              <span className="ml-auto text-sm">${quote.price.toFixed(2)}</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -261,23 +241,27 @@ export function InvestmentCalculator() {
                   <Label htmlFor="asset2" className="text-sm font-semibold text-foreground/90">Compare With</Label>
                   <Select 
                     value={selectedAsset2} 
-                    onValueChange={(value) => {
-                      setSelectedAsset2(value);
-                    }}
+                    onValueChange={setSelectedAsset2}
                   >
                     <SelectTrigger id="asset2" className="h-12 border-2 hover:border-accent/50 transition-colors" data-testid="select-asset2">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {cryptoAssets.filter(a => a.id !== selectedAsset).map((asset) => (
-                        <SelectItem key={asset.id} value={asset.id}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: asset.color }}></div>
-                            <span className="font-medium">{asset.symbol}</span>
-                            <span className="text-muted-foreground">- {asset.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {stockAssets.filter(a => a.symbol !== selectedAsset).map((asset) => {
+                        const quote = getQuote(asset.symbol);
+                        return (
+                          <SelectItem key={asset.symbol} value={asset.symbol}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: asset.color }}></div>
+                              <span className="font-medium">{asset.symbol}</span>
+                              <span className="text-muted-foreground">- {asset.name}</span>
+                              {quote && (
+                                <span className="ml-auto text-sm">${quote.price.toFixed(2)}</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </motion.div>
@@ -325,13 +309,7 @@ export function InvestmentCalculator() {
               </div>
             </div>
 
-            {error && (
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm" data-testid="error-message">
-                {error}
-              </div>
-            )}
-
-            {loading ? (
+            {quotesLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="relative">
                   <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/30 border-t-primary"></div>
@@ -360,6 +338,9 @@ export function InvestmentCalculator() {
                               </Badge>
                             )}
                           </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Current: ${result.currentPrice.toFixed(2)}
+                          </p>
                         </CardHeader>
                         <CardContent className="space-y-5">
                           <div className="space-y-2">
@@ -383,7 +364,7 @@ export function InvestmentCalculator() {
                             </div>
                           </div>
                           <div className="pt-4 space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground uppercase">Annual Growth Rate (CAGR)</p>
+                            <p className="text-xs font-medium text-muted-foreground uppercase">Avg Annual Return</p>
                             <p className="text-2xl font-bold text-foreground" data-testid="text-cagr">
                               {result.cagr.toFixed(2)}%
                             </p>
@@ -411,6 +392,9 @@ export function InvestmentCalculator() {
                                 </Badge>
                               )}
                             </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Current: ${result2.currentPrice.toFixed(2)}
+                            </p>
                           </CardHeader>
                           <CardContent className="space-y-5">
                             <div className="space-y-2">
@@ -434,7 +418,7 @@ export function InvestmentCalculator() {
                               </div>
                             </div>
                             <div className="pt-4 space-y-1">
-                              <p className="text-xs font-medium text-muted-foreground uppercase">Annual Growth Rate (CAGR)</p>
+                              <p className="text-xs font-medium text-muted-foreground uppercase">Avg Annual Return</p>
                               <p className="text-2xl font-bold text-foreground" data-testid="text-cagr-2">
                                 {result2.cagr.toFixed(2)}%
                               </p>
@@ -458,7 +442,7 @@ export function InvestmentCalculator() {
                           <div className="p-2 rounded-lg bg-primary/10">
                             <TrendingUp className="w-5 h-5 text-primary" />
                           </div>
-                          Historical Performance & Projection
+                          Projected Growth
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -494,18 +478,9 @@ export function InvestmentCalculator() {
                               dataKey="value"
                               stroke={selectedAssetData?.color}
                               strokeWidth={3}
-                              name="Historical Value"
-                              dot={false}
-                              fill="url(#colorValue)"
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="projected"
-                              stroke="hsl(var(--accent))"
-                              strokeWidth={3}
-                              strokeDasharray="8 4"
-                              name="Projected (CAGR)"
-                              dot={false}
+                              dot={{ fill: selectedAssetData?.color, r: 4 }}
+                              activeDot={{ r: 6 }}
+                              name="Portfolio Value"
                             />
                           </LineChart>
                         </ResponsiveContainer>
@@ -515,91 +490,83 @@ export function InvestmentCalculator() {
                 )}
               </>
             )}
-
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary via-accent to-purple-600 rounded-2xl blur opacity-40 group-hover:opacity-75 transition duration-1000"></div>
-              <Button 
-                className="relative w-full bg-gradient-to-r from-primary via-accent to-purple-600 hover:from-primary/90 hover:via-accent/90 hover:to-purple-600/90 text-white font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-[1.02] text-lg py-7" 
-                size="lg" 
-                onClick={() => window.location.href = "/signup"}
-                data-testid="button-start-investing"
-              >
-                <TrendingUp className="w-6 h-6 mr-2" />
-                Start Investing Now
-                <ArrowUpRight className="w-5 h-5 ml-2" />
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </motion.div>
 
+      {/* Leaderboard */}
       {leaderboard.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
           <Card className="border-0 shadow-2xl bg-gradient-to-br from-yellow-500/5 via-card to-orange-500/5 overflow-hidden" data-testid="leaderboard-card">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-full blur-3xl -z-10"></div>
             <CardHeader className="pb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 shadow-lg">
-                  <Trophy className="w-6 h-6 text-white" />
+              <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-yellow-500/10">
+                  <Trophy className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                 </div>
-                <div>
-                  <CardTitle className="text-2xl font-bold">Top Performers</CardTitle>
-                  <CardDescription className="text-base">Based on $1,000 investment over 3 years</CardDescription>
-                </div>
-              </div>
+                Top Performing Stocks (3-Year Projection)
+              </CardTitle>
+              <CardDescription>Based on $1,000 investment with historical average returns</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {leaderboard.map((item, index) => {
-                  const asset = cryptoAssets.find(a => a.id === item.asset);
-                  const badge = getBadge(item.cagr);
-                  const BadgeIcon = badge.icon;
-                  return (
-                    <motion.div
-                      key={item.asset}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="relative group"
-                      data-testid={`leaderboard-item-${index}`}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="relative flex items-center justify-between p-5 rounded-2xl bg-gradient-to-r from-muted/30 to-muted/10 border border-border/50 group-hover:border-primary/30 transition-all duration-300">
-                        <div className="flex items-center gap-4">
-                          <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg ${
-                            index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
-                            index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-white' :
-                            'bg-gradient-to-br from-orange-400 to-orange-600 text-white'
-                          }`}>
-                            {index === 0 && <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-300 rounded-full animate-pulse"></div>}
-                            {index + 1}
-                          </div>
+            <CardContent className="space-y-4">
+              {leaderboard.map((item, index) => {
+                const stockData = stockAssets.find(s => s.symbol === item.asset);
+                const badge = getBadge(item.cagr);
+                const BadgeIcon = badge.icon;
+                
+                return (
+                  <motion.div
+                    key={item.asset}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
+                    <Card className={`border-2 ${
+                      index === 0 ? 'border-yellow-500/50 bg-yellow-500/5' :
+                      index === 1 ? 'border-slate-400/50 bg-slate-400/5' :
+                      'border-orange-600/50 bg-orange-600/5'
+                    } hover:shadow-lg transition-shadow`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: asset?.color }}></div>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              index === 0 ? 'bg-yellow-500 text-white' :
+                              index === 1 ? 'bg-slate-400 text-white' :
+                              'bg-orange-600 text-white'
+                            } font-bold`}>
+                              {index + 1}
+                            </div>
                             <div>
-                              <p className="font-bold text-lg">{asset?.symbol}</p>
-                              <p className="text-sm text-muted-foreground">{asset?.name}</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: stockData?.color }}></div>
+                                <span className="font-bold text-lg">{item.asset}</span>
+                                <span className="text-sm text-muted-foreground">{stockData?.name}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Current: ${item.currentPrice.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-foreground">
+                              ${item.projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </p>
+                            <div className="flex items-center gap-2 justify-end mt-1">
+                              <BadgeIcon className="w-4 h-4 text-green-600" />
+                              <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                                +{item.cagr.toFixed(1)}% annual
+                              </p>
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-2xl bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                            ${item.projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </p>
-                          <div className="flex items-center justify-end gap-2 mt-1">
-                            <ArrowUpRight className="w-4 h-4 text-green-600 dark:text-green-400" />
-                            <span className="text-sm font-semibold text-green-600 dark:text-green-400">{item.cagr.toFixed(1)}% CAGR</span>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
             </CardContent>
           </Card>
         </motion.div>
