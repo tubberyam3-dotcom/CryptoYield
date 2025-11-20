@@ -58,8 +58,17 @@ export function InvestmentCalculator() {
   const [compareMode, setCompareMode] = useState<boolean>(false);
 
   // Fetch live stock quotes
-  const { data: stockQuotes, isLoading: quotesLoading, refetch } = useQuery<StockQuote[]>({
-    queryKey: ['/api/stocks/quotes', { symbols: stockAssets.map(s => s.symbol).join(',') }],
+  const symbols = stockAssets.map(s => s.symbol).join(',');
+  const { data: stockQuotes, isLoading: quotesLoading, error: quotesError, refetch } = useQuery<StockQuote[]>({
+    queryKey: ['/api/stocks/quotes', symbols],
+    queryFn: async () => {
+      const response = await fetch(`/api/stocks/quotes?symbols=${symbols}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch stock quotes');
+      }
+      return response.json();
+    },
+    enabled: Boolean(symbols),
     refetchInterval: 60000, // Refresh every minute
   });
 
@@ -309,6 +318,12 @@ export function InvestmentCalculator() {
               </div>
             </div>
 
+            {quotesError && (
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm" data-testid="error-message">
+                Failed to fetch live stock prices. Please try refreshing.
+              </div>
+            )}
+
             {quotesLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="relative">
@@ -316,7 +331,7 @@ export function InvestmentCalculator() {
                   <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border-4 border-primary/20"></div>
                 </div>
               </div>
-            ) : (
+            ) : !quotesError && stockQuotes && stockQuotes.length > 0 ? (
               <>
                 {result && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -489,6 +504,10 @@ export function InvestmentCalculator() {
                   </motion.div>
                 )}
               </>
+            ) : (
+              <div className="p-6 text-center text-muted-foreground" data-testid="no-data-message">
+                No stock data available. Click the refresh button to try again.
+              </div>
             )}
           </CardContent>
         </Card>
