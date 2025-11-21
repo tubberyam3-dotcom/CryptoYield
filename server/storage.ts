@@ -649,12 +649,9 @@ export class DatabaseStorage implements IStorage {
         .from(userStocks)
         .leftJoin(stockProducts, eq(userStocks.stockProductId, stockProducts.id))
         .where(
-          and(
-            or(
-              eq(userStocks.userId, userId),
-              eq(userStocks.jointAccountId, accountContext.accountId)
-            ),
-            eq(userStocks.status, 'active')
+          or(
+            eq(userStocks.userId, userId),
+            eq(userStocks.jointAccountId, accountContext.accountId)
           )
         )
         .then(rows => rows.map(row => ({
@@ -666,12 +663,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(userStocks)
         .leftJoin(stockProducts, eq(userStocks.stockProductId, stockProducts.id))
-        .where(
-          and(
-            eq(userStocks.userId, userId),
-            eq(userStocks.status, 'active')
-          )
-        )
+        .where(eq(userStocks.userId, userId))
         .then(rows => rows.map(row => ({
           ...row.user_stocks,
           stockProduct: row.stock_products!

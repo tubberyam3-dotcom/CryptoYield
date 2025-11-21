@@ -9,6 +9,8 @@ import {
   insertUserPortfolioSchema,
   insertBondProductSchema,
   insertUserBondSchema,
+  insertStockProductSchema,
+  insertUserStockSchema,
   insertCommunityChalllengeSchema,
   insertChallengeMemberSchema,
   insertJointAccountSchema,
@@ -680,6 +682,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating user bond:", error);
       res.status(500).json({ message: "Failed to create bond investment" });
+    }
+  });
+
+  // Stock product management routes (admin)
+  app.get('/api/stocks/products', async (req, res) => {
+    try {
+      const products = await storage.getStockProducts();
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching stock products:", error);
+      res.status(500).json({ message: "Failed to fetch stock products" });
+    }
+  });
+
+  app.post('/api/stocks/products', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const productData = insertStockProductSchema.parse(req.body);
+      const product = await storage.createStockProduct(productData);
+      res.json(product);
+    } catch (error) {
+      console.error("Error creating stock product:", error);
+      res.status(500).json({ message: "Failed to create stock product" });
+    }
+  });
+
+  app.patch('/api/stocks/products/:id', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const productId = req.params.id;
+      
+      const allowedFields = ['name', 'description', 'sector', 'minPurchaseQuantity', 'isActive'];
+      const updates = Object.keys(req.body)
+        .filter(key => allowedFields.includes(key))
+        .reduce((obj: any, key) => {
+          obj[key] = req.body[key];
+          return obj;
+        }, {});
+      
+      const product = await storage.updateStockProduct(productId, updates);
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating stock product:", error);
+      res.status(500).json({ message: "Failed to update stock product" });
+    }
+  });
+
+  app.delete('/api/stocks/products/:id', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const productId = req.params.id;
+      await storage.deleteStockProduct(productId);
+      res.json({ message: "Stock product deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting stock product:", error);
+      res.status(500).json({ message: "Failed to delete stock product" });
+    }
+  });
+
+  // User stock operations
+  app.get('/api/user/stocks', enhancedAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userStocks = await storage.getUserStocks(userId);
+      res.json(userStocks);
+    } catch (error) {
+      console.error("Error fetching user stocks:", error);
+      res.status(500).json({ message: "Failed to fetch user stocks" });
+    }
+  });
+
+  app.post('/api/user/stocks', enhancedAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { stockProductId, quantity, purchasePrice } = req.body;
+      
+      const stockProduct = await storage.getStockProduct(stockProductId);
+      if (!stockProduct) {
+        return res.status(404).json({ message: "Stock product not found" });
+      }
+
+      const accountContext = await storage.getAccountContext(userId);
+      const totalInvested = (parseFloat(quantity) * parseFloat(purchasePrice)).toString();
+
+      const userStockData: any = {
+        stockProductId,
+        quantity,
+        purchasePrice,
+        totalInvested,
+      };
+
+      if (accountContext.isJointAccount) {
+        userStockData.jointAccountId = accountContext.accountId;
+        userStockData.userId = null;
+      } else {
+        userStockData.userId = userId;
+        userStockData.jointAccountId = null;
+      }
+
+      const validatedData = insertUserStockSchema.parse(userStockData);
+      const userStockRecord = await storage.createUserStock(validatedData);
+      res.json(userStockRecord);
+    } catch (error) {
+      console.error("Error creating user stock:", error);
+      res.status(500).json({ message: "Failed to purchase stock" });
     }
   });
 
