@@ -19,7 +19,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { StockProduct, UserStock, InsertUserStock } from "@shared/schema";
 import { insertUserStockSchema } from "@shared/schema";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, Activity } from "lucide-react";
 
 interface StockQuote {
   symbol: string;
@@ -219,19 +219,65 @@ export default function Stocks() {
                   const profitLoss = currentValue - totalInvested;
                   const profitLossPercent = (profitLoss / totalInvested) * 100;
 
+                  const getStatusBadge = (status: string) => {
+                    switch (status) {
+                      case 'pending':
+                        return (
+                          <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20" data-testid={`badge-status-pending-${holding.id}`}>
+                            <Clock className="w-3 h-3 mr-1" />
+                            Pending Approval
+                          </Badge>
+                        );
+                      case 'approved':
+                        return (
+                          <Badge className="bg-green-500/10 text-green-500 border-green-500/20" data-testid={`badge-status-approved-${holding.id}`}>
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Approved
+                          </Badge>
+                        );
+                      case 'rejected':
+                        return (
+                          <Badge className="bg-red-500/10 text-red-500 border-red-500/20" data-testid={`badge-status-rejected-${holding.id}`}>
+                            <XCircle className="w-3 h-3 mr-1" />
+                            Rejected
+                          </Badge>
+                        );
+                      case 'active':
+                        return (
+                          <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20" data-testid={`badge-status-active-${holding.id}`}>
+                            <Activity className="w-3 h-3 mr-1" />
+                            Active
+                          </Badge>
+                        );
+                      case 'sold':
+                        return (
+                          <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20" data-testid={`badge-status-sold-${holding.id}`}>
+                            Sold
+                          </Badge>
+                        );
+                      default:
+                        return null;
+                    }
+                  };
+
                   return (
                     <Card key={holding.id} className="p-6" data-testid={`card-stock-holding-${holding.id}`}>
-                      <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-lg" data-testid={`text-stock-symbol-${holding.stockProduct.symbol}`}>
                           {holding.stockProduct.symbol}
                         </h3>
-                        <Badge className={profitLoss >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
-                          {profitLoss >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-                          {profitLoss >= 0 ? '+' : ''}{profitLossPercent.toFixed(2)}%
-                        </Badge>
+                        {holding.status !== 'pending' && holding.status !== 'rejected' && (
+                          <Badge className={profitLoss >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
+                            {profitLoss >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                            {profitLoss >= 0 ? '+' : ''}{profitLossPercent.toFixed(2)}%
+                          </Badge>
+                        )}
                       </div>
                       
-                      <p className="text-sm text-muted-foreground mb-4">{holding.stockProduct.name}</p>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-sm text-muted-foreground">{holding.stockProduct.name}</p>
+                        {getStatusBadge(holding.status)}
+                      </div>
                       
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
