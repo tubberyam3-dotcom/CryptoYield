@@ -883,6 +883,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/stocks/top-performers', async (req, res) => {
+    try {
+      // Curated list of 50 top-performing stocks across various sectors
+      const topStocks = [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'LLY', 'AVGO',
+        'V', 'JPM', 'WMT', 'XOM', 'UNH', 'MA', 'PG', 'JNJ', 'HD', 'COST',
+        'ABBV', 'NFLX', 'BAC', 'CRM', 'KO', 'ORCL', 'PEP', 'MRK', 'CVX', 'AMD',
+        'ADBE', 'TMO', 'ACN', 'CSCO', 'MCD', 'ABT', 'WFC', 'LIN', 'DHR', 'INTC',
+        'DIS', 'VZ', 'NKE', 'CMCSA', 'PM', 'TXN', 'NEE', 'UPS', 'RTX', 'QCOM'
+      ];
+
+      const quotes = await Promise.all(
+        topStocks.map(async (symbol) => {
+          try {
+            const quote: any = await yahooFinance.quote(symbol);
+            return {
+              symbol: quote.symbol,
+              name: quote.longName || quote.shortName || symbol,
+              price: quote.regularMarketPrice,
+              change: quote.regularMarketChange,
+              changePercent: quote.regularMarketChangePercent,
+              previousClose: quote.regularMarketPreviousClose,
+              dayHigh: quote.regularMarketDayHigh,
+              dayLow: quote.regularMarketDayLow,
+              volume: quote.regularMarketVolume,
+              marketCap: quote.marketCap,
+            };
+          } catch (error) {
+            console.error(`Error fetching quote for ${symbol}:`, error);
+            return null;
+          }
+        })
+      );
+
+      res.json(quotes.filter(q => q !== null));
+    } catch (error) {
+      console.error("Error fetching top performers:", error);
+      res.status(500).json({ message: "Failed to fetch top performers" });
+    }
+  });
+
   // Challenge routes
   app.get('/api/challenges', async (req, res) => {
     try {
