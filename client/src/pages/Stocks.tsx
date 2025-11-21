@@ -437,7 +437,7 @@ export default function Stocks() {
                 <p className="text-sm text-muted-foreground">Loading top performers...</p>
               </div>
             ) : topPerformers && topPerformers.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                 {topPerformers
                   .filter(stock => 
                     searchQuery === "" || 
@@ -447,46 +447,46 @@ export default function Stocks() {
                   .map((stock) => (
                     <Card 
                       key={stock.symbol} 
-                      className="p-5 hover:shadow-xl hover:border-primary/30 transition-all duration-200 hover:scale-[1.02] cursor-pointer" 
+                      className="p-3 md:p-4 hover:shadow-xl hover:border-primary/30 transition-all duration-200 hover:scale-[1.02] cursor-pointer" 
                       data-testid={`card-top-stock-${stock.symbol}`}
                       onClick={() => setLocation(`/stocks/${stock.symbol}`)}
                     >
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-xl mb-1" data-testid={`text-top-stock-symbol-${stock.symbol}`}>{stock.symbol}</h3>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{stock.name}</p>
+                          <h3 className="font-bold text-base md:text-lg mb-0.5" data-testid={`text-top-stock-symbol-${stock.symbol}`}>{stock.symbol}</h3>
+                          <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1">{stock.name}</p>
                         </div>
-                        <Badge className={`ml-2 ${stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
-                          {stock.changePercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-                          {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                        <Badge className={`ml-1 text-[10px] md:text-xs px-1.5 md:px-2 ${stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
+                          {stock.changePercent >= 0 ? <TrendingUp className="w-2.5 h-2.5 md:w-3 md:h-3 mr-0.5" /> : <TrendingDown className="w-2.5 h-2.5 md:w-3 md:h-3 mr-0.5" />}
+                          {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(1)}%
                         </Badge>
                       </div>
                       
-                      <div className="space-y-3">
-                        <div className="flex items-baseline gap-2 pb-3 border-b border-border/50">
-                          <span className="text-3xl font-bold tracking-tight">${stock.price.toFixed(2)}</span>
-                          <span className={`text-sm font-semibold ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      <div className="space-y-2">
+                        <div className="flex items-baseline gap-1.5 pb-2 border-b border-border/50">
+                          <span className="text-xl md:text-2xl font-bold tracking-tight">${stock.price.toFixed(2)}</span>
+                          <span className={`text-[10px] md:text-sm font-semibold ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                             {stock.change >= 0 ? '+' : ''}${stock.change.toFixed(2)}
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="grid grid-cols-2 gap-2 text-[10px] md:text-xs">
                           <div className="flex flex-col">
-                            <span className="text-muted-foreground mb-1">Day High</span>
+                            <span className="text-muted-foreground mb-0.5">High</span>
                             <span className="font-semibold">${stock.dayHigh?.toFixed(2) || 'N/A'}</span>
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-muted-foreground mb-1">Day Low</span>
+                            <span className="text-muted-foreground mb-0.5">Low</span>
                             <span className="font-semibold">${stock.dayLow?.toFixed(2) || 'N/A'}</span>
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-muted-foreground mb-1">Volume</span>
-                            <span className="font-semibold">{stock.volume ? (stock.volume / 1000000).toFixed(2) + 'M' : 'N/A'}</span>
+                            <span className="text-muted-foreground mb-0.5">Vol</span>
+                            <span className="font-semibold">{stock.volume ? (stock.volume / 1000000).toFixed(1) + 'M' : 'N/A'}</span>
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-muted-foreground mb-1">Market Cap</span>
+                            <span className="text-muted-foreground mb-0.5">MCap</span>
                             <span className="font-semibold">
-                              {stock.marketCap ? '$' + (stock.marketCap / 1000000000).toFixed(2) + 'B' : 'N/A'}
+                              {stock.marketCap ? '$' + (stock.marketCap / 1000000000).toFixed(1) + 'B' : 'N/A'}
                             </span>
                           </div>
                         </div>
