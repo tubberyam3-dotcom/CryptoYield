@@ -144,7 +144,7 @@ export const userStocks = pgTable("user_stocks", {
   purchasePrice: decimal("purchase_price", { precision: 18, scale: 8 }).notNull(), // price per share at purchase
   totalInvested: decimal("total_invested", { precision: 18, scale: 8 }).notNull(), // quantity * purchasePrice
   purchaseDate: timestamp("purchase_date").defaultNow(),
-  status: varchar("status", { enum: ['active', 'sold'] }).default('active'),
+  status: varchar("status", { enum: ['pending', 'approved', 'rejected', 'sold'] }).default('pending'),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
