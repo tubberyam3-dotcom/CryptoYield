@@ -45,6 +45,7 @@ type PurchaseFormData = z.infer<typeof purchaseFormSchema>;
 export default function Stocks() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockProduct | null>(null);
+  const [selectedTopStock, setSelectedTopStock] = useState<StockQuote | null>(null);
   const [stockQuotes, setStockQuotes] = useState<{ [symbol: string]: StockQuote }>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [, setLocation] = useLocation();
@@ -74,12 +75,23 @@ export default function Stocks() {
   });
 
   const purchaseMutation = useMutation({
-    mutationFn: async (data: PurchaseFormData) => {
-      const response = await apiRequest("POST", "/api/user/stocks", {
-        stockProductId: data.stockProductId,
+    mutationFn: async (data: PurchaseFormData & { symbol?: string; name?: string; sector?: string }) => {
+      const payload: any = {
         quantity: data.quantity.toString(),
         purchasePrice: data.purchasePrice.toString(),
-      });
+      };
+      
+      // If stockProductId is provided, it's an admin offering
+      if (data.stockProductId) {
+        payload.stockProductId = data.stockProductId;
+      } else {
+        // Otherwise, it's a Top 50 stock purchase
+        payload.symbol = data.symbol;
+        payload.name = data.name;
+        payload.sector = data.sector;
+      }
+      
+      const response = await apiRequest("POST", "/api/user/stocks", payload);
       return response.json();
     },
     onSuccess: (_, variables) => {
@@ -90,6 +102,7 @@ export default function Stocks() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/stocks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setSelectedStock(null);
+      setSelectedTopStock(null);
       purchaseForm.reset();
     },
     onError: (error: any) => {
@@ -494,12 +507,11 @@ export default function Stocks() {
                   .map((stock) => (
                     <Card 
                       key={stock.symbol} 
-                      className="p-3 md:p-4 hover:shadow-xl hover:border-primary/30 transition-all duration-200 hover:scale-[1.02] cursor-pointer" 
+                      className="p-3 md:p-4 hover:shadow-xl hover:border-primary/30 transition-all duration-200 relative" 
                       data-testid={`card-top-stock-${stock.symbol}`}
-                      onClick={() => setLocation(`/stocks/${stock.symbol}`)}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setLocation(`/stocks/${stock.symbol}`)}>
                           <h3 className="font-bold text-base md:text-lg mb-0.5" data-testid={`text-top-stock-symbol-${stock.symbol}`}>{stock.symbol}</h3>
                           <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1">{stock.name}</p>
                         </div>
@@ -510,14 +522,14 @@ export default function Stocks() {
                       </div>
                       
                       <div className="space-y-2">
-                        <div className="flex items-baseline gap-1.5 pb-2 border-b border-border/50">
+                        <div className="flex items-baseline gap-1.5 pb-2 border-b border-border/50 cursor-pointer" onClick={() => setLocation(`/stocks/${stock.symbol}`)}>
                           <span className="text-xl md:text-2xl font-bold tracking-tight">${stock.price.toFixed(2)}</span>
                           <span className={`text-[10px] md:text-sm font-semibold ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                             {stock.change >= 0 ? '+' : ''}${stock.change.toFixed(2)}
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2 text-[10px] md:text-xs">
+                        <div className="grid grid-cols-2 gap-2 text-[10px] md:text-xs cursor-pointer" onClick={() => setLocation(`/stocks/${stock.symbol}`)}>
                           <div className="flex flex-col">
                             <span className="text-muted-foreground mb-0.5">High</span>
                             <span className="font-semibold">${stock.dayHigh?.toFixed(2) || 'N/A'}</span>
@@ -537,6 +549,20 @@ export default function Stocks() {
                             </span>
                           </div>
                         </div>
+                        
+                        <Button 
+                          className="w-full mt-2 text-xs md:text-sm" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTopStock(stock);
+                            purchaseForm.setValue('purchasePrice', stock.price);
+                            purchaseForm.setValue('quantity', 1);
+                          }}
+                          data-testid={`button-buy-${stock.symbol}`}
+                        >
+                          Buy Now
+                        </Button>
                       </div>
                     </Card>
                   ))}
@@ -558,6 +584,101 @@ export default function Stocks() {
           </div>
         </main>
       </div>
+      
+      {/* Purchase Dialog for Top 50 Stocks */}
+      <Dialog open={!!selectedTopStock} onOpenChange={(open) => !open && setSelectedTopStock(null)}>
+        <DialogContent data-testid={`dialog-buy-top-stock-${selectedTopStock?.symbol || ''}`}>
+          <DialogHeader>
+            <DialogTitle>Purchase {selectedTopStock?.symbol} Shares</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (selectedTopStock) {
+              purchaseMutation.mutate({
+                symbol: selectedTopStock.symbol,
+                name: selectedTopStock.name,
+                sector: 'Technology', // Default sector
+                quantity: purchaseForm.watch('quantity'),
+                purchasePrice: purchaseForm.watch('purchasePrice'),
+                stockProductId: '', // Not an admin offering
+              });
+            }
+          }} className="space-y-4">
+            {selectedTopStock && (
+              <>
+                <div>
+                  <p className="text-sm font-medium mb-2">{selectedTopStock.name}</p>
+                  <p className="text-2xl font-bold">${selectedTopStock.price.toFixed(2)} per share</p>
+                  <Badge className={`mt-2 ${selectedTopStock.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                    {selectedTopStock.changePercent >= 0 ? '+' : ''}{selectedTopStock.changePercent.toFixed(2)}%
+                  </Badge>
+                </div>
+                
+                <div>
+                  <Label htmlFor="top-stock-quantity">Number of Shares</Label>
+                  <Input
+                    id="top-stock-quantity"
+                    type="number"
+                    placeholder="Enter quantity"
+                    min="1"
+                    {...purchaseForm.register("quantity", {
+                      setValueAs: (value) => parseInt(value) || 1,
+                    })}
+                    data-testid="input-top-stock-quantity"
+                  />
+                  {purchaseForm.formState.errors.quantity && (
+                    <p className="text-sm text-red-500 mt-1">{purchaseForm.formState.errors.quantity.message}</p>
+                  )}
+                </div>
+                
+                {purchaseForm.watch('quantity') > 0 && (
+                  <div className="p-4 bg-muted rounded-lg">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Price per share</span>
+                        <span className="font-medium">${selectedTopStock.price.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Quantity</span>
+                        <span className="font-medium">{purchaseForm.watch('quantity')} shares</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t">
+                        <span className="font-medium">Total Cost</span>
+                        <span className="font-bold text-lg">
+                          ${(purchaseForm.watch('quantity') * selectedTopStock.price).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                    <Clock className="w-3 h-3 inline mr-1" />
+                    Purchase requires admin approval. Funds will be deducted and refunded if rejected.
+                  </p>
+                </div>
+                
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={purchaseMutation.isPending || purchaseForm.watch('quantity') < 1}
+                  data-testid="button-confirm-top-stock-purchase"
+                >
+                  {purchaseMutation.isPending ? (
+                    <>
+                      <Activity className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    `Purchase ${purchaseForm.watch('quantity')} Shares`
+                  )}
+                </Button>
+              </>
+            )}
+          </form>
+        </DialogContent>
+      </Dialog>
       
       <MobileNav />
     </div>
