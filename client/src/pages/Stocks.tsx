@@ -84,10 +84,11 @@ export default function Stocks() {
     },
     onSuccess: (_, variables) => {
       toast({
-        title: "Purchase Successful",
-        description: `You've successfully purchased ${variables.quantity} shares!`,
+        title: "Purchase Submitted",
+        description: `Your purchase of ${variables.quantity} shares is pending admin approval. You'll be refunded if rejected.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/stocks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setSelectedStock(null);
       purchaseForm.reset();
     },
