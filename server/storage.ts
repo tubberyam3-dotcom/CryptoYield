@@ -690,6 +690,29 @@ export class DatabaseStorage implements IStorage {
     return newStock;
   }
 
+  async getPendingStockPurchases(): Promise<(UserStock & { stockProduct: StockProduct; user?: User })[]> {
+    return await db
+      .select()
+      .from(userStocks)
+      .leftJoin(stockProducts, eq(userStocks.stockProductId, stockProducts.id))
+      .leftJoin(users, eq(userStocks.userId, users.id))
+      .where(eq(userStocks.status, 'pending'))
+      .then(rows => rows.map(row => ({
+        ...row.user_stocks,
+        stockProduct: row.stock_products!,
+        user: row.users || undefined,
+      })));
+  }
+
+  async updateStockPurchaseStatus(stockPurchaseId: string, status: 'approved' | 'rejected'): Promise<UserStock> {
+    const [updatedStock] = await db
+      .update(userStocks)
+      .set({ status })
+      .where(eq(userStocks.id, stockPurchaseId))
+      .returning();
+    return updatedStock;
+  }
+
   // Challenge operations
   async getCommunityChalllenges(): Promise<CommunityChallenge[]> {
     return await db.select().from(communityChallenges).where(eq(communityChallenges.status, 'active'));

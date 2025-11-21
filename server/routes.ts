@@ -19,7 +19,10 @@ import {
   insertJointAccountSchema,
   insertUserJointAccountSchema,
   users,
+  userStocks,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -752,6 +755,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting stock product:", error);
       res.status(500).json({ message: "Failed to delete stock product" });
+    }
+  });
+
+  // Admin stock purchase approvals
+  app.get('/api/admin/stock-purchases/pending', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const pendingPurchases = await storage.getPendingStockPurchases();
+      res.json(pendingPurchases);
+    } catch (error) {
+      console.error("Error fetching pending stock purchases:", error);
+      res.status(500).json({ message: "Failed to fetch pending stock purchases" });
+    }
+  });
+
+  app.patch('/api/admin/stock-purchases/:id/approve', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const purchaseId = req.params.id;
+      const updatedPurchase = await storage.updateStockPurchaseStatus(purchaseId, 'approved');
+      res.json(updatedPurchase);
+    } catch (error) {
+      console.error("Error approving stock purchase:", error);
+      res.status(500).json({ message: "Failed to approve stock purchase" });
+    }
+  });
+
+  app.patch('/api/admin/stock-purchases/:id/reject', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const purchaseId = req.params.id;
+      
+      // Get the purchase details to refund the user
+      const [purchase] = await db.select().from(userStocks).where(eq(userStocks.id, purchaseId));
+      
+      if (purchase && purchase.userId) {
+        // Refund the user's balance
+        const user = await storage.getUser(purchase.userId);
+        if (user) {
+          const currentBalance = parseFloat(user.balance?.toString() || '0');
+          const refundAmount = parseFloat(purchase.totalInvested.toString());
+          const newBalance = (currentBalance + refundAmount).toString();
+          await storage.updateUserBalance(purchase.userId, newBalance);
+        }
+      }
+
+      const updatedPurchase = await storage.updateStockPurchaseStatus(purchaseId, 'rejected');
+      res.json(updatedPurchase);
+    } catch (error) {
+      console.error("Error rejecting stock purchase:", error);
+      res.status(500).json({ message: "Failed to reject stock purchase" });
     }
   });
 

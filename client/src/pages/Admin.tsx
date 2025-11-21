@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { StockManagement } from "@/components/admin/StockManagement";
+import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApprovals";
 import type { Portfolio, StakingPlan, CommunityChallenge } from "@shared/schema";
 
 export default function Admin() {
@@ -185,7 +186,7 @@ export default function Admin() {
           </div>
 
           <Tabs defaultValue="users" className="space-y-4 sm:space-y-6">
-            <TabsList className="grid grid-cols-5 w-full max-w-3xl h-auto">
+            <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full max-w-4xl h-auto gap-1">
               <TabsTrigger value="users" data-testid="tab-users" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
                 <span className="hidden xs:inline">Users</span>
                 <span className="xs:hidden">👥</span>
@@ -197,6 +198,10 @@ export default function Admin() {
               <TabsTrigger value="stocks" data-testid="tab-stocks" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
                 <span className="hidden xs:inline">Stocks</span>
                 <span className="xs:hidden">📈</span>
+              </TabsTrigger>
+              <TabsTrigger value="approvals" data-testid="tab-approvals" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+                <span className="hidden xs:inline">Approvals</span>
+                <span className="xs:hidden">✅</span>
               </TabsTrigger>
               <TabsTrigger value="staking" data-testid="tab-staking" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
                 <span className="hidden xs:inline">Bonds</span>
@@ -339,6 +344,10 @@ export default function Admin() {
             
             <TabsContent value="stocks" className="space-y-4 sm:space-y-6 mt-4">
               <StockManagement />
+            </TabsContent>
+
+            <TabsContent value="approvals" className="space-y-4 sm:space-y-6 mt-4">
+              <StockPurchaseApprovals />
             </TabsContent>
             
             <TabsContent value="staking" className="space-y-4 sm:space-y-6 mt-4">
