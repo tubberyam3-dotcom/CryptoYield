@@ -842,11 +842,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/user/stocks', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { stockProductId, quantity, purchasePrice } = req.body;
+      const { stockProductId, symbol, name, sector, quantity, purchasePrice } = req.body;
       
-      const stockProduct = await storage.getStockProduct(stockProductId);
-      if (!stockProduct) {
-        return res.status(404).json({ message: "Stock product not found" });
+      let stockProduct;
+      
+      // If stockProductId is provided, use it (admin offering)
+      if (stockProductId) {
+        stockProduct = await storage.getStockProduct(stockProductId);
+        if (!stockProduct) {
+          return res.status(404).json({ message: "Stock product not found" });
+        }
+      } 
+      // Otherwise, accept symbol and name to create/find stock product
+      else if (symbol && name) {
+        // Check if stock product already exists for this symbol
+        const existingProducts = await storage.getStockProducts();
+        stockProduct = existingProducts.find((p: any) => p.symbol === symbol.toUpperCase());
+        
+        // If not found, create a new stock product (non-admin offering)
+        if (!stockProduct) {
+          const newStockProduct = await storage.createStockProduct({
+            symbol: symbol.toUpperCase(),
+            name: name,
+            sector: sector || null,
+            description: null,
+            minPurchaseQuantity: '1',
+            isActive: false, // Mark as non-admin offering
+          });
+          stockProduct = newStockProduct;
+        }
+      } else {
+        return res.status(400).json({ 
+          message: "Either stockProductId or (symbol + name) must be provided" 
+        });
       }
 
       const quantityNum = parseFloat(quantity);
@@ -884,7 +912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserBalance(userId, newBalance);
 
       const userStockData: any = {
-        stockProductId,
+        stockProductId: stockProduct.id,
         quantity,
         purchasePrice,
         totalInvested: totalInvested.toString(),
