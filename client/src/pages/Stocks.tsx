@@ -202,7 +202,10 @@ export default function Stocks() {
           {/* My Stock Holdings */}
           {userStocks && userStocks.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">My Stock Holdings</h2>
+              <div className="pb-2 border-b border-border">
+                <h2 className="text-2xl font-bold">My Stock Holdings</h2>
+                <p className="text-sm text-muted-foreground">Track your investment performance in real-time</p>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {userStocks.map((holding) => {
                   const quote = stockQuotes[holding.stockProduct.symbol];
@@ -261,7 +264,10 @@ export default function Stocks() {
 
           {/* Available Stocks */}
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Available Stocks</h2>
+            <div className="pb-2 border-b border-border">
+              <h2 className="text-2xl font-bold">Available Stocks</h2>
+              <p className="text-sm text-muted-foreground">Curated stock offerings selected by our team</p>
+            </div>
             
             {productsLoading ? (
               <div className="text-center py-8">
@@ -383,32 +389,53 @@ export default function Stocks() {
                 })}
               </div>
             ) : (
-              <Card className="p-8 text-center">
-                <p className="text-muted-foreground">No stocks available at the moment. Check back later!</p>
+              <Card className="p-12 text-center bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <div className="max-w-md mx-auto space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+                    <TrendingUp className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold">Start Your Investment Journey</h3>
+                  <p className="text-muted-foreground">
+                    Browse our curated selection of top-performing stocks below and start building your wealth today. Every successful investor started with their first purchase!
+                  </p>
+                </div>
               </Card>
             )}
           </div>
 
           {/* Top 50 Performing Stocks */}
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold">Top 50 Performing Stocks</h2>
-              <Input
-                placeholder="Search by symbol or name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full sm:w-64"
-                data-testid="input-search-stocks"
-              />
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-border">
+              <div>
+                <h2 className="text-2xl font-bold">Top 50 Performing Stocks</h2>
+                <p className="text-sm text-muted-foreground">Real-time market data from leading companies</p>
+              </div>
+              <div className="relative w-full sm:w-80">
+                <Input
+                  placeholder="Search by symbol or name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10"
+                  data-testid="input-search-stocks"
+                />
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
             </div>
             
             {topPerformersLoading ? (
-              <div className="text-center py-8">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <div className="text-center py-12">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-sm text-muted-foreground">Loading top performers...</p>
               </div>
             ) : topPerformers && topPerformers.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {topPerformers
                   .filter(stock => 
                     searchQuery === "" || 
@@ -416,43 +443,43 @@ export default function Stocks() {
                     stock.name.toLowerCase().includes(searchQuery.toLowerCase())
                   )
                   .map((stock) => (
-                    <Card key={stock.symbol} className="p-4 hover:shadow-lg transition-shadow" data-testid={`card-top-stock-${stock.symbol}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h3 className="font-bold text-lg" data-testid={`text-top-stock-symbol-${stock.symbol}`}>{stock.symbol}</h3>
+                    <Card key={stock.symbol} className="p-5 hover:shadow-xl hover:border-primary/30 transition-all duration-200 hover:scale-[1.02] cursor-pointer" data-testid={`card-top-stock-${stock.symbol}`}>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-xl mb-1" data-testid={`text-top-stock-symbol-${stock.symbol}`}>{stock.symbol}</h3>
                           <p className="text-xs text-muted-foreground line-clamp-1">{stock.name}</p>
                         </div>
-                        <Badge className={stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
+                        <Badge className={`ml-2 ${stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
                           {stock.changePercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
                           {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
                         </Badge>
                       </div>
                       
-                      <div className="space-y-2">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-2xl font-bold">${stock.price.toFixed(2)}</span>
-                          <span className={`text-sm font-medium ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      <div className="space-y-3">
+                        <div className="flex items-baseline gap-2 pb-3 border-b border-border/50">
+                          <span className="text-3xl font-bold tracking-tight">${stock.price.toFixed(2)}</span>
+                          <span className={`text-sm font-semibold ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                             {stock.change >= 0 ? '+' : ''}${stock.change.toFixed(2)}
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <span className="text-muted-foreground">High:</span>
-                            <span className="ml-1 font-medium">${stock.dayHigh?.toFixed(2) || 'N/A'}</span>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div className="flex flex-col">
+                            <span className="text-muted-foreground mb-1">Day High</span>
+                            <span className="font-semibold">${stock.dayHigh?.toFixed(2) || 'N/A'}</span>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Low:</span>
-                            <span className="ml-1 font-medium">${stock.dayLow?.toFixed(2) || 'N/A'}</span>
+                          <div className="flex flex-col">
+                            <span className="text-muted-foreground mb-1">Day Low</span>
+                            <span className="font-semibold">${stock.dayLow?.toFixed(2) || 'N/A'}</span>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Volume:</span>
-                            <span className="ml-1 font-medium">{stock.volume ? (stock.volume / 1000000).toFixed(2) + 'M' : 'N/A'}</span>
+                          <div className="flex flex-col">
+                            <span className="text-muted-foreground mb-1">Volume</span>
+                            <span className="font-semibold">{stock.volume ? (stock.volume / 1000000).toFixed(2) + 'M' : 'N/A'}</span>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Mkt Cap:</span>
-                            <span className="ml-1 font-medium">
-                              {stock.marketCap ? (stock.marketCap / 1000000000).toFixed(2) + 'B' : 'N/A'}
+                          <div className="flex flex-col">
+                            <span className="text-muted-foreground mb-1">Market Cap</span>
+                            <span className="font-semibold">
+                              {stock.marketCap ? '$' + (stock.marketCap / 1000000000).toFixed(2) + 'B' : 'N/A'}
                             </span>
                           </div>
                         </div>
