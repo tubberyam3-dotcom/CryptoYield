@@ -26,6 +26,11 @@ interface StockQuote {
   price: number;
   change: number;
   changePercent: number;
+  previousClose?: number;
+  dayHigh?: number;
+  dayLow?: number;
+  volume?: number;
+  marketCap?: number;
 }
 
 const purchaseFormSchema = z.object({
