@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { UserManagement } from "@/components/admin/UserManagement";
+import { StockManagement } from "@/components/admin/StockManagement";
 import type { Portfolio, StakingPlan, CommunityChallenge } from "@shared/schema";
 
 export default function Admin() {
@@ -184,7 +185,7 @@ export default function Admin() {
           </div>
 
           <Tabs defaultValue="users" className="space-y-4 sm:space-y-6">
-            <TabsList className="grid grid-cols-4 w-full max-w-2xl h-auto">
+            <TabsList className="grid grid-cols-5 w-full max-w-3xl h-auto">
               <TabsTrigger value="users" data-testid="tab-users" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
                 <span className="hidden xs:inline">Users</span>
                 <span className="xs:hidden">👥</span>
@@ -193,8 +194,12 @@ export default function Admin() {
                 <span className="hidden xs:inline">Portfolios</span>
                 <span className="xs:hidden">📊</span>
               </TabsTrigger>
+              <TabsTrigger value="stocks" data-testid="tab-stocks" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+                <span className="hidden xs:inline">Stocks</span>
+                <span className="xs:hidden">📈</span>
+              </TabsTrigger>
               <TabsTrigger value="staking" data-testid="tab-staking" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-                <span className="hidden xs:inline">Staking</span>
+                <span className="hidden xs:inline">Bonds</span>
                 <span className="xs:hidden">🔒</span>
               </TabsTrigger>
               <TabsTrigger value="challenges" data-testid="tab-challenges" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
@@ -332,9 +337,13 @@ export default function Admin() {
               </div>
             </TabsContent>
             
+            <TabsContent value="stocks" className="space-y-4 sm:space-y-6 mt-4">
+              <StockManagement />
+            </TabsContent>
+            
             <TabsContent value="staking" className="space-y-4 sm:space-y-6 mt-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold">Manage Staking Plans</h3>
+                <h3 className="text-xl font-semibold">Manage Bond Products</h3>
                 
                 <Dialog open={createStakingPlanOpen} onOpenChange={setCreateStakingPlanOpen}>
                   <DialogTrigger asChild>

@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Portfolios from "@/pages/Portfolios";
+import Stocks from "@/pages/Stocks";
 import Staking from "@/pages/Staking";
 import Challenges from "@/pages/Challenges";
 import TransactionHistory from "@/pages/TransactionHistory";
@@ -75,6 +76,7 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/portfolios" component={Portfolios} />
+          <Route path="/stocks" component={Stocks} />
           <Route path="/staking" component={Staking} />
           <Route path="/challenges" component={Challenges} />
           <Route path="/transactions" component={TransactionHistory} />

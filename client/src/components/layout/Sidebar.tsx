@@ -18,7 +18,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navigationItems = [
     { href: "/", icon: "fas fa-chart-line", label: "Dashboard" },
     { href: "/portfolios", icon: "fas fa-briefcase", label: "Portfolios" },
-    { href: "/staking", icon: "fas fa-coins", label: "Staking" },
+    { href: "/stocks", icon: "fas fa-chart-area", label: "Stocks" },
+    { href: "/staking", icon: "fas fa-coins", label: "Bonds" },
     { href: "/challenges", icon: "fas fa-trophy", label: "Challenges" },
     { href: "/transactions", icon: "fas fa-history", label: "Transaction History" },
     { href: "/wallet", icon: "fas fa-wallet", label: "Wallet" },
