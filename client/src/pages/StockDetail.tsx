@@ -1,0 +1,368 @@
+import { useState, useEffect } from "react";
+import { useParams, useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { insertUserStockSchema } from "@shared/schema";
+import { z } from "zod";
+import { ArrowLeft, TrendingUp, TrendingDown, Building2, Tag, Calendar, BarChart3, DollarSign, Activity } from "lucide-react";
+import { MobileNav } from "@/components/layout/MobileNav";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { TopBar } from "@/components/layout/TopBar";
+
+const purchaseFormSchema = z.object({
+  stockProductId: z.string().min(1, "Stock ID is required"),
+  quantity: z.string().min(1, "Quantity is required"),
+  accountId: z.string().min(1, "Account ID is required"),
+});
+
+type PurchaseFormValues = z.infer<typeof purchaseFormSchema>;
+
+export default function StockDetail() {
+  const { symbol } = useParams();
+  const [, setLocation] = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quote, setQuote] = useState<any>(null);
+  const [loadingQuote, setLoadingQuote] = useState(true);
+  const { toast } = useToast();
+
+  const { data: user } = useQuery<any>({
+    queryKey: ['/api/user'],
+  });
+
+  const { data: stockProduct, isLoading: productLoading } = useQuery({
+    queryKey: ['/api/stocks/products', symbol],
+    queryFn: async () => {
+      const response = await fetch(`/api/stocks/products?symbol=${symbol}`);
+      if (!response.ok) throw new Error('Failed to fetch stock product');
+      const data = await response.json();
+      return data[0];
+    },
+  });
+
+  useEffect(() => {
+    if (symbol) {
+      setLoadingQuote(true);
+      fetch(`/api/stocks/quote?symbol=${symbol}`)
+        .then(res => res.json())
+        .then(data => {
+          setQuote(data);
+          setLoadingQuote(false);
+        })
+        .catch(err => {
+          console.error('Failed to fetch quote:', err);
+          setLoadingQuote(false);
+        });
+
+      const interval = setInterval(() => {
+        fetch(`/api/stocks/quote?symbol=${symbol}`)
+          .then(res => res.json())
+          .then(data => setQuote(data))
+          .catch(err => console.error('Failed to refresh quote:', err));
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [symbol]);
+
+  const form = useForm<PurchaseFormValues>({
+    resolver: zodResolver(purchaseFormSchema),
+    defaultValues: {
+      stockProductId: stockProduct?.id || "",
+      quantity: "",
+      accountId: user?.activeAccountId || "",
+    },
+  });
+
+  useEffect(() => {
+    if (stockProduct?.id) {
+      form.setValue('stockProductId', stockProduct.id);
+    }
+  }, [stockProduct, form]);
+
+  useEffect(() => {
+    if (user?.activeAccountId) {
+      form.setValue('accountId', user.activeAccountId);
+    }
+  }, [user, form]);
+
+  const purchaseMutation = useMutation({
+    mutationFn: async (values: PurchaseFormValues) => {
+      return apiRequest('/api/user/stocks', 'POST', {
+        stockProductId: values.stockProductId,
+        accountId: values.accountId,
+        quantity: parseFloat(values.quantity),
+        purchasePrice: quote.price.toString(),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success!",
+        description: `Successfully purchased ${form.getValues('quantity')} shares of ${symbol}`,
+      });
+      form.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/user/stocks'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Purchase failed",
+        description: error.message,
+      });
+    },
+  });
+
+  const onSubmit = (values: PurchaseFormValues) => {
+    purchaseMutation.mutate(values);
+  };
+
+  if (productLoading || loadingQuote) {
+    return (
+      <div className="flex h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
+          <TopBar title="Stock Details" onMenuClick={() => setSidebarOpen(true)} />
+          
+          <main className="flex-1 p-6 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading stock details...</p>
+            </div>
+          </main>
+        </div>
+        
+        <MobileNav />
+      </div>
+    );
+  }
+
+  if (!stockProduct || !quote) {
+    return (
+      <div className="flex h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
+          <TopBar title="Stock Details" onMenuClick={() => setSidebarOpen(true)} />
+          
+          <main className="flex-1 p-6 flex items-center justify-center">
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground mb-4">Stock not found</p>
+              <Button onClick={() => setLocation('/stocks')} variant="outline">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Stocks
+              </Button>
+            </Card>
+          </main>
+        </div>
+        
+        <MobileNav />
+      </div>
+    );
+  }
+
+  const quantity = form.watch('quantity');
+  const totalCost = quantity ? parseFloat(quantity) * quote.price : 0;
+
+  return (
+    <div className="flex h-screen bg-background">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
+        <TopBar title="Stock Details" onMenuClick={() => setSidebarOpen(true)} />
+        
+        <main className="flex-1 overflow-y-auto p-6 pb-20 lg:pb-6">
+          <div className="max-w-5xl mx-auto space-y-6">
+            {/* Back Button */}
+            <Button 
+              onClick={() => setLocation('/stocks')} 
+              variant="ghost" 
+              className="mb-2"
+              data-testid="button-back-to-stocks"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Stocks
+            </Button>
+
+            {/* Stock Header */}
+            <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-4xl font-bold" data-testid="text-stock-symbol">{symbol}</h1>
+                    <Badge className={quote.changePercent >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}>
+                      {quote.changePercent >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
+                      {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
+                    </Badge>
+                  </div>
+                  <h2 className="text-xl text-muted-foreground mb-1">{stockProduct.name}</h2>
+                  {stockProduct.sector && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Tag className="w-4 h-4" />
+                      {stockProduct.sector}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="text-left md:text-right">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-5xl font-bold tracking-tight">${quote.price.toFixed(2)}</span>
+                  </div>
+                  <div className={`text-lg font-semibold ${quote.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)} Today
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Market Data */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Key Statistics */}
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Key Statistics
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Previous Close</p>
+                      <p className="text-xl font-semibold">${quote.previousClose?.toFixed(2) || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Day High</p>
+                      <p className="text-xl font-semibold text-green-500">${quote.dayHigh?.toFixed(2) || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Day Low</p>
+                      <p className="text-xl font-semibold text-red-500">${quote.dayLow?.toFixed(2) || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Volume</p>
+                      <p className="text-xl font-semibold">
+                        {quote.volume ? (quote.volume / 1000000).toFixed(2) + 'M' : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Market Cap</p>
+                      <p className="text-xl font-semibold">
+                        {quote.marketCap ? '$' + (quote.marketCap / 1000000000).toFixed(2) + 'B' : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Min. Purchase</p>
+                      <p className="text-xl font-semibold">{stockProduct.minPurchaseQuantity} shares</p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* About */}
+                {stockProduct.description && (
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Building2 className="w-5 h-5" />
+                      About {stockProduct.name}
+                    </h3>
+                    <p className="text-muted-foreground leading-relaxed">{stockProduct.description}</p>
+                  </Card>
+                )}
+              </div>
+
+              {/* Purchase Form */}
+              <div className="lg:col-span-1">
+                <Card className="p-6 sticky top-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <DollarSign className="w-5 h-5" />
+                    Buy Shares
+                  </h3>
+                  
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="quantity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Shares</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder={`Min: ${stockProduct.minPurchaseQuantity}`}
+                                {...field}
+                                min={stockProduct.minPurchaseQuantity}
+                                step="1"
+                                data-testid="input-quantity"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Share Price</span>
+                          <span className="font-medium">${quote.price.toFixed(2)}</span>
+                        </div>
+                        
+                        {quantity && (
+                          <>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Shares</span>
+                              <span className="font-medium">{quantity}</span>
+                            </div>
+                            <Separator />
+                            <div className="flex justify-between">
+                              <span className="font-semibold">Total Cost</span>
+                              <span className="text-2xl font-bold">${totalCost.toFixed(2)}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        size="lg"
+                        disabled={purchaseMutation.isPending || !quantity}
+                        data-testid="button-purchase-stock"
+                      >
+                        {purchaseMutation.isPending ? (
+                          <>
+                            <Activity className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <DollarSign className="w-4 h-4 mr-2" />
+                            Buy Now
+                          </>
+                        )}
+                      </Button>
+
+                      <p className="text-xs text-muted-foreground text-center">
+                        Live market price updates every 30 seconds
+                      </p>
+                    </form>
+                  </Form>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+      
+      <MobileNav />
+    </div>
+  );
+}

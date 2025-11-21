@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -46,6 +47,7 @@ export default function Stocks() {
   const [selectedStock, setSelectedStock] = useState<StockProduct | null>(null);
   const [stockQuotes, setStockQuotes] = useState<{ [symbol: string]: StockQuote }>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
   const { user, isLoading} = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -443,7 +445,12 @@ export default function Stocks() {
                     stock.name.toLowerCase().includes(searchQuery.toLowerCase())
                   )
                   .map((stock) => (
-                    <Card key={stock.symbol} className="p-5 hover:shadow-xl hover:border-primary/30 transition-all duration-200 hover:scale-[1.02] cursor-pointer" data-testid={`card-top-stock-${stock.symbol}`}>
+                    <Card 
+                      key={stock.symbol} 
+                      className="p-5 hover:shadow-xl hover:border-primary/30 transition-all duration-200 hover:scale-[1.02] cursor-pointer" 
+                      data-testid={`card-top-stock-${stock.symbol}`}
+                      onClick={() => setLocation(`/stocks/${stock.symbol}`)}
+                    >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-xl mb-1" data-testid={`text-top-stock-symbol-${stock.symbol}`}>{stock.symbol}</h3>
