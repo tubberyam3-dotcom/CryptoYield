@@ -642,7 +642,8 @@ export default function Stocks() {
                     type="number"
                     placeholder="Enter quantity"
                     min="1"
-                    className="text-lg h-12 font-medium"
+                    className="text-lg h-12 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    onWheel={(e) => e.currentTarget.blur()}
                     {...purchaseForm.register("quantity", {
                       setValueAs: (value) => parseInt(value) || 1,
                     })}

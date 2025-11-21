@@ -541,7 +541,8 @@ export default function StockDetail() {
                 placeholder="Enter quantity"
                 value={purchaseQuantity}
                 onChange={(e) => setPurchaseQuantity(parseInt(e.target.value) || 1)}
-                className="text-lg h-12 font-medium"
+                onWheel={(e) => e.currentTarget.blur()}
+                className="text-lg h-12 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 data-testid="input-purchase-quantity-detail"
               />
             </div>
