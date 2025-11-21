@@ -39,8 +39,8 @@ export default function Staking() {
     },
     onSuccess: () => {
       toast({
-        title: "Staking Successful",
-        description: `You've staked $${stakeAmount} successfully!`,
+        title: "Investment Successful",
+        description: `You've invested $${stakeAmount} successfully!`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/staking"] });
       setSelectedPlan(null);
@@ -56,7 +56,7 @@ export default function Staking() {
         return;
       }
       toast({
-        title: "Staking Failed",
+        title: "Investment Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -74,7 +74,7 @@ export default function Staking() {
     if (amount < minAmount) {
       toast({
         title: "Amount Too Low",
-        description: `Minimum staking amount is $${minAmount.toLocaleString()}`,
+        description: `Minimum investment amount is $${minAmount.toLocaleString()}`,
         variant: "destructive",
       });
       return;
@@ -130,14 +130,14 @@ export default function Staking() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="ml-0 lg:ml-64 min-h-screen">
-        <TopBar title="Staking" onMenuClick={() => setSidebarOpen(true)} />
+        <TopBar title="Bonds" onMenuClick={() => setSidebarOpen(true)} />
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
           
-          {/* Active Stakes */}
+          {/* Active Bond Investments */}
           {userStakings && userStakings.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">My Active Stakes</h2>
+              <h2 className="text-xl font-semibold">My Bond Investments</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {userStakings.map((staking) => (
                   <Card key={staking.id} className="p-6" data-testid={`card-active-stake-${staking.id}`}>
@@ -156,7 +156,7 @@ export default function Staking() {
                     
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Staked Amount</span>
+                        <span className="text-muted-foreground">Invested Amount</span>
                         <span className="font-medium">${parseFloat(staking.amountLocked).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm">
@@ -164,7 +164,7 @@ export default function Staking() {
                         <span className="font-medium text-primary">{staking.stakingPlan.apy}%</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Est. Rewards</span>
+                        <span className="text-muted-foreground">Est. Returns</span>
                         <span className="font-medium text-green-500">
                           ${parseFloat(staking.estimatedRewards).toLocaleString()}
                         </span>
@@ -187,9 +187,9 @@ export default function Staking() {
             </div>
           )}
 
-          {/* Available Staking Plans */}
+          {/* Available Bond Offerings */}
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Available Staking Plans</h2>
+            <h2 className="text-xl font-semibold">Available Bond Offerings</h2>
             
             {plansLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -238,12 +238,12 @@ export default function Staking() {
                           onClick={() => setSelectedPlan(plan)}
                           data-testid={`button-stake-plan-${plan.id}`}
                         >
-                          Stake Now
+                          Invest Now
                         </Button>
                       </DialogTrigger>
                       <DialogContent data-testid="dialog-stake">
                         <DialogHeader>
-                          <DialogTitle>Stake with {selectedPlan?.name}</DialogTitle>
+                          <DialogTitle>Invest in {selectedPlan?.name}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="p-4 bg-muted rounded-lg">
@@ -258,7 +258,7 @@ export default function Staking() {
                           </div>
                           
                           <div>
-                            <Label htmlFor="stakeAmount">Staking Amount</Label>
+                            <Label htmlFor="stakeAmount">Investment Amount</Label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
                               <Input
@@ -284,7 +284,7 @@ export default function Staking() {
                             disabled={stakeMutation.isPending || !stakeAmount}
                             data-testid="button-confirm-stake"
                           >
-                            {stakeMutation.isPending ? "Processing..." : "Confirm Staking"}
+                            {stakeMutation.isPending ? "Processing..." : "Confirm Investment"}
                           </Button>
                         </div>
                       </DialogContent>
@@ -295,35 +295,35 @@ export default function Staking() {
             )}
           </div>
 
-          {/* Staking Rewards Info */}
+          {/* Bond Investment Info */}
           <Card className="p-6" data-testid="card-staking-info">
-            <h3 className="text-lg font-semibold mb-4">How Staking Works</h3>
+            <h3 className="text-lg font-semibold mb-4">How Bond Investment Works</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <i className="fas fa-lock text-primary text-xl"></i>
                 </div>
-                <h4 className="font-medium mb-2">Lock Your Assets</h4>
+                <h4 className="font-medium mb-2">Secure Your Investment</h4>
                 <p className="text-sm text-muted-foreground">
-                  Choose a staking plan and lock your cryptocurrency for a fixed period.
+                  Choose a bond offering and commit your funds for a fixed term.
                 </p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <i className="fas fa-chart-line text-accent text-xl"></i>
                 </div>
-                <h4 className="font-medium mb-2">Earn Rewards</h4>
+                <h4 className="font-medium mb-2">Earn Returns</h4>
                 <p className="text-sm text-muted-foreground">
-                  Receive competitive APY returns on your staked assets automatically.
+                  Receive competitive APY returns on your bond investments automatically.
                 </p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <i className="fas fa-coins text-green-500 text-xl"></i>
                 </div>
-                <h4 className="font-medium mb-2">Claim Rewards</h4>
+                <h4 className="font-medium mb-2">Claim Returns</h4>
                 <p className="text-sm text-muted-foreground">
-                  Access your original stake plus earned rewards when the term completes.
+                  Access your principal plus earned returns when the bond matures.
                 </p>
               </div>
             </div>
