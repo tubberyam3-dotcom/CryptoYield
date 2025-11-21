@@ -169,6 +169,7 @@ export class DatabaseStorage implements IStorage {
         businessName: null,
         businessType: null,
         taxId: null,
+        balance: '10000',
         role: 'admin',
         kycStatus: 'approved',
         createdAt: new Date(),
@@ -365,6 +366,7 @@ export class DatabaseStorage implements IStorage {
           businessName: null,
           businessType: null,
           taxId: null,
+          balance: '10000',
           role: 'admin',
           kycStatus: 'approved',
           createdAt: new Date('2024-01-15'),
@@ -382,6 +384,7 @@ export class DatabaseStorage implements IStorage {
           businessName: null,
           businessType: null,
           taxId: null,
+          balance: '10000',
           role: 'user',
           kycStatus: 'approved',
           createdAt: new Date('2024-02-20'),
@@ -399,6 +402,7 @@ export class DatabaseStorage implements IStorage {
           businessName: null,
           businessType: null,
           taxId: null,
+          balance: '10000',
           role: 'user',
           kycStatus: 'pending',
           createdAt: new Date('2024-03-10'),
@@ -416,6 +420,7 @@ export class DatabaseStorage implements IStorage {
           businessName: null,
           businessType: null,
           taxId: null,
+          balance: '10000',
           role: 'user',
           kycStatus: 'rejected',
           createdAt: new Date('2024-03-25'),
@@ -440,6 +445,15 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ kycStatus, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updateUserBalance(userId: string, newBalance: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ balance: newBalance, updatedAt: new Date() })
       .where(eq(users.id, userId))
       .returning();
     return user;

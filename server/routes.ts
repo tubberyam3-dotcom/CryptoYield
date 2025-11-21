@@ -790,14 +790,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Check user balance
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
       const accountContext = await storage.getAccountContext(userId);
-      const totalInvested = (quantityNum * parseFloat(purchasePrice)).toString();
+      const totalInvested = quantityNum * parseFloat(purchasePrice);
+      const userBalance = parseFloat(user.balance?.toString() || '0');
+
+      // Verify sufficient balance
+      if (userBalance < totalInvested) {
+        return res.status(400).json({ 
+          message: `Insufficient balance. You have $${userBalance.toFixed(2)}, but need $${totalInvested.toFixed(2)}` 
+        });
+      }
+
+      // Deduct balance
+      const newBalance = (userBalance - totalInvested).toString();
+      await storage.updateUserBalance(userId, newBalance);
 
       const userStockData: any = {
         stockProductId,
         quantity,
         purchasePrice,
-        totalInvested,
+        totalInvested: totalInvested.toString(),
+        status: 'pending', // Set to pending for admin approval
       };
 
       if (accountContext.isJointAccount) {
