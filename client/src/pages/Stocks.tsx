@@ -40,6 +40,7 @@ export default function Stocks() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockProduct | null>(null);
   const [stockQuotes, setStockQuotes] = useState<{ [symbol: string]: StockQuote }>({});
+  const [searchQuery, setSearchQuery] = useState("");
   const { user, isLoading} = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -59,6 +60,10 @@ export default function Stocks() {
 
   const { data: userStocks } = useQuery<(UserStock & { stockProduct: StockProduct })[]>({
     queryKey: ["/api/user/stocks"],
+  });
+
+  const { data: topPerformers, isLoading: topPerformersLoading } = useQuery<StockQuote[]>({
+    queryKey: ["/api/stocks/top-performers"],
   });
 
   const purchaseMutation = useMutation({
@@ -155,7 +160,7 @@ export default function Stocks() {
   }, [userStocks]);
 
   const handlePurchase = purchaseForm.handleSubmit((data) => {
-    const minQuantity = selectedStock?.minPurchaseQuantity || 1;
+    const minQuantity = selectedStock?.minPurchaseQuantity ? parseInt(selectedStock.minPurchaseQuantity.toString()) : 1;
     
     if (data.quantity < minQuantity) {
       toast({
@@ -375,6 +380,93 @@ export default function Stocks() {
             ) : (
               <Card className="p-8 text-center">
                 <p className="text-muted-foreground">No stocks available at the moment. Check back later!</p>
+              </Card>
+            )}
+          </div>
+
+          {/* Top 50 Performing Stocks */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h2 className="text-xl font-semibold">Top 50 Performing Stocks</h2>
+              <Input
+                placeholder="Search by symbol or name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full sm:w-64"
+                data-testid="input-search-stocks"
+              />
+            </div>
+            
+            {topPerformersLoading ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading top performers...</p>
+              </div>
+            ) : topPerformers && topPerformers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {topPerformers
+                  .filter(stock => 
+                    searchQuery === "" || 
+                    stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    stock.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((stock) => (
+                    <Card key={stock.symbol} className="p-4 hover:shadow-lg transition-shadow" data-testid={`card-top-stock-${stock.symbol}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h3 className="font-bold text-lg" data-testid={`text-top-stock-symbol-${stock.symbol}`}>{stock.symbol}</h3>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{stock.name}</p>
+                        </div>
+                        <Badge className={stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
+                          {stock.changePercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                          {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-bold">${stock.price.toFixed(2)}</span>
+                          <span className={`text-sm font-medium ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {stock.change >= 0 ? '+' : ''}${stock.change.toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">High:</span>
+                            <span className="ml-1 font-medium">${stock.dayHigh?.toFixed(2) || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Low:</span>
+                            <span className="ml-1 font-medium">${stock.dayLow?.toFixed(2) || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Volume:</span>
+                            <span className="ml-1 font-medium">{stock.volume ? (stock.volume / 1000000).toFixed(2) + 'M' : 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Mkt Cap:</span>
+                            <span className="ml-1 font-medium">
+                              {stock.marketCap ? (stock.marketCap / 1000000000).toFixed(2) + 'B' : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                {topPerformers.filter(stock => 
+                  searchQuery === "" || 
+                  stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  stock.name.toLowerCase().includes(searchQuery.toLowerCase())
+                ).length === 0 && (
+                  <Card className="col-span-full p-8 text-center">
+                    <p className="text-muted-foreground">No stocks match your search.</p>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">Unable to load top performers. Please try again later.</p>
               </Card>
             )}
           </div>
