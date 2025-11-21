@@ -365,33 +365,49 @@ export default function StockDetail() {
                   <Card className="p-6 sticky top-6 bg-muted/30">
                     <h3 className="text-lg font-semibold mb-4">Market Information</h3>
                     <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        This stock is available for viewing only. To purchase shares, contact our team to add it to available offerings.
-                      </p>
-                      <Separator />
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Current Price</span>
-                          <span className="font-semibold">${quote.price.toFixed(2)}</span>
+                      {loadingQuote ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="w-6 h-6 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Daily Change</span>
-                          <span className={`font-semibold ${quote.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                      <Button 
-                        onClick={() => setLocation('/stocks')} 
-                        variant="outline" 
-                        className="w-full"
-                      >
-                        View Available Stocks
-                      </Button>
+                      ) : quote ? (
+                        <>
+                          <div className="bg-primary/10 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Current Price</p>
+                            <p className="text-2xl font-bold">${quote.price?.toFixed(2) || 'N/A'}</p>
+                            <p className={`text-sm font-medium ${quote.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {quote.change >= 0 ? '+' : ''}{quote.change?.toFixed(2)} ({quote.changePercent?.toFixed(2)}%)
+                            </p>
+                          </div>
+                          <Separator />
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Day High</span>
+                              <span className="font-medium">${quote.dayHigh?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Day Low</span>
+                              <span className="font-medium">${quote.dayLow?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Volume</span>
+                              <span className="font-medium">{quote.volume ? (quote.volume / 1e6).toFixed(1) + 'M' : 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Market Cap</span>
+                              <span className="font-medium">${quote.marketCap ? (quote.marketCap / 1e9).toFixed(2) + 'B' : 'N/A'}</span>
+                            </div>
+                          </div>
+                          <Separator />
+                          <p className="text-xs text-muted-foreground text-center">
+                            This stock is available for viewing. Contact our team to add it to your portfolio.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Unable to load market data</p>
+                      )}
                     </div>
                   </Card>
                 )}
-              </div>
             </div>
           </div>
         </main>
