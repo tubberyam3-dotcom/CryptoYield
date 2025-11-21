@@ -290,7 +290,7 @@ export default function Stocks() {
                       
                       <div className="flex items-center justify-between mb-4">
                         <p className="text-sm text-muted-foreground">{holding.stockProduct.name}</p>
-                        {getStatusBadge(holding.status)}
+                        {holding.status && getStatusBadge(holding.status)}
                       </div>
                       
                       <div className="space-y-2">
@@ -587,9 +587,12 @@ export default function Stocks() {
       
       {/* Purchase Dialog for Top 50 Stocks */}
       <Dialog open={!!selectedTopStock} onOpenChange={(open) => !open && setSelectedTopStock(null)}>
-        <DialogContent data-testid={`dialog-buy-top-stock-${selectedTopStock?.symbol || ''}`}>
+        <DialogContent className="sm:max-w-md" data-testid={`dialog-buy-top-stock-${selectedTopStock?.symbol || ''}`}>
           <DialogHeader>
-            <DialogTitle>Purchase {selectedTopStock?.symbol} Shares</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Purchase {selectedTopStock?.symbol} Shares
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={(e) => {
             e.preventDefault();
@@ -606,21 +609,37 @@ export default function Stocks() {
           }} className="space-y-4">
             {selectedTopStock && (
               <>
-                <div>
-                  <p className="text-sm font-medium mb-2">{selectedTopStock.name}</p>
-                  <p className="text-2xl font-bold">${selectedTopStock.price.toFixed(2)} per share</p>
-                  <Badge className={`mt-2 ${selectedTopStock.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                    {selectedTopStock.changePercent >= 0 ? '+' : ''}{selectedTopStock.changePercent.toFixed(2)}%
-                  </Badge>
-                </div>
+                {/* Stock Info Card */}
+                <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-bold text-lg">{selectedTopStock.symbol}</h3>
+                        <p className="text-sm text-muted-foreground">{selectedTopStock.name}</p>
+                      </div>
+                      <Badge className={selectedTopStock.changePercent >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}>
+                        {selectedTopStock.changePercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                        {selectedTopStock.changePercent >= 0 ? '+' : ''}{selectedTopStock.changePercent.toFixed(2)}%
+                      </Badge>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold">${selectedTopStock.price.toFixed(2)}</span>
+                      <span className={`text-sm font-medium ${selectedTopStock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {selectedTopStock.change >= 0 ? '+' : ''}${selectedTopStock.change.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
                 
-                <div>
+                {/* Quantity Input */}
+                <div className="space-y-2">
                   <Label htmlFor="top-stock-quantity">Number of Shares</Label>
                   <Input
                     id="top-stock-quantity"
                     type="number"
                     placeholder="Enter quantity"
                     min="1"
+                    className="text-lg"
                     {...purchaseForm.register("quantity", {
                       setValueAs: (value) => parseInt(value) || 1,
                     })}
@@ -631,9 +650,10 @@ export default function Stocks() {
                   )}
                 </div>
                 
+                {/* Cost Summary Card */}
                 {purchaseForm.watch('quantity') > 0 && (
-                  <div className="p-4 bg-muted rounded-lg">
-                    <div className="space-y-2">
+                  <Card className="p-4 bg-muted/50">
+                    <div className="space-y-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Price per share</span>
                         <span className="font-medium">${selectedTopStock.price.toFixed(2)}</span>
@@ -642,23 +662,29 @@ export default function Stocks() {
                         <span className="text-muted-foreground">Quantity</span>
                         <span className="font-medium">{purchaseForm.watch('quantity')} shares</span>
                       </div>
-                      <div className="flex justify-between pt-2 border-t">
-                        <span className="font-medium">Total Cost</span>
-                        <span className="font-bold text-lg">
-                          ${(purchaseForm.watch('quantity') * selectedTopStock.price).toFixed(2)}
-                        </span>
+                      <div className="border-t border-border pt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold">Total Cost</span>
+                          <span className="text-2xl font-bold text-primary">
+                            ${(purchaseForm.watch('quantity') * selectedTopStock.price).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 )}
                 
+                {/* Approval Notice */}
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
-                  <p className="text-xs text-orange-600 dark:text-orange-400">
-                    <Clock className="w-3 h-3 inline mr-1" />
-                    Purchase requires admin approval. Funds will be deducted and refunded if rejected.
-                  </p>
+                  <div className="flex gap-2">
+                    <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-orange-600 dark:text-orange-400">
+                      Purchase requires admin approval. Funds will be deducted from your balance and refunded if rejected.
+                    </p>
+                  </div>
                 </div>
                 
+                {/* Submit Button */}
                 <Button
                   type="submit"
                   className="w-full"
@@ -671,7 +697,10 @@ export default function Stocks() {
                       Processing...
                     </>
                   ) : (
-                    `Purchase ${purchaseForm.watch('quantity')} Shares`
+                    <>
+                      <Activity className="w-4 h-4 mr-2" />
+                      Purchase {purchaseForm.watch('quantity')} {purchaseForm.watch('quantity') === 1 ? 'Share' : 'Shares'}
+                    </>
                   )}
                 </Button>
               </>

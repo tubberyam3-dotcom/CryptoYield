@@ -7,13 +7,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertUserStockSchema } from "@shared/schema";
 import { z } from "zod";
-import { ArrowLeft, TrendingUp, TrendingDown, Building2, Tag, Calendar, BarChart3, DollarSign, Activity } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Building2, Tag, Calendar, BarChart3, DollarSign, Activity, Clock, ShoppingCart } from "lucide-react";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
@@ -32,6 +34,8 @@ export default function StockDetail() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quote, setQuote] = useState<any>(null);
   const [loadingQuote, setLoadingQuote] = useState(true);
+  const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
+  const [purchaseQuantity, setPurchaseQuantity] = useState(1);
   const { toast } = useToast();
 
   const { data: user } = useQuery<any>({
@@ -105,11 +109,42 @@ export default function StockDetail() {
     },
     onSuccess: () => {
       toast({
-        title: "Success!",
-        description: `Successfully purchased ${form.getValues('quantity')} shares of ${symbol}`,
+        title: "Purchase Submitted",
+        description: `Your purchase of ${form.getValues('quantity')} shares is pending admin approval. You'll be refunded if rejected.`,
       });
       form.reset();
       queryClient.invalidateQueries({ queryKey: ['/api/user/stocks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Purchase failed",
+        description: error.message,
+      });
+    },
+  });
+
+  const nonAdminPurchaseMutation = useMutation({
+    mutationFn: async (data: { quantity: number; price: number }) => {
+      const response = await apiRequest("POST", "/api/user/stocks", {
+        symbol: symbol,
+        name: quote.name,
+        sector: 'Technology',
+        quantity: data.quantity.toString(),
+        purchasePrice: data.price.toString(),
+      });
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: "Purchase Submitted",
+        description: `Your purchase of ${variables.quantity} shares is pending admin approval. You'll be refunded if rejected.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/stocks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      setShowPurchaseDialog(false);
+      setPurchaseQuantity(1);
     },
     onError: (error: Error) => {
       toast({
@@ -285,12 +320,28 @@ export default function StockDetail() {
                 {isAdminOffering ? (
                   <Card className="p-6 sticky top-6">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <DollarSign className="w-5 h-5" />
+                      <ShoppingCart className="w-5 h-5" />
                       Buy Shares
                     </h3>
                     
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        {/* Stock Price Card */}
+                        <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">Current Price</p>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-bold">${quote.price.toFixed(2)}</span>
+                              <span className="text-sm text-muted-foreground">per share</span>
+                            </div>
+                            <Badge className={quote.changePercent >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}>
+                              {quote.changePercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                              {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
+                            </Badge>
+                          </div>
+                        </Card>
+
+                        {/* Quantity Input */}
                         <FormField
                           control={form.control}
                           name="quantity"
@@ -304,37 +355,50 @@ export default function StockDetail() {
                                   {...field}
                                   min={stockProduct?.minPurchaseQuantity || 1}
                                   step="1"
+                                  className="text-lg"
                                   data-testid="input-quantity"
                                 />
                               </FormControl>
                               <FormMessage />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Minimum: {stockProduct?.minPurchaseQuantity || 1} shares
+                              </p>
                             </FormItem>
                           )}
                         />
 
-                        <Separator />
-
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Share Price</span>
-                            <span className="font-medium">${quote.price.toFixed(2)}</span>
-                          </div>
-                          
-                          {quantity && (
-                            <>
+                        {/* Cost Summary Card */}
+                        {quantity && (
+                          <Card className="p-4 bg-muted/50">
+                            <div className="space-y-3">
                               <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Shares</span>
-                                <span className="font-medium">{quantity}</span>
+                                <span className="text-muted-foreground">Price per share</span>
+                                <span className="font-medium">${quote.price.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Quantity</span>
+                                <span className="font-medium">{quantity} shares</span>
                               </div>
                               <Separator />
-                              <div className="flex justify-between">
+                              <div className="flex justify-between items-center">
                                 <span className="font-semibold">Total Cost</span>
-                                <span className="text-2xl font-bold">${totalCost.toFixed(2)}</span>
+                                <span className="text-2xl font-bold text-primary">${totalCost.toFixed(2)}</span>
                               </div>
-                            </>
-                          )}
+                            </div>
+                          </Card>
+                        )}
+
+                        {/* Approval Notice */}
+                        <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                          <div className="flex gap-2">
+                            <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-orange-600 dark:text-orange-400">
+                              Purchase requires admin approval. Funds will be deducted and refunded if rejected.
+                            </p>
+                          </div>
                         </div>
 
+                        {/* Purchase Button */}
                         <Button
                           type="submit"
                           className="w-full"
@@ -349,8 +413,8 @@ export default function StockDetail() {
                             </>
                           ) : (
                             <>
-                              <DollarSign className="w-4 h-4 mr-2" />
-                              Buy Now
+                              <ShoppingCart className="w-4 h-4 mr-2" />
+                              Purchase {quantity || 0} {parseInt(quantity) === 1 ? 'Share' : 'Shares'}
                             </>
                           )}
                         </Button>
@@ -362,8 +426,11 @@ export default function StockDetail() {
                     </Form>
                   </Card>
                 ) : (
-                  <Card className="p-6 sticky top-6 bg-muted/30">
-                    <h3 className="text-lg font-semibold mb-4">Market Information</h3>
+                  <Card className="p-6 sticky top-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <ShoppingCart className="w-5 h-5" />
+                      Buy Shares
+                    </h3>
                     <div className="space-y-4">
                       {loadingQuote ? (
                         <div className="flex items-center justify-center py-8">
@@ -371,22 +438,25 @@ export default function StockDetail() {
                         </div>
                       ) : quote ? (
                         <>
-                          <div className="bg-primary/10 rounded-lg p-3">
+                          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
                             <p className="text-xs text-muted-foreground mb-1">Current Price</p>
-                            <p className="text-2xl font-bold">${quote.price?.toFixed(2) || 'N/A'}</p>
-                            <p className={`text-sm font-medium ${quote.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            <p className="text-3xl font-bold">${quote.price?.toFixed(2) || 'N/A'}</p>
+                            <Badge className={`mt-2 ${quote.change >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
+                              {quote.changePercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
                               {quote.change >= 0 ? '+' : ''}{quote.change?.toFixed(2)} ({quote.changePercent?.toFixed(2)}%)
-                            </p>
+                            </Badge>
                           </div>
+                          
                           <Separator />
+                          
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Day High</span>
-                              <span className="font-medium">${quote.dayHigh?.toFixed(2) || 'N/A'}</span>
+                              <span className="font-medium text-green-600">${quote.dayHigh?.toFixed(2) || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Day Low</span>
-                              <span className="font-medium">${quote.dayLow?.toFixed(2) || 'N/A'}</span>
+                              <span className="font-medium text-red-600">${quote.dayLow?.toFixed(2) || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Volume</span>
@@ -397,9 +467,21 @@ export default function StockDetail() {
                               <span className="font-medium">${quote.marketCap ? (quote.marketCap / 1e9).toFixed(2) + 'B' : 'N/A'}</span>
                             </div>
                           </div>
+                          
                           <Separator />
+                          
+                          <Button
+                            onClick={() => setShowPurchaseDialog(true)}
+                            className="w-full"
+                            size="lg"
+                            data-testid="button-buy-stock-detail"
+                          >
+                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            Buy Now
+                          </Button>
+                          
                           <p className="text-xs text-muted-foreground text-center">
-                            This stock is available for viewing. Contact our team to add it to your portfolio.
+                            Live market price updates every 30 seconds
                           </p>
                         </>
                       ) : (
@@ -413,6 +495,124 @@ export default function StockDetail() {
           </div>
         </main>
       </div>
+      
+      {/* Purchase Dialog for Non-Admin Stocks */}
+      <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-purchase-stock-detail">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5" />
+              Purchase {symbol} Shares
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Stock Info Card */}
+            <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+              <div className="space-y-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-bold text-lg">{symbol}</h3>
+                    <p className="text-sm text-muted-foreground">{quote?.name}</p>
+                  </div>
+                  <Badge className={quote?.changePercent >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}>
+                    {quote?.changePercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                    {quote?.changePercent >= 0 ? '+' : ''}{quote?.changePercent?.toFixed(2)}%
+                  </Badge>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold">${quote?.price?.toFixed(2)}</span>
+                  <span className={`text-sm font-medium ${quote?.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {quote?.change >= 0 ? '+' : ''}${quote?.change?.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </Card>
+            
+            {/* Quantity Input */}
+            <div className="space-y-2">
+              <Label htmlFor="purchase-quantity">Number of Shares</Label>
+              <Input
+                id="purchase-quantity"
+                type="number"
+                min="1"
+                value={purchaseQuantity}
+                onChange={(e) => setPurchaseQuantity(parseInt(e.target.value) || 1)}
+                className="text-lg"
+                data-testid="input-purchase-quantity-detail"
+              />
+            </div>
+            
+            {/* Cost Summary Card */}
+            <Card className="p-4 bg-muted/50">
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Price per share</span>
+                  <span className="font-medium">${quote?.price?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Quantity</span>
+                  <span className="font-medium">{purchaseQuantity} shares</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">Total Cost</span>
+                  <span className="text-2xl font-bold text-primary">
+                    ${((quote?.price || 0) * purchaseQuantity).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </Card>
+            
+            {/* Approval Notice */}
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+              <div className="flex gap-2">
+                <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-orange-600 dark:text-orange-400">
+                  Purchase requires admin approval. Funds will be deducted from your balance and refunded if rejected.
+                </p>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowPurchaseDialog(false)}
+                className="flex-1"
+                data-testid="button-cancel-purchase"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (quote) {
+                    nonAdminPurchaseMutation.mutate({
+                      quantity: purchaseQuantity,
+                      price: quote.price,
+                    });
+                  }
+                }}
+                disabled={nonAdminPurchaseMutation.isPending || purchaseQuantity < 1}
+                className="flex-1"
+                data-testid="button-confirm-purchase-detail"
+              >
+                {nonAdminPurchaseMutation.isPending ? (
+                  <>
+                    <Activity className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Purchase {purchaseQuantity} {purchaseQuantity === 1 ? 'Share' : 'Shares'}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <MobileNav />
     </div>
