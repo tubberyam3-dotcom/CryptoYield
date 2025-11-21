@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,28 +11,42 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { StockProduct } from "@shared/schema";
+import type { StockProduct, InsertStockProduct } from "@shared/schema";
+import { insertStockProductSchema } from "@shared/schema";
 
 export function StockManagement() {
   const [createStockOpen, setCreateStockOpen] = useState(false);
-  const [newStock, setNewStock] = useState({
-    symbol: "",
-    name: "",
-    description: "",
-    sector: "",
-    minPurchaseQuantity: "1",
-  });
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const form = useForm<InsertStockProduct>({
+    resolver: zodResolver(insertStockProductSchema.extend({
+      minPurchaseQuantity: insertStockProductSchema.shape.minPurchaseQuantity.refine(
+        (val) => val && parseInt(val.toString()) > 0,
+        { message: "Must be a positive number" }
+      ),
+    })),
+    defaultValues: {
+      symbol: "",
+      name: "",
+      description: "",
+      sector: "",
+      minPurchaseQuantity: 1,
+      isActive: true,
+    },
+  });
 
   const { data: stockProducts } = useQuery<StockProduct[]>({
     queryKey: ["/api/stocks/products"],
   });
 
   const createStockMutation = useMutation({
-    mutationFn: async (stockData: any) => {
-      const response = await apiRequest("POST", "/api/stocks/products", stockData);
+    mutationFn: async (stockData: InsertStockProduct) => {
+      const response = await apiRequest("POST", "/api/stocks/products", {
+        ...stockData,
+        symbol: stockData.symbol.toUpperCase(),
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -40,13 +56,7 @@ export function StockManagement() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/stocks/products"] });
       setCreateStockOpen(false);
-      setNewStock({
-        symbol: "",
-        name: "",
-        description: "",
-        sector: "",
-        minPurchaseQuantity: "1",
-      });
+      form.reset();
     },
     onError: (error: any) => {
       if (isUnauthorizedError(error)) {
@@ -86,25 +96,9 @@ export function StockManagement() {
     },
   });
 
-  const handleCreateStock = () => {
-    if (!newStock.symbol || !newStock.name) {
-      toast({
-        title: "Validation Error",
-        description: "Symbol and name are required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    createStockMutation.mutate({
-      symbol: newStock.symbol.toUpperCase(),
-      name: newStock.name,
-      description: newStock.description,
-      sector: newStock.sector,
-      minPurchaseQuantity: newStock.minPurchaseQuantity,
-      isActive: true,
-    });
-  };
+  const handleCreateStock = form.handleSubmit((data) => {
+    createStockMutation.mutate(data);
+  });
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -122,16 +116,20 @@ export function StockManagement() {
             <DialogHeader>
               <DialogTitle>Add New Stock Product</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <form onSubmit={handleCreateStock} className="space-y-4">
               <div>
                 <Label htmlFor="stockSymbol">Stock Symbol *</Label>
                 <Input
                   id="stockSymbol"
                   placeholder="AAPL"
-                  value={newStock.symbol}
-                  onChange={(e) => setNewStock({ ...newStock, symbol: e.target.value.toUpperCase() })}
+                  {...form.register("symbol", {
+                    setValueAs: (value) => value.toUpperCase(),
+                  })}
                   data-testid="input-stock-symbol"
                 />
+                {form.formState.errors.symbol && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.symbol.message}</p>
+                )}
               </div>
               
               <div>
@@ -139,10 +137,12 @@ export function StockManagement() {
                 <Input
                   id="stockName"
                   placeholder="Apple Inc."
-                  value={newStock.name}
-                  onChange={(e) => setNewStock({ ...newStock, name: e.target.value })}
+                  {...form.register("name")}
                   data-testid="input-stock-name"
                 />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
+                )}
               </div>
               
               <div>
@@ -150,8 +150,7 @@ export function StockManagement() {
                 <Textarea
                   id="stockDescription"
                   placeholder="Brief description of the company"
-                  value={newStock.description}
-                  onChange={(e) => setNewStock({ ...newStock, description: e.target.value })}
+                  {...form.register("description")}
                   data-testid="textarea-stock-description"
                 />
               </div>
@@ -161,8 +160,7 @@ export function StockManagement() {
                 <Input
                   id="stockSector"
                   placeholder="Technology"
-                  value={newStock.sector}
-                  onChange={(e) => setNewStock({ ...newStock, sector: e.target.value })}
+                  {...form.register("sector")}
                   data-testid="input-stock-sector"
                 />
               </div>
@@ -173,21 +171,25 @@ export function StockManagement() {
                   id="minPurchaseQuantity"
                   type="number"
                   placeholder="1"
-                  value={newStock.minPurchaseQuantity}
-                  onChange={(e) => setNewStock({ ...newStock, minPurchaseQuantity: e.target.value })}
+                  {...form.register("minPurchaseQuantity", {
+                    setValueAs: (value) => parseInt(value) || 1,
+                  })}
                   data-testid="input-min-purchase-quantity"
                 />
+                {form.formState.errors.minPurchaseQuantity && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.minPurchaseQuantity.message}</p>
+                )}
               </div>
               
               <Button 
-                onClick={handleCreateStock}
+                type="submit"
                 className="w-full"
                 disabled={createStockMutation.isPending}
                 data-testid="button-confirm-create-stock"
               >
                 {createStockMutation.isPending ? "Creating..." : "Add Stock"}
               </Button>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

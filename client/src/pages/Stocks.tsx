@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
@@ -13,7 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { StockProduct, UserStock } from "@shared/schema";
+import type { StockProduct, UserStock, InsertUserStock } from "@shared/schema";
+import { insertUserStockSchema } from "@shared/schema";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface StockQuote {
@@ -24,14 +28,30 @@ interface StockQuote {
   changePercent: number;
 }
 
+const purchaseFormSchema = z.object({
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  stockProductId: z.string(),
+  purchasePrice: z.number().positive("Purchase price must be positive"),
+});
+
+type PurchaseFormData = z.infer<typeof purchaseFormSchema>;
+
 export default function Stocks() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [quantity, setQuantity] = useState("");
   const [selectedStock, setSelectedStock] = useState<StockProduct | null>(null);
   const [stockQuotes, setStockQuotes] = useState<{ [symbol: string]: StockQuote }>({});
-  const { user, isLoading } = useAuth();
+  const { user, isLoading} = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const purchaseForm = useForm<PurchaseFormData>({
+    resolver: zodResolver(purchaseFormSchema),
+    defaultValues: {
+      quantity: 1,
+      stockProductId: "",
+      purchasePrice: 0,
+    },
+  });
 
   const { data: stockProducts, isLoading: productsLoading } = useQuery<StockProduct[]>({
     queryKey: ["/api/stocks/products"],
@@ -42,18 +62,22 @@ export default function Stocks() {
   });
 
   const purchaseMutation = useMutation({
-    mutationFn: async ({ stockProductId, quantity, purchasePrice }: { stockProductId: string; quantity: string; purchasePrice: string }) => {
-      const response = await apiRequest("POST", "/api/user/stocks", { stockProductId, quantity, purchasePrice });
+    mutationFn: async (data: PurchaseFormData) => {
+      const response = await apiRequest("POST", "/api/user/stocks", {
+        stockProductId: data.stockProductId,
+        quantity: data.quantity.toString(),
+        purchasePrice: data.purchasePrice.toString(),
+      });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast({
         title: "Purchase Successful",
-        description: `You've successfully purchased ${quantity} shares!`,
+        description: `You've successfully purchased ${variables.quantity} shares!`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/stocks"] });
       setSelectedStock(null);
-      setQuantity("");
+      purchaseForm.reset();
     },
     onError: (error: any) => {
       if (isUnauthorizedError(error)) {
@@ -72,35 +96,68 @@ export default function Stocks() {
     },
   });
 
-  const fetchStockQuote = async (symbol: string) => {
-    if (stockQuotes[symbol]) return;
+  // Fetch quotes for all visible stocks in useEffect instead of during render
+  useEffect(() => {
+    const fetchAllQuotes = async () => {
+      if (!stockProducts) return;
+      
+      for (const stock of stockProducts) {
+        // Only fetch if we don't have a quote yet
+        setStockQuotes(prev => {
+          if (prev[stock.symbol]) return prev; // Already have this quote
+          
+          // Fetch in the background
+          fetch(`/api/stocks/quote?symbol=${stock.symbol}`)
+            .then(res => res.json())
+            .then(data => {
+              setStockQuotes(current => ({ ...current, [stock.symbol]: data }));
+            })
+            .catch(error => {
+              console.error(`Failed to fetch quote for ${stock.symbol}:`, error);
+            });
+          
+          return prev;
+        });
+      }
+    };
     
-    try {
-      const response = await fetch(`/api/stocks/quote?symbol=${symbol}`);
-      const data = await response.json();
-      setStockQuotes(prev => ({ ...prev, [symbol]: data }));
-    } catch (error) {
-      console.error(`Failed to fetch quote for ${symbol}:`, error);
-    }
-  };
+    fetchAllQuotes();
+  }, [stockProducts]);
 
-  const handlePurchase = () => {
-    if (!selectedStock || !quantity) return;
+  // Also fetch quotes for user holdings
+  useEffect(() => {
+    const fetchHoldingQuotes = async () => {
+      if (!userStocks) return;
+      
+      for (const holding of userStocks) {
+        const symbol = holding.stockProduct.symbol;
+        
+        // Only fetch if we don't have a quote yet
+        setStockQuotes(prev => {
+          if (prev[symbol]) return prev; // Already have this quote
+          
+          // Fetch in the background
+          fetch(`/api/stocks/quote?symbol=${symbol}`)
+            .then(res => res.json())
+            .then(data => {
+              setStockQuotes(current => ({ ...current, [symbol]: data }));
+            })
+            .catch(error => {
+              console.error(`Failed to fetch quote for ${symbol}:`, error);
+            });
+          
+          return prev;
+        });
+      }
+    };
     
-    const quote = stockQuotes[selectedStock.symbol];
-    if (!quote) {
-      toast({
-        title: "Price Unavailable",
-        description: "Please wait for the stock price to load",
-        variant: "destructive",
-      });
-      return;
-    }
+    fetchHoldingQuotes();
+  }, [userStocks]);
 
-    const quantityNum = parseFloat(quantity);
-    const minQuantity = parseFloat(selectedStock.minPurchaseQuantity?.toString() || '1');
+  const handlePurchase = purchaseForm.handleSubmit((data) => {
+    const minQuantity = selectedStock?.minPurchaseQuantity || 1;
     
-    if (quantityNum < minQuantity) {
+    if (data.quantity < minQuantity) {
       toast({
         title: "Quantity Too Low",
         description: `Minimum purchase quantity is ${minQuantity} shares`,
@@ -109,12 +166,8 @@ export default function Stocks() {
       return;
     }
 
-    purchaseMutation.mutate({ 
-      stockProductId: selectedStock.id, 
-      quantity,
-      purchasePrice: quote.price.toString()
-    });
-  };
+    purchaseMutation.mutate(data);
+  });
 
   if (isLoading) {
     return (
@@ -150,10 +203,6 @@ export default function Stocks() {
                   const totalInvested = parseFloat(holding.totalInvested);
                   const profitLoss = currentValue - totalInvested;
                   const profitLossPercent = (profitLoss / totalInvested) * 100;
-
-                  if (!stockQuotes[holding.stockProduct.symbol]) {
-                    fetchStockQuote(holding.stockProduct.symbol);
-                  }
 
                   return (
                     <Card key={holding.id} className="p-6" data-testid={`card-stock-holding-${holding.id}`}>
@@ -213,10 +262,6 @@ export default function Stocks() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {stockProducts.map((stock) => {
                   const quote = stockQuotes[stock.symbol];
-                  
-                  if (!stockQuotes[stock.symbol]) {
-                    fetchStockQuote(stock.symbol);
-                  }
 
                   return (
                     <Card key={stock.id} className="p-6 hover:shadow-lg transition-shadow" data-testid={`card-available-stock-${stock.id}`}>
@@ -267,7 +312,14 @@ export default function Stocks() {
                           <DialogHeader>
                             <DialogTitle>Purchase {stock.symbol} Shares</DialogTitle>
                           </DialogHeader>
-                          <div className="space-y-4">
+                          <form onSubmit={(e) => {
+                            e.preventDefault();
+                            if (quote) {
+                              purchaseForm.setValue('stockProductId', stock.id);
+                              purchaseForm.setValue('purchasePrice', quote.price);
+                              handlePurchase();
+                            }
+                          }} className="space-y-4">
                             <div>
                               <p className="text-sm font-medium mb-2">{stock.name}</p>
                               {quote && (
@@ -281,35 +333,39 @@ export default function Stocks() {
                                 id="quantity"
                                 type="number"
                                 placeholder={`Min. ${stock.minPurchaseQuantity}`}
-                                value={quantity}
-                                onChange={(e) => setQuantity(e.target.value)}
+                                {...purchaseForm.register("quantity", {
+                                  setValueAs: (value) => parseInt(value) || 1,
+                                })}
                                 data-testid="input-stock-quantity"
                               />
+                              {purchaseForm.formState.errors.quantity && (
+                                <p className="text-sm text-red-500 mt-1">{purchaseForm.formState.errors.quantity.message}</p>
+                              )}
                               <p className="text-xs text-muted-foreground mt-1">
                                 Minimum: {stock.minPurchaseQuantity} shares
                               </p>
                             </div>
                             
-                            {quantity && quote && (
+                            {purchaseForm.watch('quantity') > 0 && quote && (
                               <div className="p-4 bg-muted rounded-lg">
                                 <div className="flex justify-between">
                                   <span className="text-sm text-muted-foreground">Total Cost</span>
                                   <span className="font-bold">
-                                    ${(parseFloat(quantity) * quote.price).toFixed(2)}
+                                    ${(purchaseForm.watch('quantity') * quote.price).toFixed(2)}
                                   </span>
                                 </div>
                               </div>
                             )}
                             
                             <Button
-                              onClick={handlePurchase}
+                              type="submit"
                               className="w-full"
                               disabled={purchaseMutation.isPending || !quote}
                               data-testid="button-confirm-purchase"
                             >
                               {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
                             </Button>
-                          </div>
+                          </form>
                         </DialogContent>
                       </Dialog>
                     </Card>
