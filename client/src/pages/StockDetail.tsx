@@ -410,6 +410,7 @@ export default function StockDetail() {
                 )}
             </div>
           </div>
+          </div>
         </main>
       </div>
       
