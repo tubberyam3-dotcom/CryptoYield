@@ -4,6 +4,8 @@ import {
   userPortfolios,
   bondProducts,
   userBonds,
+  stockProducts,
+  userStocks,
   communityChallenges,
   challengeMembers,
   jointAccounts,
@@ -18,6 +20,10 @@ import {
   type InsertBondProduct,
   type UserBond,
   type InsertUserBond,
+  type StockProduct,
+  type InsertStockProduct,
+  type UserStock,
+  type InsertUserStock,
   type CommunityChallenge,
   type InsertCommunityChallenge,
   type ChallengeMember,
@@ -83,6 +89,16 @@ export interface IStorage {
   createBondProduct(product: InsertBondProduct): Promise<BondProduct>;
   getUserBonds(userId: string): Promise<(UserBond & { bondProduct: BondProduct })[]>;
   createUserBond(userBond: InsertUserBond): Promise<UserBond>;
+  
+  // Stock operations
+  getStockProducts(): Promise<StockProduct[]>;
+  getStockProduct(id: string): Promise<StockProduct | undefined>;
+  getStockProductBySymbol(symbol: string): Promise<StockProduct | undefined>;
+  createStockProduct(product: InsertStockProduct): Promise<StockProduct>;
+  updateStockProduct(id: string, product: Partial<InsertStockProduct>): Promise<StockProduct>;
+  deleteStockProduct(id: string): Promise<void>;
+  getUserStocks(userId: string): Promise<(UserStock & { stockProduct: StockProduct })[]>;
+  createUserStock(userStock: InsertUserStock): Promise<UserStock>;
   
   // Challenge operations
   getCommunityChalllenges(): Promise<CommunityChallenge[]>;
@@ -589,6 +605,83 @@ export class DatabaseStorage implements IStorage {
   async createUserBond(userBondData: InsertUserBond): Promise<UserBond> {
     const [newBond] = await db.insert(userBonds).values(userBondData).returning();
     return newBond;
+  }
+
+  // Stock operations
+  async getStockProducts(): Promise<StockProduct[]> {
+    return await db.select().from(stockProducts).where(eq(stockProducts.isActive, true));
+  }
+
+  async getStockProduct(id: string): Promise<StockProduct | undefined> {
+    const [product] = await db.select().from(stockProducts).where(eq(stockProducts.id, id));
+    return product;
+  }
+
+  async getStockProductBySymbol(symbol: string): Promise<StockProduct | undefined> {
+    const [product] = await db.select().from(stockProducts).where(eq(stockProducts.symbol, symbol));
+    return product;
+  }
+
+  async createStockProduct(product: InsertStockProduct): Promise<StockProduct> {
+    const [newProduct] = await db.insert(stockProducts).values(product).returning();
+    return newProduct;
+  }
+
+  async updateStockProduct(id: string, product: Partial<InsertStockProduct>): Promise<StockProduct> {
+    const [updatedProduct] = await db
+      .update(stockProducts)
+      .set({ ...product, updatedAt: new Date() })
+      .where(eq(stockProducts.id, id))
+      .returning();
+    return updatedProduct;
+  }
+
+  async deleteStockProduct(id: string): Promise<void> {
+    await db.update(stockProducts).set({ isActive: false }).where(eq(stockProducts.id, id));
+  }
+
+  async getUserStocks(userId: string): Promise<(UserStock & { stockProduct: StockProduct })[]> {
+    const accountContext = await this.getAccountContext(userId);
+    
+    if (accountContext.isJointAccount) {
+      return await db
+        .select()
+        .from(userStocks)
+        .leftJoin(stockProducts, eq(userStocks.stockProductId, stockProducts.id))
+        .where(
+          and(
+            or(
+              eq(userStocks.userId, userId),
+              eq(userStocks.jointAccountId, accountContext.accountId)
+            ),
+            eq(userStocks.status, 'active')
+          )
+        )
+        .then(rows => rows.map(row => ({
+          ...row.user_stocks,
+          stockProduct: row.stock_products!
+        })));
+    } else {
+      return await db
+        .select()
+        .from(userStocks)
+        .leftJoin(stockProducts, eq(userStocks.stockProductId, stockProducts.id))
+        .where(
+          and(
+            eq(userStocks.userId, userId),
+            eq(userStocks.status, 'active')
+          )
+        )
+        .then(rows => rows.map(row => ({
+          ...row.user_stocks,
+          stockProduct: row.stock_products!
+        })));
+    }
+  }
+
+  async createUserStock(userStockData: InsertUserStock): Promise<UserStock> {
+    const [newStock] = await db.insert(userStocks).values(userStockData).returning();
+    return newStock;
   }
 
   // Challenge operations
