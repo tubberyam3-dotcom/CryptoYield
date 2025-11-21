@@ -121,6 +121,33 @@ export const userBonds = pgTable("user_bonds", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Stock Products (individual stocks managed by admin)
+export const stockProducts = pgTable("stock_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  symbol: varchar("symbol").unique().notNull(), // e.g., "AAPL", "MSFT", "GOOGL"
+  name: varchar("name").notNull(), // e.g., "Apple Inc.", "Microsoft Corporation"
+  description: text("description"),
+  sector: varchar("sector"), // e.g., "Technology", "Healthcare", "Finance"
+  minPurchaseQuantity: decimal("min_purchase_quantity", { precision: 18, scale: 8 }).default('1'), // minimum shares to purchase
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User Stock Holdings
+export const userStocks = pgTable("user_stocks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  jointAccountId: varchar("joint_account_id").references(() => jointAccounts.id),
+  stockProductId: varchar("stock_product_id").references(() => stockProducts.id).notNull(),
+  quantity: decimal("quantity", { precision: 18, scale: 8 }).notNull(), // number of shares owned
+  purchasePrice: decimal("purchase_price", { precision: 18, scale: 8 }).notNull(), // price per share at purchase
+  totalInvested: decimal("total_invested", { precision: 18, scale: 8 }).notNull(), // quantity * purchasePrice
+  purchaseDate: timestamp("purchase_date").defaultNow(),
+  status: varchar("status", { enum: ['active', 'sold'] }).default('active'),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const communityChallenges = pgTable("community_challenges", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
@@ -149,6 +176,7 @@ export const challengeMembers = pgTable("challenge_members", {
 export const usersRelations = relations(users, ({ many }) => ({
   portfolios: many(userPortfolios),
   bonds: many(userBonds),
+  stocks: many(userStocks),
   challengeMembers: many(challengeMembers),
   jointAccounts: many(userJointAccounts),
   createdJointAccounts: many(jointAccounts),
@@ -159,6 +187,7 @@ export const jointAccountsRelations = relations(jointAccounts, ({ one, many }) =
   members: many(userJointAccounts),
   portfolios: many(userPortfolios),
   bonds: many(userBonds),
+  stocks: many(userStocks),
   challengeMembers: many(challengeMembers),
 }));
 
@@ -186,6 +215,16 @@ export const userBondsRelations = relations(userBonds, ({ one }) => ({
   user: one(users, { fields: [userBonds.userId], references: [users.id] }),
   jointAccount: one(jointAccounts, { fields: [userBonds.jointAccountId], references: [jointAccounts.id] }),
   bondProduct: one(bondProducts, { fields: [userBonds.bondProductId], references: [bondProducts.id] }),
+}));
+
+export const stockProductsRelations = relations(stockProducts, ({ many }) => ({
+  userStocks: many(userStocks),
+}));
+
+export const userStocksRelations = relations(userStocks, ({ one }) => ({
+  user: one(users, { fields: [userStocks.userId], references: [users.id] }),
+  jointAccount: one(jointAccounts, { fields: [userStocks.jointAccountId], references: [jointAccounts.id] }),
+  stockProduct: one(stockProducts, { fields: [userStocks.stockProductId], references: [stockProducts.id] }),
 }));
 
 export const communityChallengesRelations = relations(communityChallenges, ({ one, many }) => ({
@@ -227,6 +266,17 @@ export const insertUserBondSchema = createInsertSchema(userBonds).omit({
   createdAt: true,
 });
 
+export const insertStockProductSchema = createInsertSchema(stockProducts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserStockSchema = createInsertSchema(userStocks).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertCommunityChalllengeSchema = createInsertSchema(communityChallenges).omit({
   id: true,
   createdAt: true,
@@ -259,6 +309,10 @@ export type BondProduct = typeof bondProducts.$inferSelect;
 export type InsertBondProduct = z.infer<typeof insertBondProductSchema>;
 export type UserBond = typeof userBonds.$inferSelect;
 export type InsertUserBond = z.infer<typeof insertUserBondSchema>;
+export type StockProduct = typeof stockProducts.$inferSelect;
+export type InsertStockProduct = z.infer<typeof insertStockProductSchema>;
+export type UserStock = typeof userStocks.$inferSelect;
+export type InsertUserStock = z.infer<typeof insertUserStockSchema>;
 export type CommunityChallenge = typeof communityChallenges.$inferSelect;
 export type InsertCommunityChallenge = z.infer<typeof insertCommunityChalllengeSchema>;
 export type ChallengeMember = typeof challengeMembers.$inferSelect;
