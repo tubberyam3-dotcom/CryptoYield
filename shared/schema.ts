@@ -272,6 +272,14 @@ export const insertStockProductSchema = createInsertSchema(stockProducts).omit({
   updatedAt: true,
 });
 
+export const updateStockProductSchema = insertStockProductSchema.partial().pick({
+  name: true,
+  description: true,
+  sector: true,
+  minPurchaseQuantity: true,
+  isActive: true,
+});
+
 export const insertUserStockSchema = createInsertSchema(userStocks).omit({
   id: true,
   createdAt: true,
@@ -311,6 +319,7 @@ export type UserBond = typeof userBonds.$inferSelect;
 export type InsertUserBond = z.infer<typeof insertUserBondSchema>;
 export type StockProduct = typeof stockProducts.$inferSelect;
 export type InsertStockProduct = z.infer<typeof insertStockProductSchema>;
+export type UpdateStockProduct = z.infer<typeof updateStockProductSchema>;
 export type UserStock = typeof userStocks.$inferSelect;
 export type InsertUserStock = z.infer<typeof insertUserStockSchema>;
 export type CommunityChallenge = typeof communityChallenges.$inferSelect;

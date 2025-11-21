@@ -10,6 +10,7 @@ import {
   insertBondProductSchema,
   insertUserBondSchema,
   insertStockProductSchema,
+  updateStockProductSchema,
   insertUserStockSchema,
   insertCommunityChalllengeSchema,
   insertChallengeMemberSchema,
@@ -724,14 +725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const productId = req.params.id;
-      
-      const allowedFields = ['name', 'description', 'sector', 'minPurchaseQuantity', 'isActive'];
-      const updates = Object.keys(req.body)
-        .filter(key => allowedFields.includes(key))
-        .reduce((obj: any, key) => {
-          obj[key] = req.body[key];
-          return obj;
-        }, {});
+      const updates = updateStockProductSchema.parse(req.body);
       
       const product = await storage.updateStockProduct(productId, updates);
       res.json(product);
@@ -781,8 +775,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Stock product not found" });
       }
 
+      const quantityNum = parseFloat(quantity);
+      const minQuantity = parseFloat(stockProduct.minPurchaseQuantity?.toString() || '1');
+      
+      if (quantityNum <= 0) {
+        return res.status(400).json({ message: "Quantity must be positive" });
+      }
+      
+      if (quantityNum < minQuantity) {
+        return res.status(400).json({ 
+          message: `Minimum purchase quantity is ${minQuantity} shares` 
+        });
+      }
+
       const accountContext = await storage.getAccountContext(userId);
-      const totalInvested = (parseFloat(quantity) * parseFloat(purchasePrice)).toString();
+      const totalInvested = (quantityNum * parseFloat(purchasePrice)).toString();
 
       const userStockData: any = {
         stockProductId,
