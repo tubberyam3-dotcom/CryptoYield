@@ -16,7 +16,6 @@ import { EnhancedStakingPlans } from "@/components/staking/EnhancedStakingPlans"
 import { EnhancedChallenges } from "@/components/challenges/EnhancedChallenges";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { WalletOverview } from "@/components/dashboard/WalletOverview";
-import { QuickActions } from "@/components/dashboard/QuickActions";
 import { AchievementBadges } from "@/components/gamification/AchievementBadges";
 import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { LevelSystem } from "@/components/gamification/LevelSystem";
@@ -24,6 +23,7 @@ import { CelebrationAnimation } from "@/components/gamification/CelebrationAnima
 import { InteractiveElements } from "@/components/gamification/InteractiveElements";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import type { StakingPlan } from "@shared/schema";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -52,62 +52,53 @@ export default function Dashboard() {
       <div className="ml-0 lg:ml-64 min-h-screen">
         <TopBar title="Dashboard" onMenuClick={() => setSidebarOpen(true)} />
         
-        <main className="p-6 md:p-8 space-y-8 pb-24 lg:pb-8 max-w-[1400px]">
+        <main className="p-4 md:p-8 space-y-6 md:space-y-8 pb-24 lg:pb-8">
           <BalanceSummary />
           
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Main Content */}
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="hidden lg:block lg:col-span-2">
               <PortfolioChart />
-              
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">Featured Portfolios</h2>
-                </div>
-                <FeaturedPortfolios />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <RecentActivity />
-                <WalletOverview />
-              </div>
             </div>
-            
-            {/* Right Column - Quick Actions & Info */}
-            <div className="space-y-6">
-              <QuickActions />
-              <AssetAllocation />
-            </div>
+            <AssetAllocation />
           </div>
           
-          {/* Secondary Sections */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Staking Plans</h2>
-              <EnhancedStakingPlans />
-            </div>
-            
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Community Challenges</h2>
-              <EnhancedChallenges />
-            </div>
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Featured Portfolios</h2>
+            <FeaturedPortfolios />
+          </div>
+          
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Staking Plans</h2>
+            <EnhancedStakingPlans />
+          </div>
+          
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Community Challenges</h2>
+            <EnhancedChallenges />
           </div>
           
           {/* Gamification Section */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold">Your Progress</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Your Progress</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
               <LevelSystem />
               <StreakCounter />
-              <InteractiveElements />
+              <div className="lg:col-span-1">
+                <InteractiveElements />
+              </div>
             </div>
-            <AchievementBadges />
+          </div>
+          
+          <AchievementBadges />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+            <RecentActivity />
+            <WalletOverview />
           </div>
           
           {/* Admin Access Link - Only show for admin users */}
           {user?.role === 'admin' && (
-            <Card className="hover:shadow-sm transition-shadow">
+            <Card className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 border-purple-200 dark:border-purple-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -115,7 +106,7 @@ export default function Dashboard() {
                       <i className="fas fa-shield-alt text-purple-600"></i>
                       Administrator Access
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground">
                       Access the dedicated admin dashboard for platform management
                     </p>
                   </div>

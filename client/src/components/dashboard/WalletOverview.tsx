@@ -43,9 +43,9 @@ export function WalletOverview() {
   }, 0);
 
   return (
-    <Card className="p-6 hover:shadow-sm transition-shadow" data-testid="card-wallet-overview">
+    <Card className="p-6 card-hover animate-fade-in-scale nude-gradient-light border-nude-medium/20" data-testid="card-wallet-overview">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold">Wallet Overview</h2>
+        <h2 className="text-xl font-semibold">Wallet Overview</h2>
         <Button 
           variant="default" 
           size="sm"
