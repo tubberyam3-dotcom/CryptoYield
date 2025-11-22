@@ -56,7 +56,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <img 
               src={theme === 'dark' ? refluxLogoLight : refluxLogoDark} 
               alt="Reflux Capital Logo" 
-              className="h-10 w-auto object-contain"
+              className="h-10 lg:h-12 xl:h-14 w-auto object-contain transition-all"
             />
           </div>
           <button 

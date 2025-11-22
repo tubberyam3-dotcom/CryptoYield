@@ -35,7 +35,7 @@ export function TopBar({ title, onMenuClick }: TopBarProps) {
         <img 
           src={theme === 'dark' ? refluxLogoLight : refluxLogoDark} 
           alt="Reflux Capital" 
-          className="h-7 w-auto object-contain lg:hidden flex-shrink-0"
+          className="h-8 sm:h-10 md:h-11 w-auto object-contain lg:hidden flex-shrink-0"
         />
         
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
