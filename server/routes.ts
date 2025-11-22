@@ -1455,28 +1455,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Daily reward amount
-      const rewardAmount = 100;
-      const currentBalance = parseFloat(user.balance || '0');
-      const newBalance = (currentBalance + rewardAmount).toFixed(8);
-
-      // Update user with reward
-      await db.update(users)
-        .set({
-          balance: newBalance,
-          lastDailyRewardClaim: now,
-          updatedAt: now,
-        })
-        .where(eq(users.id, userId));
+      const rewardAmount = '100';
+      
+      // Create daily bonus record and update accumulated bonus
+      await storage.createDailyBonus(userId, rewardAmount);
+      
+      // Get updated user to return new accumulated bonus
+      const updatedUser = await storage.getUser(userId);
 
       res.json({
         success: true,
         rewardAmount,
-        newBalance,
+        accumulatedBonus: updatedUser?.accumulatedDailyBonus || '0',
         message: "Daily reward claimed successfully!",
       });
     } catch (error) {
       console.error("Error claiming daily reward:", error);
       res.status(500).json({ message: "Failed to claim reward" });
+    }
+  });
+
+  app.get("/api/rewards/daily-history", enhancedAuth, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const bonuses = await storage.getUserDailyBonuses(userId);
+      const stats = await storage.getDailyBonusStats(userId);
+
+      res.json({
+        bonuses,
+        stats,
+      });
+    } catch (error) {
+      console.error("Error fetching daily bonus history:", error);
+      res.status(500).json({ message: "Failed to fetch bonus history" });
+    }
+  });
+
+  app.post("/api/rewards/redeem", enhancedAuth, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const result = await storage.redeemDailyBonuses(userId);
+
+      res.json({
+        success: true,
+        ...result,
+        message: "Bonuses redeemed successfully!",
+      });
+    } catch (error: any) {
+      console.error("Error redeeming daily bonuses:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to redeem bonuses" 
+      });
     }
   });
 
