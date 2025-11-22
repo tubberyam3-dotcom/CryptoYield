@@ -67,7 +67,7 @@ export function FeaturedPortfolios() {
         {portfolios?.slice(0, 3).map((portfolio) => (
           <Card 
             key={portfolio.id} 
-            className="p-6 card-hover cursor-pointer nude-gradient-light border-nude-medium/20" 
+            className="p-6 hover:shadow-sm transition-all cursor-pointer" 
             data-testid={`card-portfolio-${portfolio.id}`}
           >
             <div className="flex items-center justify-between mb-4">
