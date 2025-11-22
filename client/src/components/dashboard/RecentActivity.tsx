@@ -38,14 +38,14 @@ const mockActivities = [
 
 export function RecentActivity() {
   return (
-    <Card className="p-6" data-testid="card-recent-activity">
+    <Card className="p-6 card-hover animate-fade-in-scale nude-gradient-warm border-nude-medium/20" data-testid="card-recent-activity">
       <h2 className="text-xl font-semibold mb-6">Recent Activity</h2>
       
       <div className="space-y-4">
         {mockActivities.map((activity) => (
           <div 
             key={activity.id} 
-            className="flex items-center space-x-4 p-3 hover:bg-muted rounded-lg transition-colors"
+            className="flex items-center space-x-4 p-3 hover:bg-nude-medium/30 rounded-lg card-transition"
             data-testid={`activity-${activity.id}`}
           >
             <div className={`w-10 h-10 ${activity.iconBg} rounded-lg flex items-center justify-center`}>

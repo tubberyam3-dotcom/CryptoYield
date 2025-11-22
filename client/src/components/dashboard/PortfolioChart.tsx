@@ -17,7 +17,7 @@ export function PortfolioChart() {
   const periods = ['7D', '1M', '3M', '1Y'];
 
   return (
-    <Card className="p-6" data-testid="card-portfolio-chart">
+    <Card className="p-6 card-hover animate-fade-in-scale nude-gradient-light border-nude-medium/20" data-testid="card-portfolio-chart">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold">Portfolio Performance</h2>
         <div className="flex items-center space-x-2">
