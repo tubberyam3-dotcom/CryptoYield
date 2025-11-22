@@ -1050,7 +1050,7 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(users)
       .set({ 
-        accumulatedDailyBonus: sql`${users.accumulatedDailyBonus} + ${amount}`,
+        accumulatedDailyBonus: sql`COALESCE(${users.accumulatedDailyBonus}, '0')::numeric + ${amount}::numeric`,
         lastDailyRewardClaim: new Date(),
         updatedAt: new Date()
       })
@@ -1076,19 +1076,22 @@ export class DatabaseStorage implements IStorage {
     const allBonuses = await this.getUserDailyBonuses(userId);
     
     const totalClaimed = allBonuses.reduce((sum, bonus) => {
-      return (parseFloat(sum) + parseFloat(bonus.amount)).toString();
+      const amount = parseFloat(bonus.amount || '0');
+      return (parseFloat(sum) + amount).toString();
     }, '0');
 
     const totalRedeemed = allBonuses
       .filter(b => b.status === 'redeemed')
       .reduce((sum, bonus) => {
-        return (parseFloat(sum) + parseFloat(bonus.amount)).toString();
+        const amount = parseFloat(bonus.amount || '0');
+        return (parseFloat(sum) + amount).toString();
       }, '0');
 
     const pending = allBonuses
       .filter(b => b.status === 'pending')
       .reduce((sum, bonus) => {
-        return (parseFloat(sum) + parseFloat(bonus.amount)).toString();
+        const amount = parseFloat(bonus.amount || '0');
+        return (parseFloat(sum) + amount).toString();
       }, '0');
 
     const lastClaimDate = allBonuses.length > 0 ? allBonuses[0].claimedAt : null;
@@ -1118,7 +1121,28 @@ export class DatabaseStorage implements IStorage {
     }
 
     const redemptionBatchId = `redemption-${Date.now()}-${userId}`;
-    const newBalance = (parseFloat(user.balance) + parseFloat(pendingAmount)).toString();
+    
+    const pendingBonuses = await db
+      .select()
+      .from(dailyBonuses)
+      .where(and(
+        eq(dailyBonuses.userId, userId),
+        eq(dailyBonuses.status, 'pending')
+      ));
+
+    if (pendingBonuses.length === 0) {
+      throw new Error('No pending bonuses found');
+    }
+
+    const actualPendingAmount = pendingBonuses.reduce((sum, bonus) => {
+      return (parseFloat(sum) + parseFloat(bonus.amount || '0')).toString();
+    }, '0');
+
+    if (parseFloat(actualPendingAmount) <= 0) {
+      throw new Error('No bonuses to redeem');
+    }
+
+    const newBalance = (parseFloat(user.balance || '0') + parseFloat(actualPendingAmount)).toString();
 
     await db
       .update(dailyBonuses)
@@ -1141,18 +1165,9 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(users.id, userId));
 
-    const bonusCount = await db
-      .select({ count: count() })
-      .from(dailyBonuses)
-      .where(and(
-        eq(dailyBonuses.userId, userId),
-        eq(dailyBonuses.redemptionBatchId, redemptionBatchId)
-      ))
-      .then(result => result[0]?.count || 0);
-
     return {
-      redeemedAmount: pendingAmount,
-      bonusCount,
+      redeemedAmount: actualPendingAmount,
+      bonusCount: pendingBonuses.length,
       newBalance,
     };
   }

@@ -1477,9 +1477,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/rewards/daily-history", enhancedAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
       const userId = req.user?.claims?.sub;
       if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return res.status(401).json({ message: "User ID not found" });
       }
 
       const bonuses = await storage.getUserDailyBonuses(userId);
@@ -1497,9 +1501,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/rewards/redeem", enhancedAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
       const userId = req.user?.claims?.sub;
       if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return res.status(401).json({ message: "User ID not found" });
       }
 
       const result = await storage.redeemDailyBonuses(userId);
@@ -1511,6 +1519,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error redeeming daily bonuses:", error);
+      
+      if (error.message === 'No bonuses to redeem' || error.message === 'No pending bonuses found') {
+        return res.status(400).json({ message: error.message });
+      }
+      
       res.status(500).json({ 
         message: error.message || "Failed to redeem bonuses" 
       });

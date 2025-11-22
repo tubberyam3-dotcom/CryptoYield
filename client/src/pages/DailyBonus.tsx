@@ -32,11 +32,9 @@ export default function DailyBonusPage() {
 
   const redeemMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/rewards/redeem', {
-        method: 'POST',
-      });
+      return await apiRequest('/api/rewards/redeem', 'POST', {});
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/rewards/daily-history'] });
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       toast({
@@ -76,13 +74,13 @@ export default function DailyBonusPage() {
   };
 
   const bonuses = history?.bonuses || [];
-  const pendingAmount = parseFloat(stats.pending);
-  const canRedeem = pendingAmount > 0;
+  const pendingAmount = parseFloat(stats?.pending || '0');
+  const canRedeem = pendingAmount > 0 && !redeemMutation.isPending;
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <TopBar onMenuClick={() => setSidebarOpen(true)} />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <TopBar title="Daily Bonus" onMenuClick={() => setSidebarOpen(true)} />
       
       <main className="lg:ml-64 pt-16">
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
@@ -222,7 +220,7 @@ export default function DailyBonusPage() {
                           </div>
                           <div className="text-sm text-muted-foreground flex items-center gap-2">
                             <Calendar className="h-3 w-3" />
-                            Claimed: {format(new Date(bonus.claimedAt), 'MMM dd, yyyy')}
+                            Claimed: {bonus.claimedAt ? format(new Date(bonus.claimedAt), 'MMM dd, yyyy') : 'Unknown'}
                           </div>
                           {bonus.redeemedAt && (
                             <div className="text-xs text-muted-foreground mt-1">
