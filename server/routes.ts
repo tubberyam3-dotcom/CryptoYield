@@ -1389,6 +1389,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Daily Reward System
+  app.get("/api/rewards/daily-status", enhancedAuth, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const now = new Date();
+      const lastClaim = user.lastDailyRewardClaim ? new Date(user.lastDailyRewardClaim) : null;
+      
+      // Check if user can claim (24 hours since last claim)
+      let canClaim = true;
+      let nextClaimTime = null;
+      
+      if (lastClaim) {
+        const timeSinceLastClaim = now.getTime() - lastClaim.getTime();
+        const hoursElapsed = timeSinceLastClaim / (1000 * 60 * 60);
+        
+        if (hoursElapsed < 24) {
+          canClaim = false;
+          nextClaimTime = new Date(lastClaim.getTime() + (24 * 60 * 60 * 1000)).toISOString();
+        }
+      }
+
+      res.json({ canClaim, nextClaimTime });
+    } catch (error) {
+      console.error("Error checking daily reward status:", error);
+      res.status(500).json({ message: "Failed to check reward status" });
+    }
+  });
+
+  app.post("/api/rewards/claim-daily", enhancedAuth, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const now = new Date();
+      const lastClaim = user.lastDailyRewardClaim ? new Date(user.lastDailyRewardClaim) : null;
+      
+      // Check if user can claim (24 hours since last claim)
+      if (lastClaim) {
+        const timeSinceLastClaim = now.getTime() - lastClaim.getTime();
+        const hoursElapsed = timeSinceLastClaim / (1000 * 60 * 60);
+        
+        if (hoursElapsed < 24) {
+          const nextClaimTime = new Date(lastClaim.getTime() + (24 * 60 * 60 * 1000));
+          return res.status(400).json({ 
+            message: `You can claim your next reward at ${nextClaimTime.toLocaleString()}`,
+          });
+        }
+      }
+
+      // Daily reward amount
+      const rewardAmount = 100;
+      const currentBalance = parseFloat(user.balance || '0');
+      const newBalance = (currentBalance + rewardAmount).toFixed(8);
+
+      // Update user with reward
+      await db.update(users)
+        .set({
+          balance: newBalance,
+          lastDailyRewardClaim: now,
+          updatedAt: now,
+        })
+        .where(eq(users.id, userId));
+
+      res.json({
+        success: true,
+        rewardAmount,
+        newBalance,
+        message: "Daily reward claimed successfully!",
+      });
+    } catch (error) {
+      console.error("Error claiming daily reward:", error);
+      res.status(500).json({ message: "Failed to claim reward" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

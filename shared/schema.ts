@@ -41,6 +41,7 @@ export const users = pgTable("users", {
   balance: decimal("balance", { precision: 18, scale: 8 }).default('10000'), // User's available balance for purchases
   kycStatus: varchar("kyc_status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   role: varchar("role", { enum: ['user', 'admin'] }).default('user'),
+  lastDailyRewardClaim: timestamp("last_daily_reward_claim"), // Track last daily reward claim
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

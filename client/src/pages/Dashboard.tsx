@@ -21,9 +21,9 @@ import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { LevelSystem } from "@/components/gamification/LevelSystem";
 import { CelebrationAnimation } from "@/components/gamification/CelebrationAnimations";
 import { InteractiveElements } from "@/components/gamification/InteractiveElements";
+import { FloatingClaimButton } from "@/components/dashboard/FloatingClaimButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import type { StakingPlan } from "@shared/schema";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -124,6 +124,9 @@ export default function Dashboard() {
       </div>
       
       <MobileNav />
+      
+      {/* Floating Claim Button - Mobile Only */}
+      <FloatingClaimButton />
       
       {/* Celebration Animation */}
       <CelebrationAnimation 
