@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import refluxLogo from "@assets/Reflux(1)_1763816395638.png";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -50,9 +51,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center justify-between p-6 border-b border-sidebar-border">
           <div className="flex items-center space-x-3">
             <img 
-              src="/attached_assets/Reflux(1)_1763816395638.png" 
+              src={refluxLogo} 
               alt="Reflux Capital Logo" 
-              className="h-8 w-auto object-contain"
+              className="h-10 w-auto object-contain"
             />
           </div>
           <button 
