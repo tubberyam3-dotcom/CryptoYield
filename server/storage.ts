@@ -1109,67 +1109,72 @@ export class DatabaseStorage implements IStorage {
     bonusCount: number;
     newBalance: string;
   }> {
-    const user = await this.getUser(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
+    return await db.transaction(async (tx) => {
+      const user = await tx.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
+      if (!user) {
+        throw new Error('User not found');
+      }
 
-    const pendingAmount = user.accumulatedDailyBonus ?? '0';
-    
-    if (parseFloat(pendingAmount) <= 0) {
-      throw new Error('No bonuses to redeem');
-    }
+      const redemptionBatchId = `redemption-${Date.now()}-${userId}`;
+      
+      const result = await tx.execute<{
+        id: string;
+        user_id: string;
+        amount: string;
+        claimed_at: string;
+        redeemed_at: string | null;
+        redemption_batch_id: string | null;
+        status: string;
+      }>(
+        sql`
+          WITH locked_bonuses AS (
+            SELECT * FROM ${dailyBonuses} 
+            WHERE ${dailyBonuses.userId} = ${userId} 
+            AND ${dailyBonuses.status} = 'pending' 
+            FOR UPDATE
+          ),
+          updated_bonuses AS (
+            UPDATE ${dailyBonuses}
+            SET status = 'redeemed', 
+                redeemed_at = NOW(),
+                redemption_batch_id = ${redemptionBatchId}
+            WHERE id IN (SELECT id FROM locked_bonuses)
+            RETURNING *
+          ),
+          bonus_sum AS (
+            SELECT COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as total
+            FROM updated_bonuses
+          )
+          UPDATE ${users}
+          SET balance = CAST(COALESCE(balance, '0') AS NUMERIC) + (SELECT total FROM bonus_sum),
+              accumulated_daily_bonus = '0',
+              updated_at = NOW()
+          WHERE id = ${userId}
+          RETURNING balance, (SELECT total FROM bonus_sum) as redeemed_amount, 
+                   (SELECT COUNT(*) FROM updated_bonuses) as bonus_count
+        `
+      );
 
-    const redemptionBatchId = `redemption-${Date.now()}-${userId}`;
-    
-    const pendingBonuses = await db
-      .select()
-      .from(dailyBonuses)
-      .where(and(
-        eq(dailyBonuses.userId, userId),
-        eq(dailyBonuses.status, 'pending')
-      ));
+      const row = result.rows[0];
+      
+      if (!row || parseFloat(row.redeemed_amount || '0') <= 0) {
+        await tx
+          .update(users)
+          .set({
+            accumulatedDailyBonus: '0',
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, userId));
+        
+        throw new Error('No pending bonuses found');
+      }
 
-    if (pendingBonuses.length === 0) {
-      throw new Error('No pending bonuses found');
-    }
-
-    const actualPendingAmount = pendingBonuses.reduce((sum, bonus) => {
-      return (parseFloat(sum) + parseFloat(bonus.amount || '0')).toString();
-    }, '0');
-
-    if (parseFloat(actualPendingAmount) <= 0) {
-      throw new Error('No bonuses to redeem');
-    }
-
-    const newBalance = (parseFloat(user.balance || '0') + parseFloat(actualPendingAmount)).toString();
-
-    await db
-      .update(dailyBonuses)
-      .set({
-        status: 'redeemed',
-        redeemedAt: new Date(),
-        redemptionBatchId,
-      })
-      .where(and(
-        eq(dailyBonuses.userId, userId),
-        eq(dailyBonuses.status, 'pending')
-      ));
-
-    await db
-      .update(users)
-      .set({
-        balance: newBalance,
-        accumulatedDailyBonus: '0',
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId));
-
-    return {
-      redeemedAmount: actualPendingAmount,
-      bonusCount: pendingBonuses.length,
-      newBalance,
-    };
+      return {
+        redeemedAmount: row.redeemed_amount || '0',
+        bonusCount: Number(row.bonus_count) || 0,
+        newBalance: row.balance || '0',
+      };
+    });
   }
 }
 
