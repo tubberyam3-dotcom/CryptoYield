@@ -1,6 +1,8 @@
 import { useTheme } from "@/providers/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
+import refluxLogoDark from "@assets/Reflux(1)_1763816395638.png";
+import refluxLogoLight from "@assets/Reflux(2)_1763816395638.png";
 
 interface TopBarProps {
   title: string;
@@ -28,8 +30,16 @@ export function TopBar({ title, onMenuClick }: TopBarProps) {
         >
           <i className="fas fa-bars text-sm sm:text-lg"></i>
         </button>
+        
+        {/* Logo on Mobile */}
+        <img 
+          src={theme === 'dark' ? refluxLogoLight : refluxLogoDark} 
+          alt="Reflux Capital" 
+          className="h-7 w-auto object-contain lg:hidden flex-shrink-0"
+        />
+        
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          <h1 className="text-lg sm:text-2xl font-bold truncate" data-testid="text-page-title">{title}</h1>
+          <h1 className="text-lg sm:text-2xl font-bold truncate hidden lg:block" data-testid="text-page-title">{title}</h1>
           {isDemoMode && (
             <Badge variant="outline" className="text-xs flex-shrink-0 hidden xs:inline-flex">
               Demo Mode
