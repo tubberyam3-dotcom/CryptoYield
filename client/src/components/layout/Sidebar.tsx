@@ -1,7 +1,9 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import refluxLogo from "@assets/Reflux(1)_1763816395638.png";
+import { useTheme } from "@/providers/ThemeProvider";
+import refluxLogoDark from "@assets/Reflux(1)_1763816395638.png";
+import refluxLogoLight from "@assets/Reflux(2)_1763816395638.png";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { theme } = useTheme();
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -51,7 +54,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center justify-between p-6 border-b border-sidebar-border">
           <div className="flex items-center space-x-3">
             <img 
-              src={refluxLogo} 
+              src={theme === 'dark' ? refluxLogoLight : refluxLogoDark} 
               alt="Reflux Capital Logo" 
               className="h-10 w-auto object-contain"
             />
