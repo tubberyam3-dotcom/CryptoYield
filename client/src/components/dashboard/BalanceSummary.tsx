@@ -53,228 +53,117 @@ export function BalanceSummary() {
   const totalBalance = portfolioValue + stakingValue + availableBalance;
 
   return (
-    <div className="space-y-3 md:space-y-4" data-testid="balance-summary">
-      {/* Main Balance Card */}
+    <div className="space-y-6" data-testid="balance-summary">
+      {/* Main Balance Display - Coinbase Style */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
+        className="py-6"
       >
-        <Card className="p-4 md:p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
-          <CardHeader className="pb-2 md:pb-4 px-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="p-2 md:p-3 bg-blue-500 rounded-xl shadow-lg">
-                  <Wallet className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg md:text-xl">Total Balance</CardTitle>
-                  <CardDescription>All your crypto investments</CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowBalance(!showBalance)}
-                className="text-muted-foreground hover:text-foreground"
-                data-testid="toggle-balance-visibility"
-              >
-                {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              </Button>
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-1" data-testid="total-balance">
+              {showBalance ? `$${totalBalance.toLocaleString()}` : "****"}
+            </h1>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-sm text-green-600 dark:text-green-400 font-medium">+12.4% this month</span>
+              <span className="text-sm text-muted-foreground">•</span>
+              <span className="text-sm text-muted-foreground">Last updated now</span>
             </div>
-          </CardHeader>
-          <CardContent className="px-0 pb-0">
-            <div className="space-y-2 md:space-y-3">
-              <div className="flex items-baseline gap-2">
-                <h2 className="text-2xl md:text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="total-balance">
-                  {showBalance ? `$${totalBalance.toLocaleString()}` : "****"}
-                </h2>
-                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-                  +12.4%
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Total growth this month • Last updated now
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowBalance(!showBalance)}
+            className="text-muted-foreground hover:text-foreground"
+            data-testid="toggle-balance-visibility"
+          >
+            {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </Button>
+        </div>
       </motion.div>
 
-      {/* Portfolio and Staking Cards */}
-      <div className="flex md:grid md:grid-cols-2 gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-3 px-3 md:mx-0 md:px-0 md:overflow-visible">
+      {/* Account Breakdown - Clean Coinbase Style */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Portfolio Card */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
         >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="portfolio-summary">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 md:p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm md:text-base">Portfolio</h3>
-                    <p className="text-xs text-muted-foreground">Active investments</p>
-                  </div>
+          <Card className="p-5 hover:shadow-sm transition-all cursor-pointer border-l-4 border-l-primary" data-testid="portfolio-summary">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <div>
+                  <h3 className="font-semibold text-sm">Stocks & Bonds</h3>
+                  <p className="text-xs text-muted-foreground">Active investments</p>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  Active
-                </Badge>
               </div>
-              <div className="space-y-1">
-                <p className="text-lg md:text-2xl font-bold text-green-600 dark:text-green-400">
-                  {showBalance ? `$${portfolioValue.toLocaleString()}` : "****"}
-                </p>
-                <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                  Across multiple assets →
-                </p>
-              </div>
-            </CardContent>
+            </div>
+            <div>
+              <p className="text-2xl font-bold mb-1">
+                {showBalance ? `$${portfolioValue.toLocaleString()}` : "****"}
+              </p>
+              <p className="text-xs text-primary font-medium">
+                Earn up to 12% returns
+              </p>
+            </div>
           </Card>
         </motion.div>
 
         {/* Staking Card */}
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
-          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
         >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="staking-summary">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 md:p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                    <Zap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm md:text-base">Staking</h3>
-                    <p className="text-xs text-muted-foreground">Earning rewards</p>
-                  </div>
+          <Card className="p-5 hover:shadow-sm transition-all cursor-pointer border-l-4 border-l-accent" data-testid="staking-summary">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-accent" />
+                <div>
+                  <h3 className="font-semibold text-sm">Staking</h3>
+                  <p className="text-xs text-muted-foreground">Fixed income</p>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  8.5% APY
-                </Badge>
               </div>
-              <div className="space-y-1">
-                <p className="text-lg md:text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {showBalance ? `$${stakingValue.toLocaleString()}` : "****"}
-                </p>
-                <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                  View staking plans →
-                </p>
-              </div>
-            </CardContent>
+            </div>
+            <div>
+              <p className="text-2xl font-bold mb-1">
+                {showBalance ? `$${stakingValue.toLocaleString()}` : "****"}
+              </p>
+              <p className="text-xs text-accent font-medium">
+                Earn up to 8.5% APY
+              </p>
+            </div>
           </Card>
         </motion.div>
 
-        {/* Challenges Card */}
+        {/* Available Balance Card */}
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
-          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
         >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="challenges-summary">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 md:p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                    <Trophy className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm md:text-base">Challenges</h3>
-                    <p className="text-xs text-muted-foreground">Community goals</p>
-                  </div>
+          <Card className="p-5 hover:shadow-sm transition-all cursor-pointer border-l-4 border-l-green-500" data-testid="cash-summary">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <div>
+                  <h3 className="font-semibold text-sm">Cash</h3>
+                  <p className="text-xs text-muted-foreground">Available balance</p>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  {stats?.activeChallenges || 0} Active
-                </Badge>
               </div>
-              <div className="space-y-1">
-                <p className="text-lg md:text-2xl font-bold text-orange-600 dark:text-orange-400">
-                  3
-                </p>
-                <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                  Join challenges →
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Rewards Card */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.4 }}
-          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
-        >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="rewards-summary">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 md:p-2 bg-pink-100 dark:bg-pink-900 rounded-lg">
-                    <Gift className="w-4 h-4 text-pink-600 dark:text-pink-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm md:text-base">Rewards</h3>
-                    <p className="text-xs text-muted-foreground">Total earned</p>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-xs bg-pink-50 dark:bg-pink-950">
-                  New
-                </Badge>
-              </div>
-              <div className="space-y-1">
-                <p className="text-lg md:text-2xl font-bold text-pink-600 dark:text-pink-400">
-                  {showBalance ? "$247" : "****"}
-                </p>
-                <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                  View rewards history →
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Activity Card */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.5 }}
-          className="flex-shrink-0 w-[85%] md:w-auto snap-start"
-        >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="activity-summary">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 md:p-2 bg-cyan-100 dark:bg-cyan-900 rounded-lg">
-                    <Activity className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm md:text-base">Activity</h3>
-                    <p className="text-xs text-muted-foreground">Recent transactions</p>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  12 Today
-                </Badge>
-              </div>
-              <div className="space-y-1">
-                <p className="text-lg md:text-2xl font-bold text-cyan-600 dark:text-cyan-400">
-                  54
-                </p>
-                <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                  View all activity →
-                </p>
-              </div>
-            </CardContent>
+            </div>
+            <div>
+              <p className="text-2xl font-bold mb-1">
+                {showBalance ? `$${availableBalance.toLocaleString()}` : "****"}
+              </p>
+              <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                Ready to invest
+              </p>
+            </div>
           </Card>
         </motion.div>
       </div>
