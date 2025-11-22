@@ -10,7 +10,7 @@ const allocations = [
 
 export function AssetAllocation() {
   return (
-    <Card className="p-6 card-hover animate-fade-in-scale nude-gradient-light border-nude-medium/20" data-testid="card-asset-allocation">
+    <Card className="p-6 card-hover animate-fade-in-scale bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950 border-blue-200 dark:border-blue-800" data-testid="card-asset-allocation">
       <h3 className="text-lg font-semibold mb-4">Portfolio Allocation</h3>
       <div className="space-y-4">
         {allocations.map((asset, index) => (
