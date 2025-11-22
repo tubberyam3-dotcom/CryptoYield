@@ -174,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Return demo admin user
         const demoAdmin = {
           id: 'demo-admin',
-          email: 'admin@cryptovault.com',
+          email: 'admin@refluxcapital.com',
           firstName: 'Admin',
           lastName: 'User',
           profileImageUrl: null,
@@ -217,7 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (username === 'admin' && password === 'admin123') {
           const demoAdmin = {
             id: 'demo-admin',
-            email: 'admin@cryptovault.com',
+            email: 'admin@refluxcapital.com',
             firstName: 'Admin',
             lastName: 'User',
             profileImageUrl: null,
@@ -456,7 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only available in development" });
       }
       
-      const existingUser = await storage.getUserByEmail('demo@cryptovault.com');
+      const existingUser = await storage.getUserByEmail('demo@refluxcapital.com');
       if (existingUser) {
         return res.json({ message: "Demo user already exists", user: { email: existingUser.email } });
       }
@@ -465,7 +465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash('demo123', saltRounds);
       
       const user = await storage.createUser({
-        email: 'demo@cryptovault.com',
+        email: 'demo@refluxcapital.com',
         firstName: 'Demo',
         lastName: 'User', 
         passwordHash,

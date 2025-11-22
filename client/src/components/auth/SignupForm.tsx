@@ -95,7 +95,7 @@ function AccountTypeForm({
       } else {
         toast({
           title: "Account Created!",
-          description: "Welcome to CryptoVault. You're now logged in.",
+          description: "Welcome to Reflux Capital. You're now logged in.",
         });
       }
       

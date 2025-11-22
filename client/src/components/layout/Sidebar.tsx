@@ -48,11 +48,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       )}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-sidebar-border">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
-              <i className="fas fa-cube text-white text-lg"></i>
-            </div>
-            <span className="text-xl font-bold text-sidebar-foreground">CryptoVault</span>
+          <div className="flex items-center space-x-3">
+            <img 
+              src="/attached_assets/Reflux(1)_1763816395638.png" 
+              alt="Reflux Capital Logo" 
+              className="h-8 w-auto object-contain"
+            />
           </div>
           <button 
             className="lg:hidden p-2 rounded-lg bg-sidebar-accent/20 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors" 

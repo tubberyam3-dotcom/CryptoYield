@@ -37,7 +37,7 @@ export default function AdminLogin() {
           </div>
           <CardTitle className="text-2xl font-bold">Admin Login</CardTitle>
           <CardDescription>
-            Access the CryptoVault administration panel
+            Access the Reflux Capital administration panel
           </CardDescription>
         </CardHeader>
         <CardContent>
