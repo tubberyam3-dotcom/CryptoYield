@@ -39,6 +39,7 @@ export const users = pgTable("users", {
   businessType: varchar("business_type"), // For business accounts
   taxId: varchar("tax_id"), // For business accounts
   balance: decimal("balance", { precision: 18, scale: 8 }).default('10000'), // User's available balance for purchases
+  accumulatedDailyBonus: decimal("accumulated_daily_bonus", { precision: 18, scale: 8 }).default('0'), // Unredeemed daily bonuses
   kycStatus: varchar("kyc_status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   role: varchar("role", { enum: ['user', 'admin'] }).default('user'),
   lastDailyRewardClaim: timestamp("last_daily_reward_claim"), // Track last daily reward claim
@@ -172,6 +173,17 @@ export const challengeMembers = pgTable("challenge_members", {
   challengeId: varchar("challenge_id").references(() => communityChallenges.id).notNull(),
   contributedAmount: decimal("contributed_amount", { precision: 18, scale: 8 }).default('0'),
   joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+// Daily Bonuses - Individual claim records
+export const dailyBonuses = pgTable("daily_bonuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  amount: decimal("amount", { precision: 18, scale: 8 }).notNull(), // Bonus amount claimed
+  claimedAt: timestamp("claimed_at").defaultNow(),
+  redeemedAt: timestamp("redeemed_at"), // When bonus was redeemed to cash balance
+  status: varchar("status", { enum: ['pending', 'redeemed'] }).default('pending'),
+  redemptionBatchId: varchar("redemption_batch_id"), // Links multiple bonuses redeemed together
 });
 
 // Relations
@@ -308,6 +320,11 @@ export const insertUserJointAccountSchema = createInsertSchema(userJointAccounts
   joinedAt: true,
 });
 
+export const insertDailyBonusSchema = createInsertSchema(dailyBonuses).omit({
+  id: true,
+  claimedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -332,6 +349,8 @@ export type JointAccount = typeof jointAccounts.$inferSelect;
 export type InsertJointAccount = z.infer<typeof insertJointAccountSchema>;
 export type UserJointAccount = typeof userJointAccounts.$inferSelect;
 export type InsertUserJointAccount = z.infer<typeof insertUserJointAccountSchema>;
+export type DailyBonus = typeof dailyBonuses.$inferSelect;
+export type InsertDailyBonus = z.infer<typeof insertDailyBonusSchema>;
 
 // Account type definition
 export type AccountType = "personal" | "business" | "joint";
