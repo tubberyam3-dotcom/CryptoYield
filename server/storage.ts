@@ -10,6 +10,7 @@ import {
   challengeMembers,
   jointAccounts,
   userJointAccounts,
+  dailyBonuses,
   type User,
   type UpsertUser,
   type Portfolio,
@@ -32,6 +33,8 @@ import {
   type InsertJointAccount,
   type UserJointAccount,
   type InsertUserJointAccount,
+  type DailyBonus,
+  type InsertDailyBonus,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
@@ -108,6 +111,21 @@ export interface IStorage {
   getChallengeMembers(challengeId: string): Promise<(ChallengeMember & { user: User })[]>;
   updateChallengeProgress(challengeId: string, amount: string): Promise<void>;
   
+  // Daily Bonus operations
+  createDailyBonus(userId: string, amount: string): Promise<DailyBonus>;
+  getUserDailyBonuses(userId: string): Promise<DailyBonus[]>;
+  getDailyBonusStats(userId: string): Promise<{
+    totalClaimed: string;
+    totalRedeemed: string;
+    pending: string;
+    lastClaimDate: Date | null;
+  }>;
+  redeemDailyBonuses(userId: string): Promise<{
+    redeemedAmount: string;
+    bonusCount: number;
+    newBalance: string;
+  }>;
+  
   // Analytics
   getDashboardStats(userId: string): Promise<{
     totalPortfolioValue: string;
@@ -170,8 +188,10 @@ export class DatabaseStorage implements IStorage {
         businessType: null,
         taxId: null,
         balance: '10000',
+        accumulatedDailyBonus: '0',
         role: 'admin',
         kycStatus: 'approved',
+        lastDailyRewardClaim: null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -367,8 +387,10 @@ export class DatabaseStorage implements IStorage {
           businessType: null,
           taxId: null,
           balance: '10000',
+          accumulatedDailyBonus: '0',
           role: 'admin',
           kycStatus: 'approved',
+          lastDailyRewardClaim: null,
           createdAt: new Date('2024-01-15'),
           updatedAt: new Date()
         },
@@ -385,8 +407,10 @@ export class DatabaseStorage implements IStorage {
           businessType: null,
           taxId: null,
           balance: '10000',
+          accumulatedDailyBonus: '0',
           role: 'user',
           kycStatus: 'approved',
+          lastDailyRewardClaim: null,
           createdAt: new Date('2024-02-20'),
           updatedAt: new Date()
         },
@@ -403,8 +427,10 @@ export class DatabaseStorage implements IStorage {
           businessType: null,
           taxId: null,
           balance: '10000',
+          accumulatedDailyBonus: '0',
           role: 'user',
           kycStatus: 'pending',
+          lastDailyRewardClaim: null,
           createdAt: new Date('2024-03-10'),
           updatedAt: new Date()
         },
@@ -421,8 +447,10 @@ export class DatabaseStorage implements IStorage {
           businessType: null,
           taxId: null,
           balance: '10000',
+          accumulatedDailyBonus: '0',
           role: 'user',
           kycStatus: 'rejected',
+          lastDailyRewardClaim: null,
           createdAt: new Date('2024-03-25'),
           updatedAt: new Date()
         }
@@ -1009,6 +1037,124 @@ export class DatabaseStorage implements IStorage {
     // In a real implementation, this would query an activity_logs table
     // For now, return empty array for production
     return [];
+  }
+
+  // Daily Bonus operations
+  async createDailyBonus(userId: string, amount: string): Promise<DailyBonus> {
+    const [bonus] = await db.insert(dailyBonuses).values({
+      userId,
+      amount,
+      status: 'pending',
+    }).returning();
+
+    await db
+      .update(users)
+      .set({ 
+        accumulatedDailyBonus: sql`${users.accumulatedDailyBonus} + ${amount}`,
+        lastDailyRewardClaim: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+
+    return bonus;
+  }
+
+  async getUserDailyBonuses(userId: string): Promise<DailyBonus[]> {
+    return await db
+      .select()
+      .from(dailyBonuses)
+      .where(eq(dailyBonuses.userId, userId))
+      .orderBy(desc(dailyBonuses.claimedAt));
+  }
+
+  async getDailyBonusStats(userId: string): Promise<{
+    totalClaimed: string;
+    totalRedeemed: string;
+    pending: string;
+    lastClaimDate: Date | null;
+  }> {
+    const allBonuses = await this.getUserDailyBonuses(userId);
+    
+    const totalClaimed = allBonuses.reduce((sum, bonus) => {
+      return (parseFloat(sum) + parseFloat(bonus.amount)).toString();
+    }, '0');
+
+    const totalRedeemed = allBonuses
+      .filter(b => b.status === 'redeemed')
+      .reduce((sum, bonus) => {
+        return (parseFloat(sum) + parseFloat(bonus.amount)).toString();
+      }, '0');
+
+    const pending = allBonuses
+      .filter(b => b.status === 'pending')
+      .reduce((sum, bonus) => {
+        return (parseFloat(sum) + parseFloat(bonus.amount)).toString();
+      }, '0');
+
+    const lastClaimDate = allBonuses.length > 0 ? allBonuses[0].claimedAt : null;
+
+    return {
+      totalClaimed,
+      totalRedeemed,
+      pending,
+      lastClaimDate,
+    };
+  }
+
+  async redeemDailyBonuses(userId: string): Promise<{
+    redeemedAmount: string;
+    bonusCount: number;
+    newBalance: string;
+  }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const pendingAmount = user.accumulatedDailyBonus ?? '0';
+    
+    if (parseFloat(pendingAmount) <= 0) {
+      throw new Error('No bonuses to redeem');
+    }
+
+    const redemptionBatchId = `redemption-${Date.now()}-${userId}`;
+    const newBalance = (parseFloat(user.balance) + parseFloat(pendingAmount)).toString();
+
+    await db
+      .update(dailyBonuses)
+      .set({
+        status: 'redeemed',
+        redeemedAt: new Date(),
+        redemptionBatchId,
+      })
+      .where(and(
+        eq(dailyBonuses.userId, userId),
+        eq(dailyBonuses.status, 'pending')
+      ));
+
+    await db
+      .update(users)
+      .set({
+        balance: newBalance,
+        accumulatedDailyBonus: '0',
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+
+    const bonusCount = await db
+      .select({ count: count() })
+      .from(dailyBonuses)
+      .where(and(
+        eq(dailyBonuses.userId, userId),
+        eq(dailyBonuses.redemptionBatchId, redemptionBatchId)
+      ))
+      .then(result => result[0]?.count || 0);
+
+    return {
+      redeemedAmount: pendingAmount,
+      bonusCount,
+      newBalance,
+    };
   }
 }
 
