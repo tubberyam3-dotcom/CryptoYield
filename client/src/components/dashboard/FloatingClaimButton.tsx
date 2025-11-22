@@ -126,7 +126,7 @@ export function FloatingClaimButton() {
             repeat: Infinity,
           }}
         >
-          FREE
+          CLAIM
         </motion.div>
       </div>
     </motion.button>
