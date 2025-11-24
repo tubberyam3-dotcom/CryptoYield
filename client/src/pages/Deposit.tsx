@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
@@ -18,8 +18,11 @@ export default function Deposit() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
+  const [cryptoStep, setCryptoStep] = useState(1);
+  const [selectedCrypto, setSelectedCrypto] = useState<string | null>(null);
   const [cryptoAmount, setCryptoAmount] = useState("");
   const [cryptoAddress, setCryptoAddress] = useState("");
+  const [timeRemaining, setTimeRemaining] = useState(900);
 
   const [bankAmount, setBankAmount] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -30,6 +33,40 @@ export default function Deposit() {
   const [stripeTransactionId, setStripeTransactionId] = useState("");
 
   const [couponCode, setCouponCode] = useState("");
+
+  const cryptoCoins = [
+    { id: "BTC", name: "Bitcoin", icon: "fab fa-bitcoin", color: "text-orange-500", address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" },
+    { id: "ETH", name: "Ethereum", icon: "fab fa-ethereum", color: "text-blue-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
+    { id: "USDT", name: "Tether", icon: "fas fa-dollar-sign", color: "text-green-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
+    { id: "BNB", name: "Binance Coin", icon: "fas fa-coins", color: "text-yellow-500", address: "bnb1grpf0955h0ykzq3ar5nmum7y6gdfl6lxfn46h2" },
+    { id: "SOL", name: "Solana", icon: "fas fa-sun", color: "text-purple-500", address: "SoLEao8wTzSfqhuou8rcYsVoLjthVmiXuEjzdNPMnCz" },
+    { id: "XRP", name: "Ripple", icon: "fas fa-wave-square", color: "text-blue-400", address: "rN7n7otQDd6FczFgLdzmFgFgWv4NJpRkBP" },
+    { id: "ADA", name: "Cardano", icon: "fas fa-chart-line", color: "text-cyan-500", address: "addr1qxy3v9ackjr98vxl7k8sfykj3dcxl8f8e6vnr8xf" },
+    { id: "DOGE", name: "Dogecoin", icon: "fas fa-dog", color: "text-yellow-600", address: "DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L" },
+    { id: "MATIC", name: "Polygon", icon: "fas fa-layer-group", color: "text-purple-600", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
+    { id: "LTC", name: "Litecoin", icon: "fas fa-circle", color: "text-gray-500", address: "LdP8Qox1VAhCzLJNqrr74YovaWYyNBUWvL" },
+  ];
+
+  useEffect(() => {
+    if (cryptoStep === 3 && timeRemaining > 0) {
+      const timer = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [cryptoStep, timeRemaining]);
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const depositMethods = [
     {
@@ -273,7 +310,12 @@ export default function Deposit() {
             <div className="max-w-2xl mx-auto">
               <Button
                 variant="ghost"
-                onClick={() => setSelectedMethod(null)}
+                onClick={() => {
+                  setSelectedMethod(null);
+                  setCryptoStep(1);
+                  setSelectedCrypto(null);
+                  setCryptoAmount("");
+                }}
                 className="mb-4"
                 data-testid="button-back-to-methods"
               >
@@ -283,49 +325,190 @@ export default function Deposit() {
 
               {selectedMethod === "crypto" && (
                 <Card className="p-6">
-                  <div className="flex items-center space-x-4 mb-6">
-                    <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                      <i className="fab fa-bitcoin text-white text-xl"></i>
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold">Crypto Deposit</h2>
-                      <p className="text-muted-foreground">Deposit funds using cryptocurrency</p>
-                    </div>
-                  </div>
-                  <form onSubmit={handleCryptoDeposit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="crypto-amount">Amount (USD)</Label>
-                      <Input
-                        id="crypto-amount"
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter amount"
-                        value={cryptoAmount}
-                        onChange={(e) => setCryptoAmount(e.target.value)}
-                        data-testid="input-crypto-amount"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="crypto-address">Crypto Wallet Address</Label>
-                      <Input
-                        id="crypto-address"
-                        type="text"
-                        placeholder="Enter your wallet address"
-                        value={cryptoAddress}
-                        onChange={(e) => setCryptoAddress(e.target.value)}
-                        data-testid="input-crypto-address"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      size="lg"
-                      disabled={cryptoDepositMutation.isPending}
-                      data-testid="button-submit-crypto"
-                    >
-                      {cryptoDepositMutation.isPending ? "Processing..." : "Submit Deposit"}
-                    </Button>
-                  </form>
+                  {cryptoStep === 1 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
+                        <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                          <i className="fab fa-bitcoin text-white text-xl"></i>
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-bold">Select Cryptocurrency</h2>
+                          <p className="text-muted-foreground">Choose which crypto you want to deposit</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {cryptoCoins.map((coin) => (
+                          <Card
+                            key={coin.id}
+                            className={`p-4 cursor-pointer transition-all hover:scale-105 ${
+                              selectedCrypto === coin.id ? "border-2 border-primary" : ""
+                            }`}
+                            onClick={() => {
+                              setSelectedCrypto(coin.id);
+                              setCryptoAddress(coin.address);
+                              setCryptoStep(2);
+                            }}
+                            data-testid={`card-crypto-${coin.id}`}
+                          >
+                            <div className="flex flex-col items-center space-y-2">
+                              <i className={`${coin.icon} ${coin.color} text-3xl`}></i>
+                              <span className="font-semibold text-sm text-center">{coin.name}</span>
+                              <span className="text-xs text-muted-foreground">{coin.id}</span>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {cryptoStep === 2 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setCryptoStep(1)}
+                          data-testid="button-back-to-coins"
+                        >
+                          <i className="fas fa-arrow-left"></i>
+                        </Button>
+                        <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                          <i className="fab fa-bitcoin text-white text-xl"></i>
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-bold">Enter Amount</h2>
+                          <p className="text-muted-foreground">How much USD would you like to deposit?</p>
+                        </div>
+                      </div>
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!cryptoAmount) {
+                          toast({
+                            title: "Error",
+                            description: "Please enter an amount",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setTimeRemaining(900);
+                        setCryptoStep(3);
+                      }} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="crypto-amount">Amount (USD)</Label>
+                          <Input
+                            id="crypto-amount"
+                            type="number"
+                            step="0.01"
+                            placeholder="Enter amount"
+                            value={cryptoAmount}
+                            onChange={(e) => setCryptoAmount(e.target.value)}
+                            data-testid="input-crypto-amount"
+                          />
+                        </div>
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          size="lg"
+                          data-testid="button-continue-to-payment"
+                        >
+                          Continue to Payment
+                        </Button>
+                      </form>
+                    </>
+                  )}
+
+                  {cryptoStep === 3 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setCryptoStep(2)}
+                          data-testid="button-back-to-amount"
+                        >
+                          <i className="fas fa-arrow-left"></i>
+                        </Button>
+                        <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                          <i className="fab fa-bitcoin text-white text-xl"></i>
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-bold">Send Payment</h2>
+                          <p className="text-muted-foreground">Transfer ${cryptoAmount} worth of {selectedCrypto}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <i className="fas fa-clock text-yellow-500"></i>
+                            <span className="text-sm font-medium">Transaction Time Remaining:</span>
+                          </div>
+                          <span className="text-lg font-bold text-yellow-500" data-testid="text-timer">
+                            {formatTime(timeRemaining)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="flex justify-center">
+                          <div className="bg-white p-4 rounded-lg">
+                            <div className="w-48 h-48 bg-gray-200 flex items-center justify-center">
+                              <i className="fas fa-qrcode text-gray-400 text-6xl"></i>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Deposit Address</Label>
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              value={cryptoAddress}
+                              readOnly
+                              className="font-mono text-sm"
+                              data-testid="input-crypto-address-display"
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                navigator.clipboard.writeText(cryptoAddress);
+                                toast({
+                                  title: "Copied!",
+                                  description: "Address copied to clipboard",
+                                });
+                              }}
+                              data-testid="button-copy-address"
+                            >
+                              <i className="fas fa-copy"></i>
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                          <p className="text-sm text-blue-400">
+                            <i className="fas fa-info-circle mr-2"></i>
+                            Send exactly ${cryptoAmount} USD worth of {selectedCrypto} to the address above. 
+                            Your deposit will be credited after admin approval.
+                          </p>
+                        </div>
+
+                        <Button
+                          onClick={() => {
+                            cryptoDepositMutation.mutate({ 
+                              amount: cryptoAmount, 
+                              cryptoAddress: `${selectedCrypto}:${cryptoAddress}` 
+                            });
+                          }}
+                          className="w-full"
+                          size="lg"
+                          disabled={cryptoDepositMutation.isPending}
+                          data-testid="button-submit-crypto"
+                        >
+                          {cryptoDepositMutation.isPending ? "Processing..." : "I've Sent the Payment"}
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </Card>
               )}
 
