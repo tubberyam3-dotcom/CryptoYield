@@ -93,7 +93,7 @@ export default function RewardsPage() {
             </p>
           </div>
 
-          <div className="grid gap-3 md:gap-6 md:grid-cols-3 mb-4 md:mb-8">
+          <div className="grid grid-cols-2 gap-3 md:gap-6 md:grid-cols-3 mb-4 md:mb-8">
             <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800">
               <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
                 <CardTitle className="text-xs md:text-sm font-medium text-amber-900 dark:text-amber-100 flex items-center gap-1.5 md:gap-2">
