@@ -83,83 +83,83 @@ export default function RewardsPage() {
       <TopBar title="Rewards" onMenuClick={() => setSidebarOpen(true)} />
       
       <main className="lg:ml-64 pt-16">
-        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="heading-rewards">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+          <div className="mb-4 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1 md:mb-2" data-testid="heading-rewards">
               Rewards
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground">
               Track your daily rewards and redeem them for cash
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3 mb-8">
+          <div className="grid gap-3 md:gap-6 md:grid-cols-3 mb-4 md:mb-8">
             <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100 flex items-center gap-2">
-                  <Gift className="h-4 w-4" />
+              <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium text-amber-900 dark:text-amber-100 flex items-center gap-1.5 md:gap-2">
+                  <Gift className="h-3 w-3 md:h-4 md:w-4" />
                   Pending Rewards
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-amber-950 dark:text-amber-50" data-testid="text-pending-amount">
+              <CardContent className="p-3 md:p-6 pt-0">
+                <div className="text-2xl md:text-3xl font-bold text-amber-950 dark:text-amber-50" data-testid="text-pending-amount">
                   ${pendingAmount.toFixed(2)}
                 </div>
-                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5 md:mt-1">
                   Ready to redeem
                 </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
+              <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                  <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
                   Total Claimed
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold" data-testid="text-total-claimed">
+              <CardContent className="p-3 md:p-6 pt-0">
+                <div className="text-2xl md:text-3xl font-bold" data-testid="text-total-claimed">
                   ${parseFloat(stats.totalClaimed).toFixed(2)}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-0.5 md:mt-1">
                   Lifetime earnings
                 </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
+              <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                  <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4" />
                   Total Redeemed
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold" data-testid="text-total-redeemed">
+              <CardContent className="p-3 md:p-6 pt-0">
+                <div className="text-2xl md:text-3xl font-bold" data-testid="text-total-redeemed">
                   ${parseFloat(stats.totalRedeemed).toFixed(2)}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-0.5 md:mt-1">
                   Converted to cash
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          <Card className="mb-8">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+          <Card className="mb-4 md:mb-8">
+            <CardHeader className="p-3 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
                 <div>
-                  <CardTitle>Redeem Your Rewards</CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardTitle className="text-base md:text-lg">Redeem Your Rewards</CardTitle>
+                  <CardDescription className="mt-1 text-xs md:text-sm">
                     Convert your accumulated rewards to cash balance
                   </CardDescription>
                 </div>
                 <Button
                   onClick={handleRedeem}
                   disabled={!canRedeem || redeemMutation.isPending}
-                  size="lg"
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
+                  size="default"
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 w-full md:w-auto"
                   data-testid="button-redeem-rewards"
                 >
                   {redeemMutation.isPending ? (
@@ -179,51 +179,51 @@ export default function RewardsPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Reward History</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-3 md:p-6">
+              <CardTitle className="text-base md:text-lg">Reward History</CardTitle>
+              <CardDescription className="text-xs md:text-sm">
                 All your reward claims and redemptions
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 md:p-6">
               {bonuses.length === 0 ? (
-                <div className="text-center py-12" data-testid="empty-state">
-                  <Gift className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground">No bonus claims yet</p>
-                  <p className="text-sm text-muted-foreground mt-2">
+                <div className="text-center py-8 md:py-12" data-testid="empty-state">
+                  <Gift className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mx-auto mb-3 md:mb-4 opacity-50" />
+                  <p className="text-sm md:text-base text-muted-foreground">No bonus claims yet</p>
+                  <p className="text-xs md:text-sm text-muted-foreground mt-2">
                     Visit the dashboard to claim your first daily bonus
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 md:space-y-3">
                   {bonuses.map((bonus) => (
                     <div
                       key={bonus.id}
-                      className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                      className="flex items-center justify-between p-3 md:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                       data-testid={`bonus-item-${bonus.id}`}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-full ${
+                      <div className="flex items-center gap-2 md:gap-4">
+                        <div className={`p-1.5 md:p-2 rounded-full ${
                           bonus.status === 'redeemed' 
                             ? 'bg-green-100 dark:bg-green-900' 
                             : 'bg-amber-100 dark:bg-amber-900'
                         }`}>
                           {bonus.status === 'redeemed' ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-green-600 dark:text-green-400" />
                           ) : (
-                            <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                            <Clock className="h-4 w-4 md:h-5 md:w-5 text-amber-600 dark:text-amber-400" />
                           )}
                         </div>
                         <div>
-                          <div className="font-semibold" data-testid={`text-bonus-amount-${bonus.id}`}>
+                          <div className="text-sm md:text-base font-semibold" data-testid={`text-bonus-amount-${bonus.id}`}>
                             ${parseFloat(bonus.amount).toFixed(2)}
                           </div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <div className="text-xs md:text-sm text-muted-foreground flex items-center gap-1 md:gap-2">
                             <Calendar className="h-3 w-3" />
                             Claimed: {bonus.claimedAt ? format(new Date(bonus.claimedAt), 'MMM dd, yyyy') : 'Unknown'}
                           </div>
                           {bonus.redeemedAt && (
-                            <div className="text-xs text-muted-foreground mt-1">
+                            <div className="text-xs text-muted-foreground mt-0.5 md:mt-1">
                               Redeemed: {format(new Date(bonus.redeemedAt), 'MMM dd, yyyy')}
                             </div>
                           )}
@@ -231,6 +231,7 @@ export default function RewardsPage() {
                       </div>
                       <Badge
                         variant={bonus.status === 'redeemed' ? 'default' : 'secondary'}
+                        className="text-xs"
                         data-testid={`badge-status-${bonus.id}`}
                       >
                         {bonus.status === 'redeemed' ? 'Redeemed' : 'Pending'}
