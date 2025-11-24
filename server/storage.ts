@@ -16,6 +16,7 @@ import {
   xpClaims,
   systemSettings,
   deposits,
+  withdrawals,
   type User,
   type UpsertUser,
   type Portfolio,
@@ -48,6 +49,8 @@ import {
   type InsertSystemSetting,
   type Deposit,
   type InsertDeposit,
+  type Withdrawal,
+  type InsertWithdrawal,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
@@ -182,6 +185,14 @@ export interface IStorage {
   approveDeposit(depositId: string, adminId: string): Promise<Deposit>;
   rejectDeposit(depositId: string, adminId: string): Promise<Deposit>;
   getAllDeposits(): Promise<(Deposit & { user: { email: string; firstName: string; lastName: string } })[]>;
+  
+  // Withdrawal operations
+  createWithdrawal(withdrawal: InsertWithdrawal): Promise<Withdrawal>;
+  getUserWithdrawals(userId: string): Promise<Withdrawal[]>;
+  processWithdrawal(userId: string, amount: string, withdrawMethod: 'crypto' | 'bank_transfer', destinationAddress: string): Promise<Withdrawal>;
+  approveWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
+  rejectWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
+  getAllWithdrawals(): Promise<(Withdrawal & { user: { email: string; firstName: string; lastName: string } })[]>;
   
   // Analytics
   getDashboardStats(userId: string): Promise<{
@@ -1699,6 +1710,145 @@ export class DatabaseStorage implements IStorage {
       metadata: row.metadata,
       createdAt: row.createdAt,
       completedAt: row.completedAt,
+      user: {
+        email: row.userEmail || '',
+        firstName: row.userFirstName || '',
+        lastName: row.userLastName || '',
+      },
+    }));
+  }
+
+  // Withdrawal operations
+  async createWithdrawal(withdrawal: InsertWithdrawal): Promise<Withdrawal> {
+    const [newWithdrawal] = await db.insert(withdrawals).values(withdrawal).returning();
+    return newWithdrawal;
+  }
+
+  async getUserWithdrawals(userId: string): Promise<Withdrawal[]> {
+    return await db.select().from(withdrawals)
+      .where(eq(withdrawals.userId, userId))
+      .orderBy(desc(withdrawals.createdAt));
+  }
+
+  async processWithdrawal(
+    userId: string,
+    amount: string,
+    withdrawMethod: 'crypto' | 'bank_transfer',
+    destinationAddress: string
+  ): Promise<Withdrawal> {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0 || numericAmount > 1000000) {
+      throw new Error('Invalid withdrawal amount. Must be between $0.01 and $1,000,000');
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const userBalance = parseFloat(user.balance);
+    if (userBalance < numericAmount) {
+      throw new Error('Insufficient balance');
+    }
+
+    await db.update(users)
+      .set({ 
+        balance: sql`${users.balance} - ${amount}`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
+
+    const withdrawal = await this.createWithdrawal({
+      userId,
+      amount,
+      withdrawMethod,
+      destinationAddress,
+      status: 'pending',
+    });
+
+    return withdrawal;
+  }
+
+  async approveWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal> {
+    const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.id, withdrawalId));
+    
+    if (!withdrawal) {
+      throw new Error('Withdrawal not found');
+    }
+
+    if (withdrawal.status !== 'pending') {
+      throw new Error('Only pending withdrawals can be approved');
+    }
+
+    const [updated] = await db.update(withdrawals)
+      .set({
+        status: 'completed',
+        processedAt: new Date(),
+      })
+      .where(eq(withdrawals.id, withdrawalId))
+      .returning();
+
+    return updated;
+  }
+
+  async rejectWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal> {
+    const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.id, withdrawalId));
+    
+    if (!withdrawal) {
+      throw new Error('Withdrawal not found');
+    }
+
+    if (withdrawal.status !== 'pending') {
+      throw new Error('Only pending withdrawals can be rejected');
+    }
+
+    await db.update(users)
+      .set({ 
+        balance: sql`${users.balance} + ${withdrawal.amount}`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, withdrawal.userId));
+
+    const [updated] = await db.update(withdrawals)
+      .set({
+        status: 'rejected',
+        processedAt: new Date(),
+      })
+      .where(eq(withdrawals.id, withdrawalId))
+      .returning();
+
+    return updated;
+  }
+
+  async getAllWithdrawals(): Promise<(Withdrawal & { user: { email: string; firstName: string; lastName: string } })[]> {
+    const result = await db.select({
+      id: withdrawals.id,
+      userId: withdrawals.userId,
+      amount: withdrawals.amount,
+      withdrawMethod: withdrawals.withdrawMethod,
+      status: withdrawals.status,
+      destinationAddress: withdrawals.destinationAddress,
+      metadata: withdrawals.metadata,
+      createdAt: withdrawals.createdAt,
+      processedAt: withdrawals.processedAt,
+      userEmail: users.email,
+      userFirstName: users.firstName,
+      userLastName: users.lastName,
+    })
+    .from(withdrawals)
+    .leftJoin(users, eq(withdrawals.userId, users.id))
+    .orderBy(desc(withdrawals.createdAt));
+
+    return result.map(row => ({
+      id: row.id,
+      userId: row.userId,
+      amount: row.amount,
+      withdrawMethod: row.withdrawMethod,
+      status: row.status,
+      destinationAddress: row.destinationAddress,
+      metadata: row.metadata,
+      createdAt: row.createdAt,
+      processedAt: row.processedAt,
       user: {
         email: row.userEmail || '',
         firstName: row.userFirstName || '',

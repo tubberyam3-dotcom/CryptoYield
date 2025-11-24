@@ -243,6 +243,19 @@ export const deposits = pgTable("deposits", {
   completedAt: timestamp("completed_at"),
 });
 
+// Withdrawals table for tracking withdrawal transactions
+export const withdrawals = pgTable("withdrawals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
+  withdrawMethod: varchar("withdraw_method", { enum: ['crypto', 'bank_transfer'] }).notNull(),
+  status: varchar("status", { enum: ['pending', 'completed', 'rejected'] }).default('pending'),
+  destinationAddress: varchar("destination_address"), // Crypto address or bank account
+  metadata: jsonb("metadata"), // Additional data
+  createdAt: timestamp("created_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   portfolios: many(userPortfolios),
@@ -409,6 +422,12 @@ export const insertDepositSchema = createInsertSchema(deposits).omit({
   completedAt: true,
 });
 
+export const insertWithdrawalSchema = createInsertSchema(withdrawals).omit({
+  id: true,
+  createdAt: true,
+  processedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -445,6 +464,8 @@ export type SystemSetting = typeof systemSettings.$inferSelect;
 export type InsertSystemSetting = z.infer<typeof insertSystemSettingSchema>;
 export type Deposit = typeof deposits.$inferSelect;
 export type InsertDeposit = z.infer<typeof insertDepositSchema>;
+export type Withdrawal = typeof withdrawals.$inferSelect;
+export type InsertWithdrawal = z.infer<typeof insertWithdrawalSchema>;
 
 // Account type definition
 export type AccountType = "personal" | "business" | "joint";

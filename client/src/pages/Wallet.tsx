@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -6,11 +7,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { DepositDialog } from "@/components/wallet/DepositDialog";
-import { useQuery } from "@tanstack/react-query";
-import type { Deposit } from "@shared/schema";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { Deposit, Withdrawal } from "@shared/schema";
 
 const mockWalletAssets = [
   {
@@ -86,14 +91,62 @@ const mockTransactions = [
 
 export default function Wallet() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawMethod, setWithdrawMethod] = useState<'crypto' | 'bank_transfer'>('crypto');
+  const [destinationAddress, setDestinationAddress] = useState("");
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: deposits = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/deposits"],
     enabled: !!user,
   });
+
+  const { data: withdrawals = [] } = useQuery<Withdrawal[]>({
+    queryKey: ["/api/withdrawals"],
+    enabled: !!user,
+  });
+
+  const withdrawMutation = useMutation({
+    mutationFn: async (data: { amount: string; withdrawMethod: 'crypto' | 'bank_transfer'; destinationAddress: string }) => {
+      const res = await apiRequest("POST", "/api/withdrawals", data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Withdrawal Submitted",
+        description: data.message,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/withdrawals"] });
+      setWithdrawDialogOpen(false);
+      setWithdrawAmount("");
+      setDestinationAddress("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Withdrawal Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleWithdraw = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!withdrawAmount || !destinationAddress) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    withdrawMutation.mutate({ amount: withdrawAmount, withdrawMethod, destinationAddress });
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -159,20 +212,32 @@ export default function Wallet() {
                 </div>
               </div>
               
-              <Button 
-                onClick={() => setDepositDialogOpen(true)}
-                data-testid="button-deposit"
-                size="lg"
-              >
-                <i className="fas fa-plus mr-2"></i>
-                Deposit Funds
-              </Button>
+              <div className="flex space-x-3">
+                <Button 
+                  onClick={() => setLocation("/deposit")}
+                  data-testid="button-deposit"
+                  size="lg"
+                >
+                  <i className="fas fa-plus mr-2"></i>
+                  Deposit
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setWithdrawDialogOpen(true)}
+                  data-testid="button-withdraw"
+                  size="lg"
+                >
+                  <i className="fas fa-arrow-up mr-2"></i>
+                  Withdraw
+                </Button>
+              </div>
             </div>
           </Card>
 
           <Tabs defaultValue="deposits" className="space-y-6">
-            <TabsList className="grid grid-cols-2 w-full max-w-md">
-              <TabsTrigger value="deposits" data-testid="tab-deposits">Deposit History</TabsTrigger>
+            <TabsList className="grid grid-cols-3 w-full max-w-2xl">
+              <TabsTrigger value="deposits" data-testid="tab-deposits">Deposits</TabsTrigger>
+              <TabsTrigger value="withdrawals" data-testid="tab-withdrawals">Withdrawals</TabsTrigger>
               <TabsTrigger value="transactions" data-testid="tab-transactions">All Transactions</TabsTrigger>
             </TabsList>
             
@@ -225,6 +290,71 @@ export default function Wallet() {
                         <div className="text-right">
                           <p className="font-medium text-lg" data-testid={`text-deposit-amount-${deposit.id}`}>
                             ${parseFloat(deposit.amount).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="withdrawals" className="space-y-6">
+              <Card className="p-6" data-testid="card-withdrawal-history">
+                <h3 className="text-lg font-semibold mb-4">Withdrawal History</h3>
+                {withdrawals.length === 0 ? (
+                  <div className="text-center py-12">
+                    <i className="fas fa-arrow-up text-4xl text-muted-foreground mb-4"></i>
+                    <p className="text-muted-foreground">No withdrawals yet</p>
+                    <Button onClick={() => setWithdrawDialogOpen(true)} className="mt-4" data-testid="button-first-withdrawal">
+                      Make Your First Withdrawal
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {withdrawals.map((withdrawal) => (
+                      <div 
+                        key={withdrawal.id}
+                        className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                        data-testid={`withdrawal-${withdrawal.id}`}
+                      >
+                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                          <i className="fas fa-arrow-up text-orange-500"></i>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-medium capitalize" data-testid={`text-withdrawal-method-${withdrawal.id}`}>
+                              {withdrawal.withdrawMethod.replace('_', ' ')}
+                            </span>
+                            <Badge className={
+                              withdrawal.status === 'completed' ? 'bg-green-500/10 text-green-500' :
+                              withdrawal.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' :
+                              'bg-red-500/10 text-red-500'
+                            }>
+                              {withdrawal.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {withdrawal.createdAt && formatDate(withdrawal.createdAt.toString())}
+                          </p>
+                          {withdrawal.status === 'pending' && (
+                            <p className="text-xs text-yellow-500 mt-1">
+                              <i className="fas fa-clock mr-1"></i>
+                              Awaiting admin approval
+                            </p>
+                          )}
+                          {withdrawal.status === 'rejected' && (
+                            <p className="text-xs text-red-500 mt-1">
+                              <i className="fas fa-times-circle mr-1"></i>
+                              Withdrawal rejected - funds returned to balance
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="text-right">
+                          <p className="font-medium text-lg text-orange-500" data-testid={`text-withdrawal-amount-${withdrawal.id}`}>
+                            -${parseFloat(withdrawal.amount).toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -288,7 +418,73 @@ export default function Wallet() {
       </div>
       
       <MobileNav />
-      <DepositDialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen} />
+      
+      <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Withdraw Funds</DialogTitle>
+            <DialogDescription>
+              Request a withdrawal from your wallet
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleWithdraw} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="withdraw-amount">Amount (USD)</Label>
+              <Input
+                id="withdraw-amount"
+                type="number"
+                step="0.01"
+                placeholder="Enter amount"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                data-testid="input-withdraw-amount"
+              />
+              <p className="text-sm text-muted-foreground">
+                Available: ${user?.balance ? parseFloat(user.balance).toFixed(2) : '0.00'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="withdraw-method">Withdrawal Method</Label>
+              <Select value={withdrawMethod} onValueChange={(value: 'crypto' | 'bank_transfer') => setWithdrawMethod(value)}>
+                <SelectTrigger data-testid="select-withdraw-method">
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="crypto">Cryptocurrency</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="destination">
+                {withdrawMethod === 'crypto' ? 'Crypto Wallet Address' : 'Bank Account Number'}
+              </Label>
+              <Input
+                id="destination"
+                type="text"
+                placeholder={withdrawMethod === 'crypto' ? 'Enter wallet address' : 'Enter account number'}
+                value={destinationAddress}
+                onChange={(e) => setDestinationAddress(e.target.value)}
+                data-testid="input-destination"
+              />
+            </div>
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+              <p className="text-sm text-yellow-500">
+                <i className="fas fa-exclamation-triangle mr-2"></i>
+                Withdrawals require admin approval and may take 2-3 business days to process.
+              </p>
+            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={withdrawMutation.isPending}
+              data-testid="button-submit-withdrawal"
+            >
+              {withdrawMutation.isPending ? "Processing..." : "Submit Withdrawal"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

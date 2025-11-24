@@ -1813,6 +1813,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Withdrawal Endpoints
+  app.post("/api/withdrawals", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const { amount, withdrawMethod, destinationAddress } = req.body;
+      if (!amount || !withdrawMethod || !destinationAddress) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      const withdrawal = await storage.processWithdrawal(userId, amount, withdrawMethod, destinationAddress);
+
+      res.json({
+        success: true,
+        withdrawal,
+        message: `Withdrawal request of $${parseFloat(amount).toFixed(2)} submitted successfully!`,
+      });
+    } catch (error: any) {
+      console.error("Error processing withdrawal:", error);
+      res.status(400).json({ message: error.message || "Failed to process withdrawal" });
+    }
+  });
+
+  app.get("/api/withdrawals", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const withdrawals = await storage.getUserWithdrawals(userId);
+      res.json(withdrawals);
+    } catch (error: any) {
+      console.error("Error fetching withdrawals:", error);
+      res.status(500).json({ message: "Failed to fetch withdrawals" });
+    }
+  });
+
   // Admin Coupon Management
   app.get("/api/admin/coupons", adminAuth, async (req, res) => {
     try {
