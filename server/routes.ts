@@ -1642,7 +1642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Coupon Management
-  app.get("/api/admin/coupons", enhancedAuth, requireAdmin, async (req, res) => {
+  app.get("/api/admin/coupons", adminAuth, async (req, res) => {
     try {
       const coupons = await storage.getAllCoupons();
       res.json(coupons);
@@ -1652,7 +1652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/coupons", enhancedAuth, requireAdmin, async (req, res) => {
+  app.post("/api/admin/coupons", adminAuth, async (req, res) => {
     try {
       const coupon = await storage.createCoupon(req.body);
       res.json(coupon);
@@ -1662,7 +1662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/coupons/:id", enhancedAuth, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/coupons/:id", adminAuth, async (req, res) => {
     try {
       const coupon = await storage.updateCoupon(req.params.id, req.body);
       res.json(coupon);
@@ -1672,7 +1672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/coupons/:id", enhancedAuth, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/coupons/:id", adminAuth, async (req, res) => {
     try {
       await storage.deleteCoupon(req.params.id);
       res.json({ success: true });
@@ -1683,7 +1683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Settings Management
-  app.get("/api/admin/settings", enhancedAuth, requireAdmin, async (req, res) => {
+  app.get("/api/admin/settings", adminAuth, async (req, res) => {
     try {
       const settings = await storage.getAllSettings();
       res.json(settings);
@@ -1693,7 +1693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/settings/:key", enhancedAuth, requireAdmin, async (req, res) => {
+  app.get("/api/admin/settings/:key", adminAuth, async (req, res) => {
     try {
       const setting = await storage.getSetting(req.params.key);
       if (!setting) {
@@ -1706,7 +1706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/settings", enhancedAuth, requireAdmin, async (req, res) => {
+  app.post("/api/admin/settings", adminAuth, async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });

@@ -7,11 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Gift, TrendingUp, Calendar, CheckCircle2, Clock, Ticket } from "lucide-react";
+import { Gift, TrendingUp, Calendar, CheckCircle2, Clock, Ticket, Zap, ArrowRightLeft } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { DailyBonus } from "@shared/schema";
+import type { DailyBonus, User } from "@shared/schema";
 
 interface DailyBonusHistory {
   bonuses: DailyBonus[];
@@ -26,7 +26,12 @@ interface DailyBonusHistory {
 export default function RewardsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [couponCode, setCouponCode] = useState("");
+  const [xpToConvert, setXpToConvert] = useState("");
   const { toast } = useToast();
+
+  const { data: user } = useQuery<User>({
+    queryKey: ['/api/auth/user'],
+  });
 
   const { data: history, isLoading } = useQuery<DailyBonusHistory>({
     queryKey: ['/api/rewards/daily-history'],
@@ -83,6 +88,55 @@ export default function RewardsPage() {
     e.preventDefault();
     if (couponCode.trim()) {
       couponMutation.mutate(couponCode.trim());
+    }
+  };
+
+  const claimXpMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/xp/claim', 'POST', {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      toast({
+        title: "✨ XP Claimed!",
+        description: `+${data.xpAmount} XP added to your balance!`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to claim XP",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const convertXpMutation = useMutation({
+    mutationFn: async (xpAmount: number) => {
+      return await apiRequest('/api/xp/convert', 'POST', { xpAmount });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      toast({
+        title: "💰 XP Converted!",
+        description: `Converted to $${parseFloat(data.convertedAmount).toFixed(2)}!`,
+      });
+      setXpToConvert("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to convert XP",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleXpConvert = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseInt(xpToConvert);
+    if (amount && amount > 0) {
+      convertXpMutation.mutate(amount);
     }
   };
 
@@ -207,6 +261,81 @@ export default function RewardsPage() {
                 </Button>
               </div>
             </CardHeader>
+          </Card>
+
+          <Card className="mb-4 md:mb-8">
+            <CardHeader className="p-3 md:p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="h-5 w-5 text-yellow-500" />
+                <CardTitle className="text-base md:text-lg">Daily XP Rewards</CardTitle>
+              </div>
+              <CardDescription className="text-xs md:text-sm">
+                Claim 50 XP daily and convert them to cash (conversion rate set by admin)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-3 md:p-6 pt-0 space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Your XP Balance</p>
+                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-500" data-testid="text-xp-balance">
+                    {user?.xpBalance || 0} XP
+                  </p>
+                </div>
+                <Button
+                  onClick={() => claimXpMutation.mutate()}
+                  disabled={claimXpMutation.isPending}
+                  className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700"
+                  data-testid="button-claim-xp"
+                >
+                  {claimXpMutation.isPending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Claiming...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Claim 50 XP
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="border-t pt-4">
+                <p className="text-sm font-medium mb-3">Convert XP to Cash</p>
+                <form onSubmit={handleXpConvert} className="flex flex-col md:flex-row gap-3">
+                  <Input
+                    type="number"
+                    placeholder="Enter XP amount"
+                    value={xpToConvert}
+                    onChange={(e) => setXpToConvert(e.target.value)}
+                    min="1"
+                    max={user?.xpBalance || 0}
+                    className="flex-1"
+                    data-testid="input-xp-amount"
+                    disabled={convertXpMutation.isPending}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={!xpToConvert || parseInt(xpToConvert) <= 0 || convertXpMutation.isPending}
+                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 w-full md:w-auto"
+                    data-testid="button-convert-xp"
+                  >
+                    {convertXpMutation.isPending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Converting...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRightLeft className="h-4 w-4 mr-2" />
+                        Convert to Cash
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </div>
+            </CardContent>
           </Card>
 
           <Card className="mb-4 md:mb-8">
