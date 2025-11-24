@@ -186,6 +186,29 @@ export const dailyBonuses = pgTable("daily_bonuses", {
   redemptionBatchId: varchar("redemption_batch_id"), // Links multiple bonuses redeemed together
 });
 
+// Coupons table for promotional codes
+export const coupons = pgTable("coupons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code").unique().notNull(), // Coupon code (e.g., "WELCOME100")
+  description: text("description"), // Description of the coupon
+  rewardAmount: decimal("reward_amount", { precision: 18, scale: 8 }).notNull(), // Amount to credit
+  maxUses: integer("max_uses"), // Maximum total uses (null = unlimited)
+  currentUses: integer("current_uses").default(0), // Current number of uses
+  maxUsesPerUser: integer("max_uses_per_user").default(1), // Max uses per user
+  expiresAt: timestamp("expires_at"), // Expiration date (null = never expires)
+  isActive: boolean("is_active").default(true), // Can be deactivated
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Coupon redemptions tracking
+export const couponRedemptions = pgTable("coupon_redemptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  couponId: varchar("coupon_id").references(() => coupons.id).notNull(),
+  rewardAmount: decimal("reward_amount", { precision: 18, scale: 8 }).notNull(),
+  redeemedAt: timestamp("redeemed_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   portfolios: many(userPortfolios),
@@ -325,6 +348,17 @@ export const insertDailyBonusSchema = createInsertSchema(dailyBonuses).omit({
   claimedAt: true,
 });
 
+export const insertCouponSchema = createInsertSchema(coupons).omit({
+  id: true,
+  createdAt: true,
+  currentUses: true,
+});
+
+export const insertCouponRedemptionSchema = createInsertSchema(couponRedemptions).omit({
+  id: true,
+  redeemedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -351,6 +385,10 @@ export type UserJointAccount = typeof userJointAccounts.$inferSelect;
 export type InsertUserJointAccount = z.infer<typeof insertUserJointAccountSchema>;
 export type DailyBonus = typeof dailyBonuses.$inferSelect;
 export type InsertDailyBonus = z.infer<typeof insertDailyBonusSchema>;
+export type Coupon = typeof coupons.$inferSelect;
+export type InsertCoupon = z.infer<typeof insertCouponSchema>;
+export type CouponRedemption = typeof couponRedemptions.$inferSelect;
+export type InsertCouponRedemption = z.infer<typeof insertCouponRedemptionSchema>;
 
 // Account type definition
 export type AccountType = "personal" | "business" | "joint";

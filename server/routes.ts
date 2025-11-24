@@ -1530,6 +1530,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/rewards/redeem-coupon", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const { code } = req.body;
+      if (!code) {
+        return res.status(400).json({ message: "Coupon code is required" });
+      }
+
+      const result = await storage.redeemCoupon(userId, code);
+
+      res.json({
+        success: true,
+        ...result,
+        message: result.description,
+      });
+    } catch (error: any) {
+      console.error("Error redeeming coupon:", error);
+      
+      res.status(400).json({ 
+        message: error.message || "Failed to redeem coupon" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

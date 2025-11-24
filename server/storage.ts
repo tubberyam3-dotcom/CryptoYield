@@ -11,6 +11,8 @@ import {
   jointAccounts,
   userJointAccounts,
   dailyBonuses,
+  coupons,
+  couponRedemptions,
   type User,
   type UpsertUser,
   type Portfolio,
@@ -35,6 +37,8 @@ import {
   type InsertUserJointAccount,
   type DailyBonus,
   type InsertDailyBonus,
+  type Coupon,
+  type CouponRedemption,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
@@ -125,6 +129,15 @@ export interface IStorage {
     bonusCount: number;
     newBalance: string;
   }>;
+  
+  // Coupon operations
+  getCouponByCode(code: string): Promise<Coupon | undefined>;
+  redeemCoupon(userId: string, code: string): Promise<{
+    rewardAmount: string;
+    newBalance: string;
+    description: string;
+  }>;
+  getUserCouponRedemptions(userId: string): Promise<CouponRedemption[]>;
   
   // Analytics
   getDashboardStats(userId: string): Promise<{
@@ -1175,6 +1188,103 @@ export class DatabaseStorage implements IStorage {
         newBalance: row.balance || '0',
       };
     });
+  }
+
+  // Coupon operations
+  async getCouponByCode(code: string): Promise<Coupon | undefined> {
+    const [coupon] = await db.select().from(coupons).where(eq(coupons.code, code.toUpperCase()));
+    return coupon;
+  }
+
+  async redeemCoupon(userId: string, code: string): Promise<{
+    rewardAmount: string;
+    newBalance: string;
+    description: string;
+  }> {
+    return await db.transaction(async (tx) => {
+      // Get coupon
+      const [coupon] = await tx.select().from(coupons).where(eq(coupons.code, code.toUpperCase()));
+      
+      if (!coupon) {
+        throw new Error('Invalid coupon code');
+      }
+
+      // Validate coupon is active
+      if (!coupon.isActive) {
+        throw new Error('This coupon is no longer active');
+      }
+
+      // Check expiration
+      if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+        throw new Error('This coupon has expired');
+      }
+
+      // Check max uses
+      if (coupon.maxUses && coupon.currentUses >= coupon.maxUses) {
+        throw new Error('This coupon has reached its maximum number of uses');
+      }
+
+      // Check user's previous redemptions
+      const userRedemptions = await tx
+        .select()
+        .from(couponRedemptions)
+        .where(and(
+          eq(couponRedemptions.userId, userId),
+          eq(couponRedemptions.couponId, coupon.id)
+        ));
+
+      if (userRedemptions.length >= coupon.maxUsesPerUser) {
+        throw new Error('You have already used this coupon the maximum number of times');
+      }
+
+      // Get user
+      const [user] = await tx.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const rewardAmount = coupon.rewardAmount;
+      const currentBalance = parseFloat(user.balance || '0');
+      const newBalance = (currentBalance + parseFloat(rewardAmount)).toFixed(8);
+
+      // Update user balance
+      await tx
+        .update(users)
+        .set({ 
+          balance: newBalance,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      // Create redemption record
+      await tx.insert(couponRedemptions).values({
+        userId,
+        couponId: coupon.id,
+        rewardAmount,
+      });
+
+      // Increment coupon usage
+      await tx
+        .update(coupons)
+        .set({ 
+          currentUses: sql`${coupons.currentUses} + 1`
+        })
+        .where(eq(coupons.id, coupon.id));
+
+      return {
+        rewardAmount,
+        newBalance,
+        description: coupon.description || 'Coupon redeemed successfully',
+      };
+    });
+  }
+
+  async getUserCouponRedemptions(userId: string): Promise<CouponRedemption[]> {
+    return await db
+      .select()
+      .from(couponRedemptions)
+      .where(eq(couponRedemptions.userId, userId))
+      .orderBy(desc(couponRedemptions.redeemedAt));
   }
 }
 
