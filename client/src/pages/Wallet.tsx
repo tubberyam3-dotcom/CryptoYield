@@ -100,19 +100,15 @@ export default function Wallet() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  const { data: deposits = [], isError: depositsError } = useQuery<Deposit[]>({
+  const { data: deposits = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/deposits"],
     enabled: !!user,
   });
 
-  const { data: withdrawals = [], isError: withdrawalsError } = useQuery<Withdrawal[]>({
+  const { data: withdrawals = [] } = useQuery<Withdrawal[]>({
     queryKey: ["/api/withdrawals"],
     enabled: !!user,
   });
-
-  // Ensure arrays are never null
-  const safeDeposits = Array.isArray(deposits) ? deposits : [];
-  const safeWithdrawals = Array.isArray(withdrawals) ? withdrawals : [];
 
   const withdrawMutation = useMutation({
     mutationFn: async (data: { amount: string; withdrawMethod: 'crypto' | 'bank_transfer'; destinationAddress: string }) => {
@@ -252,14 +248,14 @@ export default function Wallet() {
               <Card className="p-6" data-testid="card-deposit-history">
                 <h3 className="text-lg font-semibold mb-4">Recent Deposits</h3>
                 
-                {safeDeposits.length === 0 ? (
+                {deposits.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <i className="fas fa-inbox text-4xl mb-4"></i>
                     <p>No deposits yet. Click "Deposit Funds" to get started!</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {safeDeposits.slice(0, 10).map((deposit) => (
+                    {deposits.slice(0, 10).map((deposit) => (
                       <div 
                         key={deposit.id}
                         className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
@@ -308,7 +304,7 @@ export default function Wallet() {
             <TabsContent value="withdrawals" className="space-y-6">
               <Card className="p-6" data-testid="card-withdrawal-history">
                 <h3 className="text-lg font-semibold mb-4">Withdrawal History</h3>
-                {safeWithdrawals.length === 0 ? (
+                {withdrawals.length === 0 ? (
                   <div className="text-center py-12">
                     <i className="fas fa-arrow-up text-4xl text-muted-foreground mb-4"></i>
                     <p className="text-muted-foreground">No withdrawals yet</p>
@@ -318,7 +314,7 @@ export default function Wallet() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {safeWithdrawals.map((withdrawal) => (
+                    {withdrawals.map((withdrawal) => (
                       <div 
                         key={withdrawal.id}
                         className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
