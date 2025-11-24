@@ -27,7 +27,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { href: "/challenges", icon: "fas fa-trophy", label: "Challenges" },
     { href: "/transactions", icon: "fas fa-history", label: "Transaction History" },
     { href: "/wallet", icon: "fas fa-wallet", label: "Wallet" },
-    { href: "/daily-bonus", icon: "fas fa-gift", label: "Daily Bonus" },
+    { href: "/rewards", icon: "fas fa-gift", label: "Rewards" },
     { href: "/settings", icon: "fas fa-cog", label: "Settings" },
   ];
 

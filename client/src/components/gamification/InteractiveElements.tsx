@@ -50,7 +50,7 @@ export function InteractiveElements() {
 
   return (
     <div className="space-y-3 md:space-y-6" data-testid="interactive-elements">
-      {/* Daily Bonus Card */}
+      {/* Rewards Card */}
       <Card className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10" />
         <CardHeader className="relative">
@@ -58,7 +58,7 @@ export function InteractiveElements() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Gift className="w-5 h-5 text-purple-500" />
-                Daily Bonus
+                Rewards
               </CardTitle>
               <CardDescription>
                 Streak: {todaysBonus.streak} days • Keep it going!
@@ -87,7 +87,7 @@ export function InteractiveElements() {
                     ? "bg-green-500 hover:bg-green-600"
                     : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                 } text-white`}
-                data-testid="claim-daily-bonus-btn"
+                data-testid="claim-rewards-btn"
               >
                 {dailyRewardClaimed ? (
                   <>

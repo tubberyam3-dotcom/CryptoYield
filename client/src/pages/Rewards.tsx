@@ -22,7 +22,7 @@ interface DailyBonusHistory {
   };
 }
 
-export default function DailyBonusPage() {
+export default function RewardsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { toast } = useToast();
 
@@ -45,7 +45,7 @@ export default function DailyBonusPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to redeem bonuses",
+        description: error.message || "Failed to redeem rewards",
         variant: "destructive",
       });
     },
@@ -80,16 +80,16 @@ export default function DailyBonusPage() {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <TopBar title="Daily Bonus" onMenuClick={() => setSidebarOpen(true)} />
+      <TopBar title="Rewards" onMenuClick={() => setSidebarOpen(true)} />
       
       <main className="lg:ml-64 pt-16">
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="heading-daily-bonus">
-              Daily Bonus Rewards
+            <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="heading-rewards">
+              Rewards
             </h1>
             <p className="text-muted-foreground">
-              Track your daily bonus claims and redeem them for cash
+              Track your daily rewards and redeem them for cash
             </p>
           </div>
 
@@ -98,7 +98,7 @@ export default function DailyBonusPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100 flex items-center gap-2">
                   <Gift className="h-4 w-4" />
-                  Pending Bonuses
+                  Pending Rewards
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -150,9 +150,9 @@ export default function DailyBonusPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Redeem Your Bonuses</CardTitle>
+                  <CardTitle>Redeem Your Rewards</CardTitle>
                   <CardDescription className="mt-1">
-                    Convert your accumulated daily bonuses to cash balance
+                    Convert your accumulated rewards to cash balance
                   </CardDescription>
                 </div>
                 <Button
@@ -160,7 +160,7 @@ export default function DailyBonusPage() {
                   disabled={!canRedeem || redeemMutation.isPending}
                   size="lg"
                   className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
-                  data-testid="button-redeem-bonuses"
+                  data-testid="button-redeem-rewards"
                 >
                   {redeemMutation.isPending ? (
                     <>
@@ -180,9 +180,9 @@ export default function DailyBonusPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Bonus History</CardTitle>
+              <CardTitle>Reward History</CardTitle>
               <CardDescription>
-                All your daily bonus claims and redemptions
+                All your reward claims and redemptions
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -11,7 +11,7 @@ export function FloatingClaimButton() {
   });
 
   const handleClick = () => {
-    setLocation("/daily-bonus");
+    setLocation("/rewards");
   };
 
   if (!rewardStatus?.canClaim) {

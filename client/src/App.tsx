@@ -16,7 +16,7 @@ import Challenges from "@/pages/Challenges";
 import TransactionHistory from "@/pages/TransactionHistory";
 import Wallet from "@/pages/Wallet";
 import Settings from "@/pages/Settings";
-import DailyBonus from "@/pages/DailyBonus";
+import Rewards from "@/pages/Rewards";
 import Admin from "@/pages/Admin";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -84,7 +84,7 @@ function Router() {
           <Route path="/challenges" component={Challenges} />
           <Route path="/transactions" component={TransactionHistory} />
           <Route path="/wallet" component={Wallet} />
-          <Route path="/daily-bonus" component={DailyBonus} />
+          <Route path="/rewards" component={Rewards} />
           <Route path="/settings" component={Settings} />
         </>
       )}
