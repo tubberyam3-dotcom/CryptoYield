@@ -168,7 +168,7 @@ export default function RewardsPage() {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <TopBar title="Rewards" onMenuClick={() => setSidebarOpen(true)} />
+      <TopBar title="Rewards" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
       
       <main className="lg:ml-64 pt-16">
         <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto">

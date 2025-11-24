@@ -165,7 +165,7 @@ export default function StockDetail() {
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
         <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
-          <TopBar title="Stock Details" onMenuClick={() => setSidebarOpen(true)} />
+          <TopBar title="Stock Details" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
           
           <main className="flex-1 p-6 flex items-center justify-center">
             <div className="text-center">
@@ -186,7 +186,7 @@ export default function StockDetail() {
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
         <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
-          <TopBar title="Stock Details" onMenuClick={() => setSidebarOpen(true)} />
+          <TopBar title="Stock Details" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
           
           <main className="flex-1 p-6 flex items-center justify-center">
             <Card className="p-8 text-center">

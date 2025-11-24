@@ -27,7 +27,7 @@ export default function Challenges() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="ml-0 lg:ml-64 min-h-screen">
-        <TopBar title="Community Challenges" onMenuClick={() => setSidebarOpen(true)} />
+        <TopBar title="Community Challenges" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-3 sm:p-6 pb-24 lg:pb-6">
           <EnhancedChallenges />

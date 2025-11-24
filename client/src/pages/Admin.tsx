@@ -168,7 +168,7 @@ export default function Admin() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="ml-0 lg:ml-64 min-h-screen">
-        <TopBar title="Admin Panel" onMenuClick={() => setSidebarOpen(true)} />
+        <TopBar title="Admin Panel" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-3 sm:p-6 space-y-4 sm:space-y-6 pb-24 lg:pb-6">
           

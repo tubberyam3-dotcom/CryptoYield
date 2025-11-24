@@ -88,7 +88,7 @@ export default function Settings() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="ml-0 lg:ml-64 min-h-screen">
-        <TopBar title="Settings" onMenuClick={() => setSidebarOpen(true)} />
+        <TopBar title="Settings" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-6 pb-20 lg:pb-6">
           <div className="max-w-4xl mx-auto">

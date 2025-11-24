@@ -225,7 +225,7 @@ export default function TransactionHistory() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="ml-0 lg:ml-64 min-h-screen">
-        <TopBar title="Transaction History" onMenuClick={() => setSidebarOpen(true)} />
+        <TopBar title="Transaction History" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-6 space-y-6">
           {/* Header & Quick Stats */}

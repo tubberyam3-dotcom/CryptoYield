@@ -7,9 +7,10 @@ import refluxLogoLight from "@assets/Reflux(2)_1763816395638.png";
 interface TopBarProps {
   title: string;
   onMenuClick: () => void;
+  sidebarOpen?: boolean;
 }
 
-export function TopBar({ title, onMenuClick }: TopBarProps) {
+export function TopBar({ title, onMenuClick, sidebarOpen = false }: TopBarProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, isDemoMode } = useAuth();
 
@@ -31,12 +32,14 @@ export function TopBar({ title, onMenuClick }: TopBarProps) {
           <i className="fas fa-bars text-sm sm:text-lg"></i>
         </button>
         
-        {/* Logo on Mobile */}
-        <img 
-          src={theme === 'dark' ? refluxLogoLight : refluxLogoDark} 
-          alt="Reflux Capital" 
-          className="h-8 sm:h-10 md:h-11 w-auto object-contain lg:hidden flex-shrink-0"
-        />
+        {/* Logo on Mobile - Hide when sidebar is open */}
+        {!sidebarOpen && (
+          <img 
+            src={theme === 'dark' ? refluxLogoLight : refluxLogoDark} 
+            alt="Reflux Capital" 
+            className="h-8 sm:h-10 md:h-11 w-auto object-contain lg:hidden flex-shrink-0"
+          />
+        )}
         
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <h1 className="text-lg sm:text-2xl font-bold truncate hidden lg:block" data-testid="text-page-title">{title}</h1>

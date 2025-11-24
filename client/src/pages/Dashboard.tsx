@@ -50,7 +50,7 @@ export default function Dashboard() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="ml-0 lg:ml-64 min-h-screen">
-        <TopBar title="Dashboard" onMenuClick={() => setSidebarOpen(true)} />
+        <TopBar title="Dashboard" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-4 md:p-8 space-y-6 md:space-y-8 pb-24 lg:pb-8">
           <BalanceSummary />

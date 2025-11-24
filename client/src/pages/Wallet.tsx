@@ -157,7 +157,7 @@ export default function Wallet() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="ml-0 lg:ml-64 min-h-screen">
-        <TopBar title="Wallet" onMenuClick={() => setSidebarOpen(true)} />
+        <TopBar title="Wallet" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
           
