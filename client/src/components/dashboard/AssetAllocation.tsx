@@ -10,16 +10,16 @@ const allocations = [
 
 export function AssetAllocation() {
   return (
-    <Card className="p-6 card-hover animate-fade-in-scale bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950 border-blue-200 dark:border-blue-800" data-testid="card-asset-allocation">
-      <h3 className="text-lg font-semibold mb-4">Portfolio Allocation</h3>
-      <div className="space-y-4">
+    <Card className="p-4 md:p-6 card-hover animate-fade-in-scale bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950 border-blue-200 dark:border-blue-800" data-testid="card-asset-allocation">
+      <h3 className="text-lg font-semibold mb-2 md:mb-4">Portfolio Allocation</h3>
+      <div className="space-y-1.5 md:space-y-4">
         {allocations.map((asset, index) => (
           <motion.div 
             key={asset.name}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4, delay: index * 0.1 }}
-            className="flex items-center justify-between p-3 rounded-lg hover:bg-white/50 dark:hover:bg-black/20 card-transition" 
+            className="flex items-center justify-between p-2 md:p-3 rounded-lg hover:bg-white/50 dark:hover:bg-black/20 card-transition" 
             data-testid={`allocation-${index}`}
           >
             <div className="flex items-center space-x-3">
