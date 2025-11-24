@@ -240,28 +240,28 @@ export default function Deposit() {
           </div>
 
           {!selectedMethod ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {depositMethods.map((method) => (
                 <Card
                   key={method.id}
-                  className="p-6 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+                  className="p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
                   onClick={() => setSelectedMethod(method.id)}
                   data-testid={`card-method-${method.id}`}
                 >
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className={`w-16 h-16 ${method.iconBg} rounded-lg flex items-center justify-center`}>
-                      <i className={`${method.icon} text-white text-2xl`}></i>
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className={`w-12 h-12 ${method.iconBg} rounded-lg flex items-center justify-center`}>
+                      <i className={`${method.icon} text-white text-xl`}></i>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold">{method.name}</h3>
-                      <p className="text-sm text-muted-foreground">{method.description}</p>
+                      <h3 className="text-lg font-semibold">{method.name}</h3>
+                      <p className="text-xs text-muted-foreground">{method.description}</p>
                     </div>
-                    <i className="fas fa-chevron-right text-muted-foreground"></i>
+                    <i className="fas fa-chevron-right text-muted-foreground text-sm"></i>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {method.features.map((feature, index) => (
-                      <div key={index} className="flex items-center text-sm">
-                        <i className="fas fa-check text-green-500 mr-2"></i>
+                      <div key={index} className="flex items-center text-xs">
+                        <i className="fas fa-check text-green-500 mr-2 text-xs"></i>
                         <span>{feature}</span>
                       </div>
                     ))}
