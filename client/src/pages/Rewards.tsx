@@ -39,7 +39,7 @@ export default function RewardsPage() {
 
   const redeemMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/rewards/redeem', 'POST', {});
+      return await apiRequest('POST', '/api/rewards/redeem', {});
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/rewards/daily-history'] });
@@ -60,7 +60,7 @@ export default function RewardsPage() {
 
   const couponMutation = useMutation({
     mutationFn: async (code: string) => {
-      return await apiRequest('/api/rewards/redeem-coupon', 'POST', { code });
+      return await apiRequest('POST', '/api/rewards/redeem-coupon', { code });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
@@ -93,10 +93,11 @@ export default function RewardsPage() {
 
   const claimXpMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/xp/claim', 'POST', {});
+      return await apiRequest('POST', '/api/xp/claim', {});
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/xp/history'] });
       toast({
         title: "✨ XP Claimed!",
         description: `+${data.xpAmount} XP added to your balance!`,
@@ -113,10 +114,12 @@ export default function RewardsPage() {
 
   const convertXpMutation = useMutation({
     mutationFn: async (xpAmount: number) => {
-      return await apiRequest('/api/xp/convert', 'POST', { xpAmount });
+      return await apiRequest('POST', '/api/xp/convert', { xpAmount });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/xp/history'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settings'] });
       toast({
         title: "💰 XP Converted!",
         description: `Converted to $${parseFloat(data.convertedAmount).toFixed(2)}!`,

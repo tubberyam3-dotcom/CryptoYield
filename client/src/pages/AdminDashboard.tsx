@@ -15,6 +15,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { ChallengeManagement } from "@/components/admin/ChallengeManagement";
+import { CouponManagement } from "@/components/admin/CouponManagement";
+import { SystemSettings } from "@/components/admin/SystemSettings";
 import type { Portfolio, StakingPlan, CommunityChallenge, User } from "@shared/schema";
 
 interface AdminStats {
@@ -359,7 +361,7 @@ export default function AdminDashboard() {
 
         {/* Admin Management Tabs */}
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid grid-cols-3 lg:grid-cols-7 w-full h-auto">
+          <TabsList className="grid grid-cols-3 lg:grid-cols-9 w-full h-auto">
             <TabsTrigger value="analytics" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
               <i className="fas fa-chart-bar mr-1 sm:mr-2"></i>
               <span className="hidden sm:inline">Analytics</span>
@@ -394,6 +396,16 @@ export default function AdminDashboard() {
               <i className="fas fa-trophy mr-1 sm:mr-2"></i>
               <span className="hidden sm:inline">Challenges</span>
               <span className="sm:hidden">🏆</span>
+            </TabsTrigger>
+            <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <i className="fas fa-ticket mr-1 sm:mr-2"></i>
+              <span className="hidden sm:inline">Coupons</span>
+              <span className="sm:hidden">🎟️</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <i className="fas fa-cog mr-1 sm:mr-2"></i>
+              <span className="hidden sm:inline">Settings</span>
+              <span className="sm:hidden">⚙️</span>
             </TabsTrigger>
           </TabsList>
 
@@ -895,6 +907,16 @@ export default function AdminDashboard() {
                 </Card>
               )) || []}
             </div>
+          </TabsContent>
+
+          {/* Coupons Management Tab */}
+          <TabsContent value="coupons" className="space-y-6">
+            <CouponManagement />
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <SystemSettings />
           </TabsContent>
         </Tabs>
       </div>
