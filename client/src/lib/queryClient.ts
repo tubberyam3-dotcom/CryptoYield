@@ -5,14 +5,16 @@ async function throwIfResNotOk(res: Response) {
     const text = (await res.text()) || res.statusText;
     
     // Try to parse JSON error message
+    let message = text;
     try {
       const errorData = JSON.parse(text);
-      const message = errorData.message || errorData.error || text;
-      throw new Error(message);
+      message = errorData.message || errorData.error || text;
     } catch {
-      // If not JSON, throw the text as is
-      throw new Error(text);
+      // If not JSON, use the text as is
+      message = text;
     }
+    
+    throw new Error(message);
   }
 }
 
