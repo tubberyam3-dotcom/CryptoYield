@@ -1777,7 +1777,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (withdrawal.status !== 'pending') {
-      throw new Error('Only pending withdrawals can be approved');
+      throw new Error('Only pending withdrawals can be approved. Current status: ' + withdrawal.status);
     }
 
     const [updated] = await db.update(withdrawals)
@@ -1785,8 +1785,15 @@ export class DatabaseStorage implements IStorage {
         status: 'completed',
         processedAt: new Date(),
       })
-      .where(eq(withdrawals.id, withdrawalId))
+      .where(and(
+        eq(withdrawals.id, withdrawalId),
+        eq(withdrawals.status, 'pending')
+      ))
       .returning();
+
+    if (!updated) {
+      throw new Error('Failed to approve withdrawal - status may have changed');
+    }
 
     return updated;
   }

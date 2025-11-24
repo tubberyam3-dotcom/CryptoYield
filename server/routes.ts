@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -18,9 +19,11 @@ import {
   insertChallengeMemberSchema,
   insertJointAccountSchema,
   insertUserJointAccountSchema,
+  insertWithdrawalSchema,
   users,
   userStocks,
 } from "@shared/schema";
+import { fromError } from "zod-validation-error";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -1814,7 +1817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Withdrawal Endpoints
-  app.post("/api/withdrawals", enhancedAuth, async (req, res) => {
+  app.post("/api/withdrawals", express.json(), enhancedAuth, async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -1825,7 +1828,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User ID not found" });
       }
 
-      const { amount, withdrawMethod, destinationAddress } = req.body;
+      const validationResult = insertWithdrawalSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid withdrawal data",
+          errors: fromError(validationResult.error).toString()
+        });
+      }
+
+      const { amount, withdrawMethod, destinationAddress } = validationResult.data;
       if (!amount || !withdrawMethod || !destinationAddress) {
         return res.status(400).json({ message: "All fields are required" });
       }
