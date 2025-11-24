@@ -231,9 +231,11 @@ export class DatabaseStorage implements IStorage {
         taxId: null,
         balance: '10000',
         accumulatedDailyBonus: '0',
+        xpBalance: 0,
         role: 'admin',
         kycStatus: 'approved',
         lastDailyRewardClaim: null,
+        lastXpClaim: null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -430,9 +432,11 @@ export class DatabaseStorage implements IStorage {
           taxId: null,
           balance: '10000',
           accumulatedDailyBonus: '0',
+          xpBalance: 0,
           role: 'admin',
           kycStatus: 'approved',
           lastDailyRewardClaim: null,
+          lastXpClaim: null,
           createdAt: new Date('2024-01-15'),
           updatedAt: new Date()
         },
@@ -450,9 +454,11 @@ export class DatabaseStorage implements IStorage {
           taxId: null,
           balance: '10000',
           accumulatedDailyBonus: '0',
+          xpBalance: 0,
           role: 'user',
           kycStatus: 'approved',
           lastDailyRewardClaim: null,
+          lastXpClaim: null,
           createdAt: new Date('2024-02-20'),
           updatedAt: new Date()
         },
@@ -470,9 +476,11 @@ export class DatabaseStorage implements IStorage {
           taxId: null,
           balance: '10000',
           accumulatedDailyBonus: '0',
+          xpBalance: 0,
           role: 'user',
           kycStatus: 'pending',
           lastDailyRewardClaim: null,
+          lastXpClaim: null,
           createdAt: new Date('2024-03-10'),
           updatedAt: new Date()
         },
@@ -490,9 +498,11 @@ export class DatabaseStorage implements IStorage {
           taxId: null,
           balance: '10000',
           accumulatedDailyBonus: '0',
+          xpBalance: 0,
           role: 'user',
           kycStatus: 'rejected',
           lastDailyRewardClaim: null,
+          lastXpClaim: null,
           createdAt: new Date('2024-03-25'),
           updatedAt: new Date()
         }
@@ -1160,13 +1170,9 @@ export class DatabaseStorage implements IStorage {
       const redemptionBatchId = `redemption-${Date.now()}-${userId}`;
       
       const result = await tx.execute<{
-        id: string;
-        user_id: string;
-        amount: string;
-        claimed_at: string;
-        redeemed_at: string | null;
-        redemption_batch_id: string | null;
-        status: string;
+        balance: string;
+        redeemed_amount: string;
+        bonus_count: string;
       }>(
         sql`
           WITH locked_bonuses AS (
@@ -1249,7 +1255,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Check max uses
-      if (coupon.maxUses && coupon.currentUses >= coupon.maxUses) {
+      if (coupon.maxUses && (coupon.currentUses || 0) >= coupon.maxUses) {
         throw new Error('This coupon has reached its maximum number of uses');
       }
 
@@ -1262,7 +1268,7 @@ export class DatabaseStorage implements IStorage {
           eq(couponRedemptions.couponId, coupon.id)
         ));
 
-      if (userRedemptions.length >= coupon.maxUsesPerUser) {
+      if (userRedemptions.length >= (coupon.maxUsesPerUser || 1)) {
         throw new Error('You have already used this coupon the maximum number of times');
       }
 

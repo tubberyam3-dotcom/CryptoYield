@@ -1562,6 +1562,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // XP Endpoints
+  app.post("/api/xp/claim", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const result = await storage.claimDailyXp(userId);
+
+      res.json({
+        success: true,
+        ...result,
+        message: `Claimed ${result.xpAmount} XP!`,
+      });
+    } catch (error: any) {
+      console.error("Error claiming XP:", error);
+      
+      res.status(400).json({ 
+        message: error.message || "Failed to claim XP" 
+      });
+    }
+  });
+
+  app.post("/api/xp/convert", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const { xpAmount } = req.body;
+      if (!xpAmount || xpAmount <= 0) {
+        return res.status(400).json({ message: "Valid XP amount is required" });
+      }
+
+      const result = await storage.convertXpToCash(userId, xpAmount);
+
+      res.json({
+        success: true,
+        ...result,
+        message: `Converted ${xpAmount} XP to $${parseFloat(result.convertedAmount).toFixed(2)}!`,
+      });
+    } catch (error: any) {
+      console.error("Error converting XP:", error);
+      
+      res.status(400).json({ 
+        message: error.message || "Failed to convert XP" 
+      });
+    }
+  });
+
+  app.get("/api/xp/history", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const claims = await storage.getUserXpClaims(userId);
+      res.json(claims);
+    } catch (error: any) {
+      console.error("Error fetching XP history:", error);
+      res.status(500).json({ message: "Failed to fetch XP history" });
+    }
+  });
+
+  // Admin Coupon Management
+  app.get("/api/admin/coupons", enhancedAuth, requireAdmin, async (req, res) => {
+    try {
+      const coupons = await storage.getAllCoupons();
+      res.json(coupons);
+    } catch (error: any) {
+      console.error("Error fetching coupons:", error);
+      res.status(500).json({ message: "Failed to fetch coupons" });
+    }
+  });
+
+  app.post("/api/admin/coupons", enhancedAuth, requireAdmin, async (req, res) => {
+    try {
+      const coupon = await storage.createCoupon(req.body);
+      res.json(coupon);
+    } catch (error: any) {
+      console.error("Error creating coupon:", error);
+      res.status(500).json({ message: error.message || "Failed to create coupon" });
+    }
+  });
+
+  app.patch("/api/admin/coupons/:id", enhancedAuth, requireAdmin, async (req, res) => {
+    try {
+      const coupon = await storage.updateCoupon(req.params.id, req.body);
+      res.json(coupon);
+    } catch (error: any) {
+      console.error("Error updating coupon:", error);
+      res.status(500).json({ message: error.message || "Failed to update coupon" });
+    }
+  });
+
+  app.delete("/api/admin/coupons/:id", enhancedAuth, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteCoupon(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting coupon:", error);
+      res.status(500).json({ message: "Failed to delete coupon" });
+    }
+  });
+
+  // Admin Settings Management
+  app.get("/api/admin/settings", enhancedAuth, requireAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getAllSettings();
+      res.json(settings);
+    } catch (error: any) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.get("/api/admin/settings/:key", enhancedAuth, requireAdmin, async (req, res) => {
+    try {
+      const setting = await storage.getSetting(req.params.key);
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      res.json(setting);
+    } catch (error: any) {
+      console.error("Error fetching setting:", error);
+      res.status(500).json({ message: "Failed to fetch setting" });
+    }
+  });
+
+  app.post("/api/admin/settings", enhancedAuth, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      const setting = await storage.setSetting({
+        ...req.body,
+        updatedBy: userId,
+      });
+      res.json(setting);
+    } catch (error: any) {
+      console.error("Error saving setting:", error);
+      res.status(500).json({ message: error.message || "Failed to save setting" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
