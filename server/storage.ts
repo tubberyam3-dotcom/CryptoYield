@@ -13,6 +13,8 @@ import {
   dailyBonuses,
   coupons,
   couponRedemptions,
+  xpClaims,
+  systemSettings,
   type User,
   type UpsertUser,
   type Portfolio,
@@ -38,7 +40,11 @@ import {
   type DailyBonus,
   type InsertDailyBonus,
   type Coupon,
+  type InsertCoupon,
   type CouponRedemption,
+  type XpClaim,
+  type SystemSetting,
+  type InsertSystemSetting,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
@@ -138,6 +144,29 @@ export interface IStorage {
     description: string;
   }>;
   getUserCouponRedemptions(userId: string): Promise<CouponRedemption[]>;
+  
+  // Admin Coupon Management
+  getAllCoupons(): Promise<Coupon[]>;
+  createCoupon(coupon: InsertCoupon): Promise<Coupon>;
+  updateCoupon(id: string, coupon: Partial<InsertCoupon>): Promise<Coupon>;
+  deleteCoupon(id: string): Promise<void>;
+  
+  // XP operations
+  claimDailyXp(userId: string): Promise<{
+    xpAmount: number;
+    newXpBalance: number;
+  }>;
+  convertXpToCash(userId: string, xpAmount: number): Promise<{
+    convertedAmount: string;
+    newBalance: string;
+    newXpBalance: number;
+  }>;
+  getUserXpClaims(userId: string): Promise<XpClaim[]>;
+  
+  // System Settings
+  getSetting(key: string): Promise<SystemSetting | undefined>;
+  setSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
+  getAllSettings(): Promise<SystemSetting[]>;
   
   // Analytics
   getDashboardStats(userId: string): Promise<{
@@ -1285,6 +1314,177 @@ export class DatabaseStorage implements IStorage {
       .from(couponRedemptions)
       .where(eq(couponRedemptions.userId, userId))
       .orderBy(desc(couponRedemptions.redeemedAt));
+  }
+
+  // Admin Coupon Management
+  async getAllCoupons(): Promise<Coupon[]> {
+    return await db
+      .select()
+      .from(coupons)
+      .orderBy(desc(coupons.createdAt));
+  }
+
+  async createCoupon(coupon: InsertCoupon): Promise<Coupon> {
+    const [newCoupon] = await db.insert(coupons).values({
+      ...coupon,
+      code: coupon.code.toUpperCase(),
+    }).returning();
+    return newCoupon;
+  }
+
+  async updateCoupon(id: string, coupon: Partial<InsertCoupon>): Promise<Coupon> {
+    const updateData = { ...coupon };
+    if (updateData.code) {
+      updateData.code = updateData.code.toUpperCase();
+    }
+    
+    const [updated] = await db
+      .update(coupons)
+      .set(updateData)
+      .where(eq(coupons.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error('Coupon not found');
+    }
+    
+    return updated;
+  }
+
+  async deleteCoupon(id: string): Promise<void> {
+    await db.delete(coupons).where(eq(coupons.id, id));
+  }
+
+  // XP operations
+  async claimDailyXp(userId: string): Promise<{
+    xpAmount: number;
+    newXpBalance: number;
+  }> {
+    const xpAmount = 50; // Daily XP reward
+    
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if user already claimed today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (user.lastXpClaim) {
+      const lastClaim = new Date(user.lastXpClaim);
+      lastClaim.setHours(0, 0, 0, 0);
+      
+      if (lastClaim.getTime() === today.getTime()) {
+        throw new Error('You have already claimed your daily XP today');
+      }
+    }
+
+    // Create XP claim record
+    await db.insert(xpClaims).values({
+      userId,
+      xpAmount,
+    });
+
+    // Update user's XP balance
+    const newXpBalance = (user.xpBalance || 0) + xpAmount;
+    await db
+      .update(users)
+      .set({
+        xpBalance: newXpBalance,
+        lastXpClaim: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    return {
+      xpAmount,
+      newXpBalance,
+    };
+  }
+
+  async convertXpToCash(userId: string, xpAmount: number): Promise<{
+    convertedAmount: string;
+    newBalance: string;
+    newXpBalance: number;
+  }> {
+    // Get conversion rate from settings
+    const setting = await this.getSetting('xp_conversion_rate');
+    const conversionRate = setting ? parseFloat(setting.settingValue) : 0.01; // Default: 1 XP = $0.01
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if ((user.xpBalance || 0) < xpAmount) {
+      throw new Error('Insufficient XP balance');
+    }
+
+    const convertedAmount = (xpAmount * conversionRate).toFixed(8);
+    const currentBalance = parseFloat(user.balance || '0');
+    const newBalance = (currentBalance + parseFloat(convertedAmount)).toFixed(8);
+    const newXpBalance = (user.xpBalance || 0) - xpAmount;
+
+    await db
+      .update(users)
+      .set({
+        balance: newBalance,
+        xpBalance: newXpBalance,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    return {
+      convertedAmount,
+      newBalance,
+      newXpBalance,
+    };
+  }
+
+  async getUserXpClaims(userId: string): Promise<XpClaim[]> {
+    return await db
+      .select()
+      .from(xpClaims)
+      .where(eq(xpClaims.userId, userId))
+      .orderBy(desc(xpClaims.claimedAt));
+  }
+
+  // System Settings
+  async getSetting(key: string): Promise<SystemSetting | undefined> {
+    const [setting] = await db
+      .select()
+      .from(systemSettings)
+      .where(eq(systemSettings.settingKey, key));
+    return setting;
+  }
+
+  async setSetting(setting: InsertSystemSetting): Promise<SystemSetting> {
+    const existing = await this.getSetting(setting.settingKey);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(systemSettings)
+        .set({
+          settingValue: setting.settingValue,
+          description: setting.description,
+          updatedBy: setting.updatedBy,
+          updatedAt: new Date(),
+        })
+        .where(eq(systemSettings.settingKey, setting.settingKey))
+        .returning();
+      return updated;
+    } else {
+      const [newSetting] = await db
+        .insert(systemSettings)
+        .values(setting)
+        .returning();
+      return newSetting;
+    }
+  }
+
+  async getAllSettings(): Promise<SystemSetting[]> {
+    return await db.select().from(systemSettings);
   }
 }
 
