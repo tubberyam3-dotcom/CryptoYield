@@ -199,7 +199,7 @@ export default function Wallet() {
           
           {/* Balance Summary */}
           <Card className="p-6" data-testid="card-balance-summary">
-            <div className="flex items-center justify-between">
+            <div className="space-y-6">
               <div className="flex items-center space-x-4">
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10">
                   <i className="fas fa-wallet text-xl text-primary"></i>
@@ -217,6 +217,7 @@ export default function Wallet() {
                   onClick={() => setLocation("/deposit")}
                   data-testid="button-deposit"
                   size="lg"
+                  className="flex-1"
                 >
                   <i className="fas fa-plus mr-2"></i>
                   Deposit
@@ -226,6 +227,7 @@ export default function Wallet() {
                   onClick={() => setWithdrawDialogOpen(true)}
                   data-testid="button-withdraw"
                   size="lg"
+                  className="flex-1"
                 >
                   <i className="fas fa-arrow-up mr-2"></i>
                   Withdraw
