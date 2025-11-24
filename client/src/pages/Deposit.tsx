@@ -240,29 +240,28 @@ export default function Deposit() {
           </div>
 
           {!selectedMethod ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {depositMethods.map((method) => (
                 <Card
                   key={method.id}
-                  className="p-6 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+                  className="p-3 hover:shadow-lg transition-all cursor-pointer hover:scale-102"
                   onClick={() => setSelectedMethod(method.id)}
                   data-testid={`card-method-${method.id}`}
                 >
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className={`w-16 h-16 ${method.iconBg} rounded-lg flex items-center justify-center`}>
-                      <i className={`${method.icon} text-white text-2xl`}></i>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <div className={`w-10 h-10 ${method.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      <i className={`${method.icon} text-white text-lg`}></i>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold">{method.name}</h3>
-                      <p className="text-sm text-muted-foreground">{method.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold truncate">{method.name}</h3>
+                      <p className="text-xs text-muted-foreground truncate">{method.description}</p>
                     </div>
-                    <i className="fas fa-chevron-right text-muted-foreground"></i>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {method.features.map((feature, index) => (
-                      <div key={index} className="flex items-center text-sm">
-                        <i className="fas fa-check text-green-500 mr-2"></i>
-                        <span>{feature}</span>
+                      <div key={index} className="flex items-center text-xs gap-1">
+                        <i className="fas fa-check text-green-500 flex-shrink-0"></i>
+                        <span className="truncate">{feature}</span>
                       </div>
                     ))}
                   </div>
