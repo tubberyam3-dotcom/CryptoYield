@@ -40,9 +40,11 @@ export const users = pgTable("users", {
   taxId: varchar("tax_id"), // For business accounts
   balance: decimal("balance", { precision: 18, scale: 8 }).default('10000'), // User's available balance for purchases
   accumulatedDailyBonus: decimal("accumulated_daily_bonus", { precision: 18, scale: 8 }).default('0'), // Unredeemed daily bonuses
+  xpBalance: integer("xp_balance").default(0), // User's XP balance
   kycStatus: varchar("kyc_status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   role: varchar("role", { enum: ['user', 'admin'] }).default('user'),
   lastDailyRewardClaim: timestamp("last_daily_reward_claim"), // Track last daily reward claim
+  lastXpClaim: timestamp("last_xp_claim"), // Track last XP claim
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -209,6 +211,24 @@ export const couponRedemptions = pgTable("coupon_redemptions", {
   redeemedAt: timestamp("redeemed_at").defaultNow(),
 });
 
+// XP claims tracking
+export const xpClaims = pgTable("xp_claims", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  xpAmount: integer("xp_amount").notNull(), // Amount of XP claimed
+  claimedAt: timestamp("claimed_at").defaultNow(),
+});
+
+// System settings for admin configuration
+export const systemSettings = pgTable("system_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  settingKey: varchar("setting_key").unique().notNull(), // e.g., "xp_conversion_rate"
+  settingValue: text("setting_value").notNull(), // Value as string
+  description: text("description"),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   portfolios: many(userPortfolios),
@@ -359,6 +379,16 @@ export const insertCouponRedemptionSchema = createInsertSchema(couponRedemptions
   redeemedAt: true,
 });
 
+export const insertXpClaimSchema = createInsertSchema(xpClaims).omit({
+  id: true,
+  claimedAt: true,
+});
+
+export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -389,6 +419,10 @@ export type Coupon = typeof coupons.$inferSelect;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type CouponRedemption = typeof couponRedemptions.$inferSelect;
 export type InsertCouponRedemption = z.infer<typeof insertCouponRedemptionSchema>;
+export type XpClaim = typeof xpClaims.$inferSelect;
+export type InsertXpClaim = z.infer<typeof insertXpClaimSchema>;
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = z.infer<typeof insertSystemSettingSchema>;
 
 // Account type definition
 export type AccountType = "personal" | "business" | "joint";
