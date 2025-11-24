@@ -2,10 +2,10 @@ import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 
 const allocations = [
-  { name: "Bitcoin (BTC)", percentage: 35, color: "bg-chart-1" },
-  { name: "Ethereum (ETH)", percentage: 28, color: "bg-chart-2" },
-  { name: "DeFi Portfolio", percentage: 22, color: "bg-chart-3" },
-  { name: "Layer 2 Tokens", percentage: 15, color: "bg-chart-4" },
+  { name: "Stocks & Shares", percentage: 40, color: "bg-chart-1" },
+  { name: "Investment Portfolios", percentage: 30, color: "bg-chart-2" },
+  { name: "Bonds", percentage: 20, color: "bg-chart-3" },
+  { name: "Rewards & XP", percentage: 10, color: "bg-chart-4" },
 ];
 
 export function AssetAllocation() {
