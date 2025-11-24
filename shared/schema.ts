@@ -229,6 +229,20 @@ export const systemSettings = pgTable("system_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Deposits table for tracking all deposit transactions
+export const deposits = pgTable("deposits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
+  depositMethod: varchar("deposit_method", { enum: ['crypto', 'bank_transfer', 'card_payment', 'deposit_coupon'] }).notNull(),
+  status: varchar("status", { enum: ['pending', 'completed', 'failed'] }).default('pending'),
+  transactionId: varchar("transaction_id"), // External transaction ID (Stripe, bank, etc.)
+  couponCode: varchar("coupon_code"), // For deposit coupon method
+  metadata: jsonb("metadata"), // Additional data (crypto address, bank details, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   portfolios: many(userPortfolios),
@@ -389,6 +403,12 @@ export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit
   updatedAt: true,
 });
 
+export const insertDepositSchema = createInsertSchema(deposits).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -423,6 +443,8 @@ export type XpClaim = typeof xpClaims.$inferSelect;
 export type InsertXpClaim = z.infer<typeof insertXpClaimSchema>;
 export type SystemSetting = typeof systemSettings.$inferSelect;
 export type InsertSystemSetting = z.infer<typeof insertSystemSettingSchema>;
+export type Deposit = typeof deposits.$inferSelect;
+export type InsertDeposit = z.infer<typeof insertDepositSchema>;
 
 // Account type definition
 export type AccountType = "personal" | "business" | "joint";

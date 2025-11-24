@@ -15,6 +15,7 @@ import {
   couponRedemptions,
   xpClaims,
   systemSettings,
+  deposits,
   type User,
   type UpsertUser,
   type Portfolio,
@@ -45,6 +46,8 @@ import {
   type XpClaim,
   type SystemSetting,
   type InsertSystemSetting,
+  type Deposit,
+  type InsertDeposit,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
@@ -167,6 +170,18 @@ export interface IStorage {
   getSetting(key: string): Promise<SystemSetting | undefined>;
   setSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
   getAllSettings(): Promise<SystemSetting[]>;
+  
+  // Deposit operations
+  createDeposit(deposit: InsertDeposit): Promise<Deposit>;
+  getUserDeposits(userId: string): Promise<Deposit[]>;
+  updateDepositStatus(id: string, status: 'pending' | 'completed' | 'failed', transactionId?: string): Promise<Deposit>;
+  processCryptoDeposit(userId: string, amount: string, cryptoAddress: string): Promise<Deposit>;
+  processBankTransferDeposit(userId: string, amount: string, bankDetails: any): Promise<Deposit>;
+  processCardPaymentDeposit(userId: string, amount: string, stripeTransactionId: string): Promise<Deposit>;
+  processDepositCouponDeposit(userId: string, couponCode: string): Promise<Deposit>;
+  approveDeposit(depositId: string, adminId: string): Promise<Deposit>;
+  rejectDeposit(depositId: string, adminId: string): Promise<Deposit>;
+  getAllDeposits(): Promise<(Deposit & { user: { email: string; firstName: string; lastName: string } })[]>;
   
   // Analytics
   getDashboardStats(userId: string): Promise<{
@@ -1491,6 +1506,205 @@ export class DatabaseStorage implements IStorage {
 
   async getAllSettings(): Promise<SystemSetting[]> {
     return await db.select().from(systemSettings);
+  }
+
+  // Deposit operations
+  async createDeposit(deposit: InsertDeposit): Promise<Deposit> {
+    const [newDeposit] = await db.insert(deposits).values(deposit).returning();
+    return newDeposit;
+  }
+
+  async getUserDeposits(userId: string): Promise<Deposit[]> {
+    return await db.select().from(deposits)
+      .where(eq(deposits.userId, userId))
+      .orderBy(desc(deposits.createdAt));
+  }
+
+  async updateDepositStatus(
+    id: string,
+    status: 'pending' | 'completed' | 'failed',
+    transactionId?: string
+  ): Promise<Deposit> {
+    const updateData: any = {
+      status,
+      completedAt: status === 'completed' ? new Date() : null,
+    };
+    
+    if (transactionId) {
+      updateData.transactionId = transactionId;
+    }
+
+    const [updated] = await db.update(deposits)
+      .set(updateData)
+      .where(eq(deposits.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  async processCryptoDeposit(userId: string, amount: string, cryptoAddress: string): Promise<Deposit> {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0 || numericAmount > 1000000) {
+      throw new Error('Invalid deposit amount. Must be between $0.01 and $1,000,000');
+    }
+
+    const deposit = await this.createDeposit({
+      userId,
+      amount,
+      depositMethod: 'crypto',
+      status: 'pending',
+      metadata: { cryptoAddress },
+    });
+
+    return deposit;
+  }
+
+  async processBankTransferDeposit(userId: string, amount: string, bankDetails: any): Promise<Deposit> {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0 || numericAmount > 1000000) {
+      throw new Error('Invalid deposit amount. Must be between $0.01 and $1,000,000');
+    }
+
+    const deposit = await this.createDeposit({
+      userId,
+      amount,
+      depositMethod: 'bank_transfer',
+      status: 'pending',
+      metadata: { bankDetails },
+    });
+
+    return deposit;
+  }
+
+  async processCardPaymentDeposit(userId: string, amount: string, stripeTransactionId: string): Promise<Deposit> {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0 || numericAmount > 1000000) {
+      throw new Error('Invalid deposit amount. Must be between $0.01 and $1,000,000');
+    }
+
+    if (!stripeTransactionId || stripeTransactionId.trim().length === 0) {
+      throw new Error('Valid Stripe transaction ID is required');
+    }
+
+    const deposit = await this.createDeposit({
+      userId,
+      amount,
+      depositMethod: 'card_payment',
+      status: 'pending',
+      transactionId: stripeTransactionId,
+    });
+
+    return deposit;
+  }
+
+  async processDepositCouponDeposit(userId: string, couponCode: string): Promise<Deposit> {
+    const couponResult = await this.redeemCoupon(userId, couponCode);
+    
+    const deposit = await this.createDeposit({
+      userId,
+      amount: couponResult.rewardAmount,
+      depositMethod: 'deposit_coupon',
+      status: 'completed',
+      couponCode,
+      metadata: { description: couponResult.description },
+    });
+
+    return deposit;
+  }
+
+  async approveDeposit(depositId: string, adminId: string): Promise<Deposit> {
+    const [deposit] = await db.select().from(deposits).where(eq(deposits.id, depositId));
+    
+    if (!deposit) {
+      throw new Error('Deposit not found');
+    }
+
+    if (deposit.status !== 'pending') {
+      throw new Error('Only pending deposits can be approved');
+    }
+
+    const numericAmount = parseFloat(deposit.amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      throw new Error('Invalid deposit amount');
+    }
+
+    await db.update(users)
+      .set({ 
+        balance: sql`${users.balance} + ${deposit.amount}`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, deposit.userId));
+
+    const [updated] = await db.update(deposits)
+      .set({
+        status: 'completed',
+        completedAt: new Date(),
+      })
+      .where(eq(deposits.id, depositId))
+      .returning();
+
+    return updated;
+  }
+
+  async rejectDeposit(depositId: string, adminId: string): Promise<Deposit> {
+    const [deposit] = await db.select().from(deposits).where(eq(deposits.id, depositId));
+    
+    if (!deposit) {
+      throw new Error('Deposit not found');
+    }
+
+    if (deposit.status !== 'pending') {
+      throw new Error('Only pending deposits can be rejected');
+    }
+
+    const [updated] = await db.update(deposits)
+      .set({
+        status: 'failed',
+        completedAt: new Date(),
+      })
+      .where(eq(deposits.id, depositId))
+      .returning();
+
+    return updated;
+  }
+
+  async getAllDeposits(): Promise<(Deposit & { user: { email: string; firstName: string; lastName: string } })[]> {
+    const result = await db.select({
+      id: deposits.id,
+      userId: deposits.userId,
+      amount: deposits.amount,
+      depositMethod: deposits.depositMethod,
+      status: deposits.status,
+      transactionId: deposits.transactionId,
+      couponCode: deposits.couponCode,
+      metadata: deposits.metadata,
+      createdAt: deposits.createdAt,
+      completedAt: deposits.completedAt,
+      userEmail: users.email,
+      userFirstName: users.firstName,
+      userLastName: users.lastName,
+    })
+    .from(deposits)
+    .leftJoin(users, eq(deposits.userId, users.id))
+    .orderBy(desc(deposits.createdAt));
+
+    return result.map(row => ({
+      id: row.id,
+      userId: row.userId,
+      amount: row.amount,
+      depositMethod: row.depositMethod,
+      status: row.status,
+      transactionId: row.transactionId,
+      couponCode: row.couponCode,
+      metadata: row.metadata,
+      createdAt: row.createdAt,
+      completedAt: row.completedAt,
+      user: {
+        email: row.userEmail || '',
+        firstName: row.userFirstName || '',
+        lastName: row.userLastName || '',
+      },
+    }));
   }
 }
 

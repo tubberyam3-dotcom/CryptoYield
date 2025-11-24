@@ -1641,6 +1641,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Deposit Endpoints
+  app.post("/api/deposits/crypto", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const { amount, cryptoAddress } = req.body;
+      if (!amount || !cryptoAddress) {
+        return res.status(400).json({ message: "Amount and crypto address are required" });
+      }
+
+      const deposit = await storage.processCryptoDeposit(userId, amount, cryptoAddress);
+
+      res.json({
+        success: true,
+        deposit,
+        message: `Crypto deposit request of $${parseFloat(amount).toFixed(2)} submitted! It will be reviewed by an admin.`,
+      });
+    } catch (error: any) {
+      console.error("Error processing crypto deposit:", error);
+      res.status(400).json({ message: error.message || "Failed to process crypto deposit" });
+    }
+  });
+
+  app.post("/api/deposits/bank-transfer", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const { amount, accountNumber, routingNumber, accountHolderName } = req.body;
+      if (!amount || !accountNumber || !routingNumber || !accountHolderName) {
+        return res.status(400).json({ message: "All bank transfer details are required" });
+      }
+
+      const bankDetails = { accountNumber, routingNumber, accountHolderName };
+      const deposit = await storage.processBankTransferDeposit(userId, amount, bankDetails);
+
+      res.json({
+        success: true,
+        deposit,
+        message: `Bank transfer request of $${parseFloat(amount).toFixed(2)} submitted! It will be reviewed by an admin.`,
+      });
+    } catch (error: any) {
+      console.error("Error processing bank transfer:", error);
+      res.status(400).json({ message: error.message || "Failed to process bank transfer" });
+    }
+  });
+
+  app.post("/api/deposits/card-payment", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const { amount, stripeTransactionId } = req.body;
+      if (!amount || !stripeTransactionId) {
+        return res.status(400).json({ message: "Amount and transaction ID are required" });
+      }
+
+      const deposit = await storage.processCardPaymentDeposit(userId, amount, stripeTransactionId);
+
+      res.json({
+        success: true,
+        deposit,
+        message: `Card payment request of $${parseFloat(amount).toFixed(2)} submitted! It will be reviewed by an admin.`,
+      });
+    } catch (error: any) {
+      console.error("Error processing card payment:", error);
+      res.status(400).json({ message: error.message || "Failed to process card payment" });
+    }
+  });
+
+  app.post("/api/deposits/coupon", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const { couponCode } = req.body;
+      if (!couponCode) {
+        return res.status(400).json({ message: "Coupon code is required" });
+      }
+
+      const deposit = await storage.processDepositCouponDeposit(userId, couponCode);
+      const user = await storage.getUser(userId);
+
+      res.json({
+        success: true,
+        deposit,
+        newBalance: user?.balance,
+        message: `Coupon deposit of $${parseFloat(deposit.amount).toFixed(2)} completed successfully!`,
+      });
+    } catch (error: any) {
+      console.error("Error processing coupon deposit:", error);
+      res.status(400).json({ message: error.message || "Failed to process coupon deposit" });
+    }
+  });
+
+  app.get("/api/deposits", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const deposits = await storage.getUserDeposits(userId);
+      res.json(deposits);
+    } catch (error: any) {
+      console.error("Error fetching deposits:", error);
+      res.status(500).json({ message: "Failed to fetch deposits" });
+    }
+  });
+
+  // Admin Deposit Management
+  app.get("/api/admin/deposits", adminAuth, async (req, res) => {
+    try {
+      const deposits = await storage.getAllDeposits();
+      res.json(deposits);
+    } catch (error: any) {
+      console.error("Error fetching all deposits:", error);
+      res.status(500).json({ message: "Failed to fetch deposits" });
+    }
+  });
+
+  app.post("/api/admin/deposits/:id/approve", adminAuth, async (req, res) => {
+    try {
+      const adminId = req.user?.claims?.sub || '';
+      const deposit = await storage.approveDeposit(req.params.id, adminId);
+      res.json({ success: true, deposit, message: "Deposit approved successfully" });
+    } catch (error: any) {
+      console.error("Error approving deposit:", error);
+      res.status(400).json({ message: error.message || "Failed to approve deposit" });
+    }
+  });
+
+  app.post("/api/admin/deposits/:id/reject", adminAuth, async (req, res) => {
+    try {
+      const adminId = req.user?.claims?.sub || '';
+      const deposit = await storage.rejectDeposit(req.params.id, adminId);
+      res.json({ success: true, deposit, message: "Deposit rejected successfully" });
+    } catch (error: any) {
+      console.error("Error rejecting deposit:", error);
+      res.status(400).json({ message: error.message || "Failed to reject deposit" });
+    }
+  });
+
   // Admin Coupon Management
   app.get("/api/admin/coupons", adminAuth, async (req, res) => {
     try {

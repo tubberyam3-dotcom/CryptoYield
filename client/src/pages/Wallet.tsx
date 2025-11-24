@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { DepositDialog } from "@/components/wallet/DepositDialog";
+import { useQuery } from "@tanstack/react-query";
+import type { Deposit } from "@shared/schema";
 
 const mockWalletAssets = [
   {
@@ -83,34 +86,14 @@ const mockTransactions = [
 
 export default function Wallet() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
 
-  // Authentication is handled by App component routing
-
-  const handleConnectWallet = () => {
-    setIsWalletConnected(true);
-    toast({
-      title: "Wallet Connected",
-      description: "Your wallet has been successfully connected!",
-    });
-  };
-
-  const handleDisconnectWallet = () => {
-    setIsWalletConnected(false);
-    toast({
-      title: "Wallet Disconnected",
-      description: "Your wallet has been disconnected.",
-    });
-  };
-
-  const handleTransferToCustody = () => {
-    toast({
-      title: "Transfer Initiated",
-      description: "Self-custody transfer feature coming soon!",
-    });
-  };
+  const { data: deposits = [] } = useQuery<Deposit[]>({
+    queryKey: ["/api/deposits"],
+    enabled: !!user,
+  });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -161,120 +144,97 @@ export default function Wallet() {
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
           
-          {/* Wallet Connection Status */}
-          <Card className="p-6" data-testid="card-wallet-status">
+          {/* Balance Summary */}
+          <Card className="p-6" data-testid="card-balance-summary">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                  isWalletConnected ? 'bg-green-500/10' : 'bg-muted'
-                }`}>
-                  <i className={`fas fa-wallet text-xl ${
-                    isWalletConnected ? 'text-green-500' : 'text-muted-foreground'
-                  }`}></i>
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10">
+                  <i className="fas fa-wallet text-xl text-primary"></i>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold">
-                    {isWalletConnected ? 'Wallet Connected' : 'Connect Your Wallet'}
-                  </h2>
-                  <p className="text-muted-foreground">
-                    {isWalletConnected 
-                      ? 'Your external wallet is connected and ready to use'
-                      : 'Connect your external wallet to view balances and transfer assets'
-                    }
-                  </p>
+                  <h2 className="text-xl font-semibold">Available Balance</h2>
+                  <div className="text-3xl font-bold text-primary" data-testid="text-wallet-balance">
+                    ${user?.balance ? parseFloat(user.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                  </div>
                 </div>
               </div>
               
-              {isWalletConnected ? (
-                <Button 
-                  variant="outline"
-                  onClick={handleDisconnectWallet}
-                  data-testid="button-disconnect-wallet"
-                >
-                  Disconnect
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleConnectWallet}
-                  data-testid="button-connect-wallet"
-                >
-                  Connect Wallet
-                </Button>
-              )}
+              <Button 
+                onClick={() => setDepositDialogOpen(true)}
+                data-testid="button-deposit"
+                size="lg"
+              >
+                <i className="fas fa-plus mr-2"></i>
+                Deposit Funds
+              </Button>
             </div>
           </Card>
 
-          {isWalletConnected ? (
-            <Tabs defaultValue="assets" className="space-y-6">
-              <TabsList className="grid grid-cols-2 w-full max-w-md">
-                <TabsTrigger value="assets" data-testid="tab-assets">Assets</TabsTrigger>
-                <TabsTrigger value="transactions" data-testid="tab-transactions">Transactions</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="assets" className="space-y-6">
-                {/* Portfolio Summary */}
-                <Card className="p-6" data-testid="card-portfolio-summary">
-                  <div className="text-center mb-6">
-                    <div className="text-3xl font-bold text-primary mb-2" data-testid="text-total-wallet-value">
-                      ${totalValue.toLocaleString()}
-                    </div>
-                    <p className="text-muted-foreground">Total Wallet Value</p>
+          <Tabs defaultValue="deposits" className="space-y-6">
+            <TabsList className="grid grid-cols-2 w-full max-w-md">
+              <TabsTrigger value="deposits" data-testid="tab-deposits">Deposit History</TabsTrigger>
+              <TabsTrigger value="transactions" data-testid="tab-transactions">All Transactions</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="deposits" className="space-y-6">
+              {/* Deposit History */}
+              <Card className="p-6" data-testid="card-deposit-history">
+                <h3 className="text-lg font-semibold mb-4">Recent Deposits</h3>
+                
+                {deposits.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <i className="fas fa-inbox text-4xl mb-4"></i>
+                    <p>No deposits yet. Click "Deposit Funds" to get started!</p>
                   </div>
-                  
-                  <div className="flex justify-center space-x-4">
-                    <Button 
-                      variant="outline"
-                      onClick={handleTransferToCustody}
-                      data-testid="button-transfer-custody"
-                    >
-                      <i className="fas fa-arrow-right mr-2"></i>
-                      Transfer to Self-Custody
-                    </Button>
-                  </div>
-                </Card>
-
-                {/* Asset List */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {mockWalletAssets.map((asset, index) => (
-                    <Card key={asset.symbol} className="p-6 hover-lift" data-testid={`card-asset-${asset.symbol}`}>
-                      <div className="flex items-center space-x-4 mb-4">
-                        <div className={`w-12 h-12 ${asset.iconBg} rounded-full flex items-center justify-center`}>
-                          <i className={`${asset.icon} text-white text-xl`}></i>
+                ) : (
+                  <div className="space-y-4">
+                    {deposits.slice(0, 10).map((deposit) => (
+                      <div 
+                        key={deposit.id}
+                        className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                        data-testid={`deposit-${deposit.id}`}
+                      >
+                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                          <i className="fas fa-arrow-down text-green-500"></i>
                         </div>
-                        <div>
-                          <h3 className="font-semibold" data-testid={`text-asset-name-${index}`}>{asset.name}</h3>
-                          <p className="text-sm text-muted-foreground">{asset.symbol}</p>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-medium capitalize" data-testid={`text-deposit-method-${deposit.id}`}>
+                              {deposit.depositMethod.replace('_', ' ')}
+                            </span>
+                            <Badge className={
+                              deposit.status === 'completed' ? 'bg-green-500/10 text-green-500' :
+                              deposit.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' :
+                              'bg-red-500/10 text-red-500'
+                            }>
+                              {deposit.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {deposit.createdAt && formatDate(deposit.createdAt.toString())}
+                          </p>
+                          {deposit.status === 'pending' && (
+                            <p className="text-xs text-yellow-500 mt-1">
+                              <i className="fas fa-clock mr-1"></i>
+                              Awaiting admin approval
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="text-right">
+                          <p className="font-medium text-lg" data-testid={`text-deposit-amount-${deposit.id}`}>
+                            ${parseFloat(deposit.amount).toFixed(2)}
+                          </p>
                         </div>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Balance</span>
-                          <span className="font-medium" data-testid={`text-asset-balance-${index}`}>
-                            {asset.balance} {asset.symbol}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Value</span>
-                          <span className="font-medium" data-testid={`text-asset-value-${index}`}>
-                            ${asset.value.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">24h Change</span>
-                          <span className={`font-medium ${
-                            asset.change24h >= 0 ? 'text-green-500' : 'text-red-500'
-                          }`} data-testid={`text-asset-change-${index}`}>
-                            {asset.change24h >= 0 ? '+' : ''}{asset.change24h}%
-                          </span>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="transactions" className="space-y-6">
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="transactions" className="space-y-6">
                 <Card className="p-6" data-testid="card-transaction-history">
                   <h3 className="text-lg font-semibold mb-4">Transaction History</h3>
                   
@@ -323,55 +283,12 @@ export default function Wallet() {
                 </Card>
               </TabsContent>
             </Tabs>
-          ) : (
-            /* Wallet Connection Instructions */
-            <Card className="p-8 text-center" data-testid="card-connect-instructions">
-              <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
-                <i className="fas fa-wallet text-muted-foreground text-2xl"></i>
-              </div>
-              
-              <h3 className="text-xl font-semibold mb-4">Connect Your Wallet</h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Connect your external cryptocurrency wallet to view balances, track assets, 
-                and enable transfers to self-custody wallets.
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mb-6">
-                <div className="p-4 border border-border rounded-lg">
-                  <div className="w-8 h-8 bg-orange-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                    <i className="fab fa-bitcoin text-orange-500"></i>
-                  </div>
-                  <p className="text-sm font-medium">Bitcoin Wallets</p>
-                </div>
-                <div className="p-4 border border-border rounded-lg">
-                  <div className="w-8 h-8 bg-blue-600/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                    <i className="fab fa-ethereum text-blue-600"></i>
-                  </div>
-                  <p className="text-sm font-medium">Ethereum Wallets</p>
-                </div>
-                <div className="p-4 border border-border rounded-lg">
-                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                    <i className="fas fa-coins text-primary"></i>
-                  </div>
-                  <p className="text-sm font-medium">Multi-Asset Wallets</p>
-                </div>
-              </div>
-              
-              <Button 
-                size="lg"
-                onClick={handleConnectWallet}
-                data-testid="button-connect-wallet-main"
-              >
-                <i className="fas fa-link mr-2"></i>
-                Connect Wallet
-              </Button>
-            </Card>
-          )}
 
         </main>
       </div>
       
       <MobileNav />
+      <DepositDialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen} />
     </div>
   );
 }
