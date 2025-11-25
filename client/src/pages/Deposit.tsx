@@ -434,11 +434,19 @@ export default function Deposit() {
                           <Label htmlFor="crypto-amount">Amount (USD)</Label>
                           <Input
                             id="crypto-amount"
-                            type="number"
-                            step="0.01"
+                            type="text"
+                            inputMode="decimal"
                             placeholder="Enter amount"
                             value={cryptoAmount}
-                            onChange={(e) => setCryptoAmount(e.target.value)}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9.]/g, '');
+                              const parts = value.split('.');
+                              if (parts.length > 2) return;
+                              const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                              const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
+                              setCryptoAmount(formatted);
+                            }}
+                            className="font-['Archivo'] text-lg"
                             data-testid="input-crypto-amount"
                           />
                           {cryptoAmount && selectedCoin && (
@@ -448,7 +456,7 @@ export default function Deposit() {
                                 <div className="flex items-center space-x-2">
                                   {CoinIcon && <CoinIcon className={`${selectedCoin.color} text-base md:text-lg`} />}
                                   <span className="text-sm md:text-lg font-bold break-all" data-testid="text-crypto-equivalent">
-                                    {(parseFloat(cryptoAmount) / selectedCoin.priceUsd).toFixed(8)} {selectedCoin.id}
+                                    {(parseFloat(cryptoAmount.replace(/,/g, '')) / selectedCoin.priceUsd).toFixed(8)} {selectedCoin.id}
                                   </span>
                                 </div>
                               </div>
@@ -490,7 +498,7 @@ export default function Deposit() {
                         </div>
                         <div>
                           <h2 className="text-lg md:text-2xl font-bold">Send Payment</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Transfer ${cryptoAmount} worth of {selectedCrypto}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">Transfer ${cryptoAmount.replace(/,/g, '')} worth of {selectedCrypto}</p>
                         </div>
                       </div>
 
@@ -547,7 +555,7 @@ export default function Deposit() {
                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                           <p className="text-sm text-blue-400">
                             <i className="fas fa-info-circle mr-2"></i>
-                            Send exactly {selectedCoin && (parseFloat(cryptoAmount) / selectedCoin.priceUsd).toFixed(8)} {selectedCrypto} to the address above. 
+                            Send exactly {selectedCoin && (parseFloat(cryptoAmount.replace(/,/g, '')) / selectedCoin.priceUsd).toFixed(8)} {selectedCrypto} to the address above. 
                             Your deposit will be credited after payment is completed in the blockchain.
                           </p>
                         </div>
@@ -555,7 +563,7 @@ export default function Deposit() {
                         <Button
                           onClick={() => {
                             cryptoDepositMutation.mutate({ 
-                              amount: cryptoAmount, 
+                              amount: cryptoAmount.replace(/,/g, ''), 
                               cryptoAddress: `${selectedCrypto}:${cryptoAddress}` 
                             });
                           }}
