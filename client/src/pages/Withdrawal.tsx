@@ -260,26 +260,26 @@ export default function Withdrawal() {
           )}
 
           {!selectedMethod ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
               {withdrawalMethods.map((method) => (
                 <Card
                   key={method.id}
-                  className="p-6 hover:shadow-lg transition-all cursor-pointer hover:scale-105 hover:border-primary"
+                  className="p-2 md:p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
                   onClick={() => setSelectedMethod(method.id)}
                   data-testid={`card-method-${method.id}`}
                 >
-                  <div className="flex flex-col items-center text-center space-y-4">
-                    <div className={`w-16 h-16 ${method.iconBg} rounded-xl flex items-center justify-center`}>
-                      <i className={`${method.icon} text-white text-2xl`}></i>
+                  <div className="flex items-center space-x-2 md:space-x-3 mb-2 md:mb-3">
+                    <div className={`w-8 h-8 md:w-12 md:h-12 ${method.iconBg} rounded-md md:rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      <i className={`${method.icon} text-white text-sm md:text-xl`}></i>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">{method.name}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">{method.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm md:text-lg font-semibold truncate">{method.name}</h3>
+                      <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1">{method.description}</p>
+                      <span className="text-[8px] md:text-[10px] text-muted-foreground/70">
+                        <i className="fas fa-clock mr-1"></i>{method.processingTime}
+                      </span>
                     </div>
-                    <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
-                      <i className="fas fa-clock mr-1"></i>
-                      {method.processingTime}
-                    </div>
+                    <i className="fas fa-chevron-right text-muted-foreground text-xs md:text-sm flex-shrink-0"></i>
                   </div>
                 </Card>
               ))}
