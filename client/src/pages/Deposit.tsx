@@ -36,16 +36,16 @@ export default function Deposit() {
   const [couponCode, setCouponCode] = useState("");
 
   const cryptoCoins = [
-    { id: "BTC", name: "Bitcoin", icon: SiBitcoin, color: "text-orange-500", address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" },
-    { id: "ETH", name: "Ethereum", icon: SiEthereum, color: "text-blue-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
-    { id: "USDT", name: "Tether", icon: SiTether, color: "text-green-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
-    { id: "BNB", name: "Binance Coin", icon: SiBinance, color: "text-yellow-500", address: "bnb1grpf0955h0ykzq3ar5nmum7y6gdfl6lxfn46h2" },
-    { id: "SOL", name: "Solana", icon: SiSolana, color: "text-purple-500", address: "SoLEao8wTzSfqhuou8rcYsVoLjthVmiXuEjzdNPMnCz" },
-    { id: "XRP", name: "Ripple", icon: SiRipple, color: "text-blue-400", address: "rN7n7otQDd6FczFgLdzmFgFgWv4NJpRkBP" },
-    { id: "ADA", name: "Cardano", icon: SiCardano, color: "text-cyan-500", address: "addr1qxy3v9ackjr98vxl7k8sfykj3dcxl8f8e6vnr8xf" },
-    { id: "DOGE", name: "Dogecoin", icon: SiDogecoin, color: "text-yellow-600", address: "DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L" },
-    { id: "MATIC", name: "Polygon", icon: SiPolygon, color: "text-purple-600", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
-    { id: "LTC", name: "Litecoin", icon: SiLitecoin, color: "text-gray-500", address: "LdP8Qox1VAhCzLJNqrr74YovaWYyNBUWvL" },
+    { id: "BTC", name: "Bitcoin", icon: SiBitcoin, color: "text-orange-500", address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", priceUsd: 97842.50 },
+    { id: "ETH", name: "Ethereum", icon: SiEthereum, color: "text-blue-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", priceUsd: 3456.78 },
+    { id: "USDT", name: "Tether", icon: SiTether, color: "text-green-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", priceUsd: 1.00 },
+    { id: "BNB", name: "Binance Coin", icon: SiBinance, color: "text-yellow-500", address: "bnb1grpf0955h0ykzq3ar5nmum7y6gdfl6lxfn46h2", priceUsd: 623.45 },
+    { id: "SOL", name: "Solana", icon: SiSolana, color: "text-purple-500", address: "SoLEao8wTzSfqhuou8rcYsVoLjthVmiXuEjzdNPMnCz", priceUsd: 234.67 },
+    { id: "XRP", name: "Ripple", icon: SiRipple, color: "text-blue-400", address: "rN7n7otQDd6FczFgLdzmFgFgWv4NJpRkBP", priceUsd: 1.42 },
+    { id: "ADA", name: "Cardano", icon: SiCardano, color: "text-cyan-500", address: "addr1qxy3v9ackjr98vxl7k8sfykj3dcxl8f8e6vnr8xf", priceUsd: 1.05 },
+    { id: "DOGE", name: "Dogecoin", icon: SiDogecoin, color: "text-yellow-600", address: "DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L", priceUsd: 0.38 },
+    { id: "MATIC", name: "Polygon", icon: SiPolygon, color: "text-purple-600", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", priceUsd: 0.52 },
+    { id: "LTC", name: "Litecoin", icon: SiLitecoin, color: "text-gray-500", address: "LdP8Qox1VAhCzLJNqrr74YovaWYyNBUWvL", priceUsd: 102.34 },
   ];
 
   useEffect(() => {
@@ -401,6 +401,22 @@ export default function Deposit() {
                             onChange={(e) => setCryptoAmount(e.target.value)}
                             data-testid="input-crypto-amount"
                           />
+                          {cryptoAmount && selectedCoin && (
+                            <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">You will receive:</span>
+                                <div className="flex items-center space-x-2">
+                                  {CoinIcon && <CoinIcon className={`${selectedCoin.color} text-lg`} />}
+                                  <span className="text-lg font-bold" data-testid="text-crypto-equivalent">
+                                    {(parseFloat(cryptoAmount) / selectedCoin.priceUsd).toFixed(8)} {selectedCoin.id}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground text-right">
+                                @ ${selectedCoin.priceUsd.toLocaleString()} per {selectedCoin.id}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <Button
                           type="submit"
