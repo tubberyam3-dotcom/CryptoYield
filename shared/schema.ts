@@ -77,11 +77,13 @@ export const portfolios = pgTable("portfolios", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
   description: text("description"),
+  detailedDescription: text("detailed_description"), // Full detailed description for detail page
   strategyTag: varchar("strategy_tag"), // e.g., "growth", "value", "dividend", "balanced"
   assets: jsonb("assets").notNull(), // Array of stocks, ETFs, mutual funds with allocations
   minInvestment: decimal("min_investment", { precision: 18, scale: 8 }).notNull(),
   riskLevel: varchar("risk_level", { enum: ['low', 'medium', 'high'] }).notNull(),
   currentReturn: decimal("current_return", { precision: 5, scale: 2 }).default('0'),
+  whitepaperUrl: varchar("whitepaper_url"), // URL to whitepaper PDF document
   createdBy: varchar("created_by").references(() => users.id),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),

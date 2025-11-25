@@ -1,0 +1,392 @@
+import { useState } from "react";
+import { useParams, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { TopBar } from "@/components/layout/TopBar";
+import { MobileNav } from "@/components/layout/MobileNav";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { QuickInvestButton } from "@/components/investment/QuickInvestButton";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import type { Portfolio } from "@shared/schema";
+import { 
+  ArrowLeft, 
+  Download, 
+  FileText, 
+  TrendingUp, 
+  Shield, 
+  DollarSign,
+  PieChart,
+  Calendar,
+  Activity
+} from "lucide-react";
+
+export default function PortfolioDetail() {
+  const { id } = useParams();
+  const [, setLocation] = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, isLoading } = useAuth();
+  const { toast } = useToast();
+
+  const { data: portfolios, isLoading: portfoliosLoading } = useQuery<Portfolio[]>({
+    queryKey: ["/api/portfolios"],
+  });
+
+  const portfolio = portfolios?.find(p => p.id === id);
+
+  const { data: userPortfolios } = useQuery<any[]>({
+    queryKey: ["/api/user/portfolios"],
+  });
+
+  const userInvestment = userPortfolios?.find(up => up.portfolio?.id === id);
+
+  const handleDownloadWhitepaper = () => {
+    if (portfolio?.whitepaperUrl) {
+      window.open(portfolio.whitepaperUrl, '_blank');
+      toast({
+        title: "Download Started",
+        description: "Your whitepaper download has begun.",
+      });
+    } else {
+      toast({
+        title: "Not Available",
+        description: "Whitepaper is not available for this portfolio.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    if (!userInvestment) {
+      toast({
+        title: "No Investment",
+        description: "You must invest in this portfolio before generating a report.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/portfolios/${id}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${portfolio?.name || 'portfolio'}-investment-report-${new Date().toISOString().slice(0, 7)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Report Generated",
+        description: "Your monthly investment report has been downloaded.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case 'low': return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'medium': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      case 'high': return 'bg-red-500/10 text-red-500 border-red-500/20';
+      default: return 'bg-muted/10 text-muted-foreground';
+    }
+  };
+
+  const getStrategyColor = (strategy: string) => {
+    switch (strategy?.toLowerCase()) {
+      case 'ai': return 'bg-accent/10 text-accent border-accent/20';
+      case 'defi': return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'layer2': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+      case 'growth': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
+      case 'value': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+      case 'dividend': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+      default: return 'bg-primary/10 text-primary border-primary/20';
+    }
+  };
+
+  if (isLoading || portfoliosLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading portfolio details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!portfolio) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="p-8 text-center max-w-md">
+          <h2 className="text-xl font-semibold mb-2">Portfolio Not Found</h2>
+          <p className="text-muted-foreground mb-4">The portfolio you're looking for doesn't exist.</p>
+          <Button onClick={() => setLocation('/portfolios')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Portfolios
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const assets = Array.isArray(portfolio.assets) ? portfolio.assets : [];
+
+  return (
+    <div className="min-h-screen bg-background text-foreground" data-testid="portfolio-detail-page">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      
+      <div className="ml-0 lg:ml-64 min-h-screen">
+        <TopBar title={portfolio.name} onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
+        
+        <main className="p-4 sm:p-6 space-y-6 pb-20 lg:pb-6">
+          {/* Back Button */}
+          <Button 
+            variant="ghost" 
+            onClick={() => setLocation('/portfolios')}
+            className="mb-4"
+            data-testid="button-back-to-portfolios"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Portfolios
+          </Button>
+
+          {/* Portfolio Header */}
+          <Card className="p-6 sm:p-8 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <Badge className={getStrategyColor(portfolio.strategyTag || '')}>
+                    {portfolio.strategyTag || 'General'}
+                  </Badge>
+                  <Badge variant="outline" className={getRiskColor(portfolio.riskLevel)}>
+                    <Shield className="w-3 h-3 mr-1" />
+                    {portfolio.riskLevel} Risk
+                  </Badge>
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-bold mb-3">{portfolio.name}</h1>
+                <p className="text-lg text-muted-foreground">{portfolio.description}</p>
+              </div>
+              <div className="flex flex-col items-start md:items-end gap-2">
+                <div className="text-sm text-muted-foreground">Current Return</div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-6 h-6 text-green-500" />
+                  <span className="text-3xl font-bold text-green-500">
+                    +{portfolio.currentReturn}%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="bg-background/50 rounded-lg p-4 border">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Min. Investment</span>
+                </div>
+                <div className="text-2xl font-bold">
+                  ${parseFloat(portfolio.minInvestment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div className="bg-background/50 rounded-lg p-4 border">
+                <div className="flex items-center gap-2 mb-2">
+                  <PieChart className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Assets</span>
+                </div>
+                <div className="text-2xl font-bold">{assets.length}</div>
+              </div>
+              <div className="bg-background/50 rounded-lg p-4 border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Status</span>
+                </div>
+                <div className="text-2xl font-bold text-green-500">Active</div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <QuickInvestButton portfolio={portfolio} className="flex-1" />
+              {portfolio.whitepaperUrl && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleDownloadWhitepaper}
+                  className="flex-1"
+                  data-testid="button-download-whitepaper"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Whitepaper
+                </Button>
+              )}
+              {userInvestment && (
+                <Button 
+                  variant="outline"
+                  onClick={handleGenerateReport}
+                  className="flex-1"
+                  data-testid="button-generate-report"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Monthly Report
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          {/* My Investment (if invested) */}
+          {userInvestment && (
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                My Investment
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Invested Amount</div>
+                  <div className="text-2xl font-bold">
+                    ${parseFloat(userInvestment.investedAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Current Value</div>
+                  <div className="text-2xl font-bold text-green-500">
+                    ${parseFloat(userInvestment.currentValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Returns</div>
+                  <div className="text-2xl font-bold text-green-500">
+                    +${parseFloat(userInvestment.returns || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Detailed Description */}
+          {portfolio.detailedDescription && (
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">About This Portfolio</h2>
+              <div className="prose dark:prose-invert max-w-none">
+                <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {portfolio.detailedDescription}
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {/* Asset Allocation */}
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <PieChart className="w-5 h-5" />
+              Asset Allocation
+            </h2>
+            {assets.length > 0 ? (
+              <div className="space-y-4">
+                {assets.map((asset: any, index: number) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <div>
+                          <div className="font-semibold">{asset.symbol || asset.name}</div>
+                          <div className="text-sm text-muted-foreground">{asset.type || 'Stock'}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">{asset.allocation}%</div>
+                        {asset.description && (
+                          <div className="text-sm text-muted-foreground">{asset.description}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary h-2 rounded-full transition-all" 
+                        style={{ width: `${asset.allocation}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No asset allocation data available.</p>
+            )}
+          </Card>
+
+          {/* Performance & Risk Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Performance Highlights
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Current Return</span>
+                  <span className="font-semibold text-green-500">+{portfolio.currentReturn}%</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Risk Level</span>
+                  <Badge variant="outline" className={getRiskColor(portfolio.riskLevel)}>
+                    {portfolio.riskLevel}
+                  </Badge>
+                </div>
+                <Separator />
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Strategy</span>
+                  <span className="font-semibold">{portfolio.strategyTag || 'General'}</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Risk Information
+              </h3>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                {portfolio.riskLevel === 'low' && (
+                  <p>This portfolio is designed for conservative investors seeking stable, predictable returns with minimal volatility.</p>
+                )}
+                {portfolio.riskLevel === 'medium' && (
+                  <p>This balanced portfolio aims for moderate growth while maintaining reasonable risk levels suitable for most investors.</p>
+                )}
+                {portfolio.riskLevel === 'high' && (
+                  <p>This aggressive portfolio targets maximum growth potential but comes with higher volatility and risk. Suitable for experienced investors with longer time horizons.</p>
+                )}
+                <div className="bg-muted/50 rounded p-3 mt-3">
+                  <p className="text-xs">
+                    Past performance does not guarantee future results. All investments carry risk, including potential loss of principal.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </main>
+      </div>
+      
+      <MobileNav />
+    </div>
+  );
+}
