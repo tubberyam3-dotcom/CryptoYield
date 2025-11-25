@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -12,9 +13,11 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Portfolio } from "@shared/schema";
+import { Eye } from "lucide-react";
 
 export default function Portfolios() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -145,10 +148,21 @@ export default function Portfolios() {
                       </div>
                     </div>
 
-                    <QuickInvestButton 
-                      portfolio={portfolio}
-                      className="w-full"
-                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setLocation(`/portfolios/${portfolio.id}`)}
+                        className="flex-1"
+                        data-testid={`button-learn-more-${portfolio.id}`}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Learn More
+                      </Button>
+                      <QuickInvestButton 
+                        portfolio={portfolio}
+                        className="flex-1"
+                      />
+                    </div>
                   </Card>
                 )) || []}
               </div>
