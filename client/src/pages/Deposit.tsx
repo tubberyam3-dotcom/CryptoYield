@@ -401,16 +401,16 @@ export default function Deposit() {
                           />
                           {cryptoAmount && selectedCoin && (
                             <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">You will receive:</span>
+                              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                                <span className="text-xs md:text-sm text-muted-foreground">You will receive:</span>
                                 <div className="flex items-center space-x-2">
-                                  {CoinIcon && <CoinIcon className={`${selectedCoin.color} text-lg`} />}
-                                  <span className="text-lg font-bold" data-testid="text-crypto-equivalent">
+                                  {CoinIcon && <CoinIcon className={`${selectedCoin.color} text-base md:text-lg`} />}
+                                  <span className="text-sm md:text-lg font-bold break-all" data-testid="text-crypto-equivalent">
                                     {(parseFloat(cryptoAmount) / selectedCoin.priceUsd).toFixed(8)} {selectedCoin.id}
                                   </span>
                                 </div>
                               </div>
-                              <div className="mt-1 text-xs text-muted-foreground text-right">
+                              <div className="mt-1 text-[10px] md:text-xs text-muted-foreground text-left md:text-right">
                                 @ ${selectedCoin.priceUsd.toLocaleString()} per {selectedCoin.id}
                               </div>
                             </div>
