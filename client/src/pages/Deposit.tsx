@@ -502,8 +502,8 @@ export default function Deposit() {
                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                           <p className="text-sm text-blue-400">
                             <i className="fas fa-info-circle mr-2"></i>
-                            Send exactly ${cryptoAmount} USD worth of {selectedCrypto} to the address above. 
-                            Your deposit will be credited after admin approval.
+                            Send exactly {selectedCoin && (parseFloat(cryptoAmount) / selectedCoin.priceUsd).toFixed(8)} {selectedCrypto} to the address above. 
+                            Your deposit will be credited after payment is completed in the blockchain.
                           </p>
                         </div>
 
