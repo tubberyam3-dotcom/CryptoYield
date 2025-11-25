@@ -101,7 +101,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
   };
 
   const validateAmount = () => {
-    const amount = parseFloat(investAmount);
+    const amount = parseFloat(investAmount.replace(/,/g, ''));
     const minAmount = parseFloat(portfolio?.minInvestment || "0");
     return amount >= minAmount && amount > 0;
   };
@@ -242,11 +242,19 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                       <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                       <Input
                         id="investAmount"
-                        type="number"
-                        className="pl-10 text-lg py-6"
+                        type="text"
+                        inputMode="decimal"
+                        className="pl-10 text-lg py-6 font-['Archivo']"
                         placeholder="0.00"
                         value={investAmount}
-                        onChange={(e) => setInvestAmount(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                          const parts = value.split('.');
+                          if (parts.length > 2) return;
+                          const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                          const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
+                          setInvestAmount(formatted);
+                        }}
                         data-testid="input-investment-amount"
                       />
                     </div>
@@ -264,7 +272,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                           key={amount}
                           variant="outline"
                           className="h-12"
-                          onClick={() => setInvestAmount(amount.toString())}
+                          onClick={() => setInvestAmount(amount.toLocaleString())}
                           data-testid={`button-quick-amount-${amount}`}
                         >
                           ${amount.toLocaleString()}
@@ -274,7 +282,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                   </div>
 
                   {/* Investment Calculator */}
-                  {investAmount && parseFloat(investAmount) > 0 && (
+                  {investAmount && parseFloat(investAmount.replace(/,/g, '')) > 0 && (
                     <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-2 mb-3">
@@ -285,19 +293,19 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                           <div>
                             <p className="text-muted-foreground">1 Month</p>
                             <p className="font-medium">
-                              ${(parseFloat(investAmount) * (1 + (parseFloat(portfolio.currentReturn || "0") / 100) / 12)).toLocaleString()}
+                              ${(parseFloat(investAmount.replace(/,/g, '')) * (1 + (parseFloat(portfolio.currentReturn || "0") / 100) / 12)).toLocaleString()}
                             </p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">6 Months</p>
                             <p className="font-medium">
-                              ${(parseFloat(investAmount) * (1 + (parseFloat(portfolio.currentReturn || "0") / 100) / 2)).toLocaleString()}
+                              ${(parseFloat(investAmount.replace(/,/g, '')) * (1 + (parseFloat(portfolio.currentReturn || "0") / 100) / 2)).toLocaleString()}
                             </p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">1 Year</p>
                             <p className="font-medium">
-                              ${(parseFloat(investAmount) * (1 + (parseFloat(portfolio.currentReturn || "0") / 100))).toLocaleString()}
+                              ${(parseFloat(investAmount.replace(/,/g, '')) * (1 + (parseFloat(portfolio.currentReturn || "0") / 100))).toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -330,7 +338,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Investment Amount</span>
-                          <span className="text-2xl font-bold">${parseFloat(investAmount).toLocaleString()}</span>
+                          <span className="text-2xl font-bold">${parseFloat(investAmount.replace(/,/g, '')).toLocaleString()}</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between">
@@ -382,7 +390,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                   <div>
                     <h3 className="text-2xl font-bold mb-2">Investment Successful! 🎉</h3>
                     <p className="text-muted-foreground">
-                      You've successfully invested ${parseFloat(investAmount).toLocaleString()} in {portfolio.name}
+                      You've successfully invested ${parseFloat(investAmount.replace(/,/g, '')).toLocaleString()} in {portfolio.name}
                     </p>
                   </div>
 
@@ -395,7 +403,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                         </div>
                         <div className="flex justify-between">
                           <span>Investment Amount</span>
-                          <span className="font-medium">${parseFloat(investAmount).toLocaleString()}</span>
+                          <span className="font-medium">${parseFloat(investAmount.replace(/,/g, '')).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Expected Growth</span>

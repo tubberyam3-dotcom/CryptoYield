@@ -56,7 +56,7 @@ export function StakingCalculator({ plans, selectedPlan, onPlanChange }: Staking
 
   useEffect(() => {
     if (selectedPlan && amount) {
-      calculateMutation.mutate({ amount, planId: selectedPlan.id });
+      calculateMutation.mutate({ amount: amount.replace(/,/g, ''), planId: selectedPlan.id });
     }
   }, [selectedPlan, amount]);
 
@@ -64,7 +64,7 @@ export function StakingCalculator({ plans, selectedPlan, onPlanChange }: Staking
     if (!selectedPlan || !amount) return;
     stakeMutation.mutate({ 
       stakingPlanId: selectedPlan.id, 
-      amountLocked: amount 
+      amountLocked: amount.replace(/,/g, '') 
     });
   };
 
@@ -79,11 +79,19 @@ export function StakingCalculator({ plans, selectedPlan, onPlanChange }: Staking
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
             <Input
               id="amount"
-              type="number"
-              className="pl-8"
+              type="text"
+              inputMode="decimal"
+              className="pl-8 font-['Archivo']"
               placeholder="1,000"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9.]/g, '');
+                const parts = value.split('.');
+                if (parts.length > 2) return;
+                const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
+                setAmount(formatted);
+              }}
               data-testid="input-staking-amount"
             />
           </div>

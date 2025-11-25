@@ -598,7 +598,7 @@ export default function Deposit() {
 
                       <form onSubmit={(e) => {
                         e.preventDefault();
-                        if (!bankAmount || parseFloat(bankAmount) <= 0) {
+                        if (!bankAmount || parseFloat(bankAmount.replace(/,/g, '')) <= 0) {
                           toast({
                             title: "Error",
                             description: "Please enter a valid amount",
@@ -617,13 +617,19 @@ export default function Deposit() {
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl font-medium text-muted-foreground">$</span>
                             <Input
                               id="bank-amount"
-                              type="number"
-                              step="0.01"
-                              min="1"
+                              type="text"
+                              inputMode="decimal"
                               placeholder="0.00"
                               value={bankAmount}
-                              onChange={(e) => setBankAmount(e.target.value)}
-                              className="pl-8 text-2xl font-bold h-16"
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/[^0-9.]/g, '');
+                                const parts = value.split('.');
+                                if (parts.length > 2) return;
+                                const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                                const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
+                                setBankAmount(formatted);
+                              }}
+                              className="pl-8 text-2xl font-bold h-16 font-['Archivo']"
                               data-testid="input-bank-amount"
                             />
                           </div>
@@ -636,7 +642,7 @@ export default function Deposit() {
                               key={amount}
                               type="button"
                               variant="outline"
-                              onClick={() => setBankAmount(amount.toString())}
+                              onClick={() => setBankAmount(amount.toLocaleString())}
                               className="text-sm"
                               data-testid={`button-quick-amount-${amount}`}
                             >
@@ -714,7 +720,7 @@ export default function Deposit() {
                         </div>
                         <div>
                           <h2 className="text-lg md:text-2xl font-bold">Merchant Paired!</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Transfer ${parseFloat(bankAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to complete your deposit</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">Transfer ${parseFloat(bankAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to complete your deposit</p>
                         </div>
                       </div>
 
@@ -722,7 +728,7 @@ export default function Deposit() {
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Deposit Amount</span>
                           <span className="text-2xl font-bold text-green-500">
-                            ${parseFloat(bankAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${parseFloat(bankAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </div>
                       </div>
@@ -884,7 +890,7 @@ export default function Deposit() {
 
                       <form onSubmit={(e) => {
                         e.preventDefault();
-                        if (!cardAmount || parseFloat(cardAmount) <= 0) {
+                        if (!cardAmount || parseFloat(cardAmount.replace(/,/g, '')) <= 0) {
                           toast({
                             title: "Error",
                             description: "Please enter a valid amount",
@@ -900,13 +906,19 @@ export default function Deposit() {
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl font-medium text-muted-foreground">$</span>
                             <Input
                               id="card-amount"
-                              type="number"
-                              step="0.01"
-                              min="1"
+                              type="text"
+                              inputMode="decimal"
                               placeholder="0.00"
                               value={cardAmount}
-                              onChange={(e) => setCardAmount(e.target.value)}
-                              className="pl-8 text-2xl font-bold h-16"
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/[^0-9.]/g, '');
+                                const parts = value.split('.');
+                                if (parts.length > 2) return;
+                                const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                                const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
+                                setCardAmount(formatted);
+                              }}
+                              className="pl-8 text-2xl font-bold h-16 font-['Archivo']"
                               data-testid="input-card-amount"
                             />
                           </div>
@@ -919,7 +931,7 @@ export default function Deposit() {
                               key={amount}
                               type="button"
                               variant="outline"
-                              onClick={() => setCardAmount(amount.toString())}
+                              onClick={() => setCardAmount(amount.toLocaleString())}
                               className="text-sm"
                               data-testid={`button-card-quick-amount-${amount}`}
                             >
@@ -957,7 +969,7 @@ export default function Deposit() {
                         </div>
                         <div>
                           <h2 className="text-lg md:text-2xl font-bold">Enter Card Details</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Deposit ${parseFloat(cardAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">Deposit ${parseFloat(cardAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                       </div>
 
@@ -965,7 +977,7 @@ export default function Deposit() {
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Deposit Amount</span>
                           <span className="text-2xl font-bold text-green-500">
-                            ${parseFloat(cardAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${parseFloat(cardAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </div>
                       </div>
@@ -1085,7 +1097,7 @@ export default function Deposit() {
                           size="lg"
                           data-testid="button-proceed-to-pay"
                         >
-                          Proceed to Pay ${parseFloat(cardAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          Proceed to Pay ${parseFloat(cardAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </Button>
                       </form>
                     </>

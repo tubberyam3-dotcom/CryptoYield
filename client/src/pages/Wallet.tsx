@@ -145,7 +145,7 @@ export default function Wallet() {
       });
       return;
     }
-    withdrawMutation.mutate({ amount: withdrawAmount, withdrawMethod, destinationAddress });
+    withdrawMutation.mutate({ amount: withdrawAmount.replace(/,/g, ''), withdrawMethod, destinationAddress });
   };
 
   const formatDate = (dateString: string) => {
@@ -434,11 +434,19 @@ export default function Wallet() {
               <Label htmlFor="withdraw-amount">Amount (USD)</Label>
               <Input
                 id="withdraw-amount"
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 placeholder="Enter amount"
                 value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9.]/g, '');
+                  const parts = value.split('.');
+                  if (parts.length > 2) return;
+                  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                  const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
+                  setWithdrawAmount(formatted);
+                }}
+                className="font-['Archivo']"
                 data-testid="input-withdraw-amount"
               />
               <p className="text-sm text-muted-foreground">

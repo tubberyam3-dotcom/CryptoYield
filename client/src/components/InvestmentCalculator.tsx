@@ -130,7 +130,7 @@ export function InvestmentCalculator() {
   const selectedAssetData = stockAssets.find(a => a.symbol === selectedAsset);
   const selectedAsset2Data = stockAssets.find(a => a.symbol === selectedAsset2);
 
-  const investmentAmount = parseFloat(amount) || 1000;
+  const investmentAmount = parseFloat(amount.replace(/,/g, '')) || 1000;
   
   const quote1 = getQuote(selectedAsset);
   const quote2 = getQuote(selectedAsset2);
@@ -282,11 +282,19 @@ export function InvestmentCalculator() {
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
                   <Input
                     id="amount"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="1000"
-                    className="h-12 pl-8 border-2 hover:border-primary/50 focus:border-primary transition-colors text-lg"
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const parts = value.split('.');
+                      if (parts.length > 2) return;
+                      const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                      const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
+                      setAmount(formatted);
+                    }}
+                    placeholder="1,000"
+                    className="h-12 pl-8 border-2 hover:border-primary/50 focus:border-primary transition-colors text-lg font-['Archivo']"
                     data-testid="input-amount"
                   />
                 </div>
