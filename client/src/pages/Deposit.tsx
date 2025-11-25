@@ -75,7 +75,6 @@ export default function Deposit() {
       icon: "fab fa-bitcoin",
       iconBg: "bg-orange-500",
       description: "Deposit using your cryptocurrency wallet",
-      features: ["Instant processing", "Low fees", "Secure blockchain"],
     },
     {
       id: "bank",
@@ -83,7 +82,6 @@ export default function Deposit() {
       icon: "fas fa-university",
       iconBg: "bg-blue-500",
       description: "Direct transfer from your bank account",
-      features: ["Secure transfer", "No fees", "2-3 business days"],
     },
     {
       id: "card",
@@ -91,7 +89,6 @@ export default function Deposit() {
       icon: "fas fa-credit-card",
       iconBg: "bg-green-500",
       description: "Pay with your credit or debit card",
-      features: ["Instant deposit", "All major cards", "Secure payment"],
     },
     {
       id: "coupon",
@@ -99,7 +96,6 @@ export default function Deposit() {
       icon: "fas fa-gift",
       iconBg: "bg-purple-500",
       description: "Redeem a promotional deposit coupon",
-      features: ["Instant credit", "No fees", "Special offers"],
     },
   ];
 
@@ -294,14 +290,6 @@ export default function Deposit() {
                       <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1">{method.description}</p>
                     </div>
                     <i className="fas fa-chevron-right text-muted-foreground text-xs md:text-sm flex-shrink-0"></i>
-                  </div>
-                  <div className="space-y-0.5 md:space-y-1.5">
-                    {method.features.map((feature, index) => (
-                      <div key={index} className="flex items-center text-[10px] md:text-xs">
-                        <i className="fas fa-check text-green-500 mr-1 md:mr-2 text-[10px] md:text-xs flex-shrink-0"></i>
-                        <span className="line-clamp-1">{feature}</span>
-                      </div>
-                    ))}
                   </div>
                 </Card>
               ))}
