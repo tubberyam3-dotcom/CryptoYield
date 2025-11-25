@@ -23,6 +23,19 @@ import {
   Calendar,
   Activity
 } from "lucide-react";
+import aiTechImage from "@assets/stock_images/artificial_intellige_0671b83c.jpg";
+import financeChartImage from "@assets/stock_images/stock_market_trading_39893979.jpg";
+
+const ALLOCATION_COLORS = [
+  'bg-blue-500',
+  'bg-emerald-500',
+  'bg-purple-500',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-cyan-500',
+  'bg-indigo-500',
+  'bg-orange-500',
+];
 
 export default function PortfolioDetail() {
   const { id } = useParams();
@@ -170,20 +183,33 @@ export default function PortfolioDetail() {
             Back to Portfolios
           </Button>
 
+          {/* Hero Image Banner */}
+          <div className="relative rounded-xl overflow-hidden h-48 sm:h-64 mb-6">
+            <img 
+              src={portfolio.strategyTag?.toLowerCase().includes('ai') ? aiTechImage : financeChartImage} 
+              alt={portfolio.name}
+              className="w-full h-full object-cover"
+              data-testid="img-portfolio-hero"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <Badge className={getStrategyColor(portfolio.strategyTag || '')}>
+                  {portfolio.strategyTag || 'General'}
+                </Badge>
+                <Badge variant="outline" className={`${getRiskColor(portfolio.riskLevel)} bg-background/80`}>
+                  <Shield className="w-3 h-3 mr-1" />
+                  {portfolio.riskLevel} Risk
+                </Badge>
+              </div>
+              <h1 className="text-2xl sm:text-4xl font-bold text-foreground drop-shadow-lg">{portfolio.name}</h1>
+            </div>
+          </div>
+
           {/* Portfolio Header */}
           <Card className="p-6 sm:p-8 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
               <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <Badge className={getStrategyColor(portfolio.strategyTag || '')}>
-                    {portfolio.strategyTag || 'General'}
-                  </Badge>
-                  <Badge variant="outline" className={getRiskColor(portfolio.riskLevel)}>
-                    <Shield className="w-3 h-3 mr-1" />
-                    {portfolio.riskLevel} Risk
-                  </Badge>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-bold mb-3">{portfolio.name}</h1>
                 <p className="text-lg text-muted-foreground">{portfolio.description}</p>
               </div>
               <div className="flex flex-col items-start md:items-end gap-2">
@@ -296,40 +322,100 @@ export default function PortfolioDetail() {
 
           {/* Asset Allocation */}
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
               <PieChart className="w-5 h-5" />
               Asset Allocation
             </h2>
             {assets.length > 0 ? (
-              <div className="space-y-4">
-                {assets.map((asset: any, index: number) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <div>
-                          <div className="font-semibold">{asset.symbol || asset.name}</div>
-                          <div className="text-sm text-muted-foreground">{asset.type || 'Stock'}</div>
-                        </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Visual Pie Chart Representation */}
+                <div className="flex flex-col items-center justify-center">
+                  <div className="relative w-48 h-48 sm:w-56 sm:h-56">
+                    <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                      {(() => {
+                        let cumulativePercent = 0;
+                        return assets.map((asset: any, index: number) => {
+                          const percent = asset.allocation;
+                          const startPercent = cumulativePercent;
+                          cumulativePercent += percent;
+                          const strokeDasharray = `${percent} ${100 - percent}`;
+                          const strokeDashoffset = -startPercent;
+                          const colorClasses = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#F43F5E', '#06B6D4', '#6366F1', '#F97316'];
+                          return (
+                            <circle
+                              key={index}
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              fill="transparent"
+                              stroke={colorClasses[index % colorClasses.length]}
+                              strokeWidth="20"
+                              strokeDasharray={strokeDasharray}
+                              strokeDashoffset={strokeDashoffset}
+                              className="transition-all duration-500"
+                              style={{ strokeDasharray: `${percent} ${100 - percent}`, strokeDashoffset: -startPercent }}
+                            />
+                          );
+                        });
+                      })()}
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{assets.length}</div>
+                        <div className="text-xs text-muted-foreground">Assets</div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold">{asset.allocation}%</div>
-                        {asset.description && (
-                          <div className="text-sm text-muted-foreground">{asset.description}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className="bg-primary h-2 rounded-full transition-all" 
-                        style={{ width: `${asset.allocation}%` }}
-                      />
                     </div>
                   </div>
-                ))}
+                  {/* Legend */}
+                  <div className="flex flex-wrap justify-center gap-3 mt-4">
+                    {assets.map((asset: any, index: number) => (
+                      <div key={index} className="flex items-center gap-1.5">
+                        <div className={`w-3 h-3 rounded-full ${ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}`} />
+                        <span className="text-xs text-muted-foreground">{asset.symbol}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Detailed Asset List */}
+                <div className="space-y-4">
+                  {assets.map((asset: any, index: number) => (
+                    <div key={index} className="bg-muted/30 rounded-lg p-4 border">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full ${ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}`} />
+                          <div>
+                            <div className="font-semibold text-lg">{asset.symbol || asset.name}</div>
+                            <div className="text-sm text-muted-foreground">{asset.name}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold">{asset.allocation}%</div>
+                          <Badge variant="outline" className="text-xs">{asset.type || 'Stock'}</Badge>
+                        </div>
+                      </div>
+                      {asset.description && (
+                        <p className="text-sm text-muted-foreground mt-2">{asset.description}</p>
+                      )}
+                      <div className="w-full bg-muted rounded-full h-2 mt-3">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-500 ${ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}`}
+                          style={{ width: `${asset.allocation}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
-              <p className="text-muted-foreground">No asset allocation data available.</p>
+              <div className="text-center py-8">
+                <img 
+                  src={financeChartImage} 
+                  alt="Investment Chart" 
+                  className="w-full max-w-md mx-auto rounded-lg opacity-50 mb-4"
+                />
+                <p className="text-muted-foreground">No asset allocation data available for this portfolio.</p>
+              </div>
             )}
           </Card>
 
