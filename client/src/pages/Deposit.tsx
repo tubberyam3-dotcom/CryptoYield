@@ -262,14 +262,14 @@ export default function Deposit() {
         <TopBar title="Deposit Funds" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
-          <div className="flex items-center justify-between mb-6">
-            {!selectedMethod && (
+          {!selectedMethod && (
+            <div className="flex justify-end mb-4">
               <Button variant="outline" onClick={() => setLocation("/wallet")} data-testid="button-back">
                 <i className="fas fa-arrow-left mr-2"></i>
                 Back to Wallet
               </Button>
-            )}
-          </div>
+            </div>
+          )}
 
           {!selectedMethod ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
@@ -323,8 +323,8 @@ export default function Deposit() {
                           <i className="fab fa-bitcoin text-white text-xl"></i>
                         </div>
                         <div>
-                          <h2 className="text-2xl font-bold">Select Cryptocurrency</h2>
-                          <p className="text-muted-foreground">Choose which crypto you want to deposit</p>
+                          <h2 className="text-lg md:text-2xl font-bold">Select Cryptocurrency</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">Choose which crypto you want to deposit</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -371,8 +371,8 @@ export default function Deposit() {
                           )}
                         </div>
                         <div>
-                          <h2 className="text-2xl font-bold">Enter Amount</h2>
-                          <p className="text-muted-foreground">How much USD would you like to deposit?</p>
+                          <h2 className="text-lg md:text-2xl font-bold">Enter Amount</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">How much USD would you like to deposit?</p>
                         </div>
                       </div>
                       <form onSubmit={(e) => {
@@ -447,8 +447,8 @@ export default function Deposit() {
                           )}
                         </div>
                         <div>
-                          <h2 className="text-2xl font-bold">Send Payment</h2>
-                          <p className="text-muted-foreground">Transfer ${cryptoAmount} worth of {selectedCrypto}</p>
+                          <h2 className="text-lg md:text-2xl font-bold">Send Payment</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">Transfer ${cryptoAmount} worth of {selectedCrypto}</p>
                         </div>
                       </div>
 
