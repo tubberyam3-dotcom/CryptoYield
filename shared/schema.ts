@@ -335,6 +335,9 @@ export const insertPortfolioSchema = createInsertSchema(portfolios).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  detailedDescription: z.string().optional(),
+  whitepaperUrl: z.string().optional(),
 });
 
 export const insertUserPortfolioSchema = createInsertSchema(userPortfolios).omit({
