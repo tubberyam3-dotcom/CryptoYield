@@ -559,6 +559,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate monthly investment report
+  app.post('/api/portfolios/:id/report', enhancedAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const portfolioId = req.params.id;
+      
+      // Get user's portfolio investment
+      const userPortfolios = await storage.getUserPortfolios(userId);
+      const userInvestment = userPortfolios.find((up: any) => up.portfolio?.id === portfolioId);
+      
+      if (!userInvestment) {
+        return res.status(404).json({ message: "You have not invested in this portfolio" });
+      }
+
+      // Get portfolio details
+      const portfolio = await storage.getPortfolio(portfolioId);
+      if (!portfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+      }
+
+      // Generate simple text-based report (can be enhanced to PDF in future)
+      const currentDate = new Date();
+      const monthYear = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      
+      const reportData = {
+        title: `Monthly Investment Report - ${monthYear}`,
+        portfolio: portfolio.name,
+        strategyTag: portfolio.strategyTag || 'General',
+        riskLevel: portfolio.riskLevel,
+        investedAmount: parseFloat(userInvestment.investedAmount),
+        currentValue: parseFloat(userInvestment.currentValue),
+        returns: parseFloat(userInvestment.returns || '0'),
+        returnPercentage: ((parseFloat(userInvestment.returns || '0') / parseFloat(userInvestment.investedAmount)) * 100).toFixed(2),
+        reportDate: currentDate.toLocaleDateString('en-US'),
+      };
+
+      // Create a simple HTML/text report
+      const reportHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>${reportData.title}</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+    h1 { color: #333; border-bottom: 3px solid #0066cc; padding-bottom: 10px; }
+    h2 { color: #666; margin-top: 30px; }
+    .header { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+    .stat { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+    .stat label { font-weight: bold; color: #666; }
+    .stat value { color: #333; }
+    .positive { color: #22c55e; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Reflux Capital - Investment Report</h1>
+    <p><strong>Report Period:</strong> ${reportData.title}</p>
+    <p><strong>Generated:</strong> ${reportData.reportDate}</p>
+  </div>
+  
+  <h2>Portfolio Summary</h2>
+  <div class="stat">
+    <label>Portfolio Name:</label>
+    <value>${reportData.portfolio}</value>
+  </div>
+  <div class="stat">
+    <label>Strategy:</label>
+    <value>${reportData.strategyTag}</value>
+  </div>
+  <div class="stat">
+    <label>Risk Level:</label>
+    <value>${reportData.riskLevel.toUpperCase()}</value>
+  </div>
+  
+  <h2>Investment Performance</h2>
+  <div class="stat">
+    <label>Invested Amount:</label>
+    <value>$${reportData.investedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</value>
+  </div>
+  <div class="stat">
+    <label>Current Value:</label>
+    <value>$${reportData.currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</value>
+  </div>
+  <div class="stat">
+    <label>Total Returns:</label>
+    <value class="positive">+$${reportData.returns.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (+${reportData.returnPercentage}%)</value>
+  </div>
+  
+  <div class="footer">
+    <p>This report is for informational purposes only. Past performance does not guarantee future results.</p>
+    <p>&copy; ${currentDate.getFullYear()} Reflux Capital. All rights reserved.</p>
+  </div>
+</body>
+</html>
+      `;
+
+      // Send as HTML (browser will handle print-to-PDF)
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `attachment; filename="investment-report-${monthYear.replace(' ', '-')}.html"`);
+      res.send(reportHTML);
+    } catch (error) {
+      console.error("Error generating report:", error);
+      res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
   // Joint Account routes
   app.post('/api/joint-accounts', enhancedAuth, async (req: any, res) => {
     try {
