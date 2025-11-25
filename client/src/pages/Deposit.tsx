@@ -402,7 +402,7 @@ export default function Deposit() {
                           {cryptoAmount && selectedCoin && (
                             <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border">
                               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                                <span className="text-xs md:text-sm text-muted-foreground">You will receive:</span>
+                                <span className="text-xs md:text-sm text-muted-foreground">You will send:</span>
                                 <div className="flex items-center space-x-2">
                                   {CoinIcon && <CoinIcon className={`${selectedCoin.color} text-base md:text-lg`} />}
                                   <span className="text-sm md:text-lg font-bold break-all" data-testid="text-crypto-equivalent">
