@@ -666,6 +666,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate investment statement
+  app.post('/api/portfolios/:id/statement', enhancedAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const portfolioId = req.params.id;
+      
+      // Get user's portfolio investment
+      const userPortfolios = await storage.getUserPortfolios(userId);
+      const userInvestment = userPortfolios.find((up: any) => up.portfolio?.id === portfolioId);
+      
+      if (!userInvestment) {
+        return res.status(404).json({ message: "You have not invested in this portfolio" });
+      }
+
+      // Get portfolio details
+      const portfolio = await storage.getPortfolio(portfolioId);
+      if (!portfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+      }
+
+      // Get user details
+      const user = await storage.getUser(userId);
+
+      const currentDate = new Date();
+      const statementDate = currentDate.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      
+      const investedAmount = parseFloat(userInvestment.investedAmount);
+      const currentValue = parseFloat(userInvestment.currentValue);
+      const returns = parseFloat(userInvestment.returns || '0');
+      const returnPercentage = ((returns / investedAmount) * 100).toFixed(2);
+      const investmentDate = new Date(userInvestment.createdAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      // Generate statement HTML
+      const statementHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Investment Statement - Reflux Capital</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; background: #fff; color: #333; }
+    .header { text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 20px; margin-bottom: 30px; }
+    .logo { font-size: 28px; font-weight: bold; color: #0066cc; margin-bottom: 5px; }
+    .tagline { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
+    .statement-title { font-size: 24px; color: #333; margin: 20px 0 10px; }
+    .statement-date { color: #666; font-size: 14px; }
+    
+    .account-section { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .section-title { font-size: 16px; font-weight: 600; color: #0066cc; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+    
+    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #666; }
+    .info-value { font-weight: 600; color: #333; }
+    
+    .summary-box { background: linear-gradient(135deg, #0066cc 0%, #004499 100%); color: white; padding: 25px; border-radius: 8px; margin: 30px 0; }
+    .summary-title { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
+    .summary-value { font-size: 32px; font-weight: bold; }
+    .summary-change { font-size: 16px; margin-top: 10px; }
+    .positive { color: #4ade80; }
+    
+    .performance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+    .performance-item { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
+    .performance-label { font-size: 12px; color: #666; margin-bottom: 5px; }
+    .performance-value { font-size: 20px; font-weight: 600; color: #333; }
+    
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 11px; color: #999; text-align: center; }
+    .footer p { margin: 5px 0; }
+    
+    .watermark { position: fixed; bottom: 20px; right: 20px; opacity: 0.1; font-size: 60px; font-weight: bold; color: #0066cc; transform: rotate(-15deg); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">REFLUX CAPITAL</div>
+    <div class="tagline">Investment Brokerage & Advisory</div>
+    <div class="statement-title">Investment Statement</div>
+    <div class="statement-date">${statementDate}</div>
+  </div>
+  
+  <div class="account-section">
+    <div class="section-title">Account Information</div>
+    <div class="info-row">
+      <span class="info-label">Account Holder</span>
+      <span class="info-value">${user?.firstName || 'Investor'} ${user?.lastName || ''}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Account ID</span>
+      <span class="info-value">${userId.substring(0, 8).toUpperCase()}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Statement Period</span>
+      <span class="info-value">${investmentDate} - Present</span>
+    </div>
+  </div>
+  
+  <div class="account-section">
+    <div class="section-title">Portfolio Details</div>
+    <div class="info-row">
+      <span class="info-label">Portfolio Name</span>
+      <span class="info-value">${portfolio.name}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Strategy</span>
+      <span class="info-value">${portfolio.strategyTag || 'General'}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Risk Level</span>
+      <span class="info-value">${portfolio.riskLevel.toUpperCase()}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Investment Date</span>
+      <span class="info-value">${investmentDate}</span>
+    </div>
+  </div>
+  
+  <div class="summary-box">
+    <div class="summary-title">Current Portfolio Value</div>
+    <div class="summary-value">$${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+    <div class="summary-change positive">+$${returns.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (+${returnPercentage}%) since investment</div>
+  </div>
+  
+  <div class="performance-grid">
+    <div class="performance-item">
+      <div class="performance-label">Original Investment</div>
+      <div class="performance-value">$${investedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+    </div>
+    <div class="performance-item">
+      <div class="performance-label">Total Returns</div>
+      <div class="performance-value" style="color: #22c55e;">+$${returns.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+    </div>
+    <div class="performance-item">
+      <div class="performance-label">Return Rate</div>
+      <div class="performance-value" style="color: #22c55e;">+${returnPercentage}%</div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p><strong>Important Notice:</strong> This statement is for informational purposes only and does not constitute investment advice.</p>
+    <p>Past performance does not guarantee future results. All investments carry risk, including potential loss of principal.</p>
+    <p>&copy; ${currentDate.getFullYear()} Reflux Capital. All rights reserved. | Member SIPC</p>
+  </div>
+  
+  <div class="watermark">RC</div>
+</body>
+</html>
+      `;
+
+      // Send as HTML
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `attachment; filename="investment-statement-${currentDate.toISOString().slice(0, 10)}.html"`);
+      res.send(statementHTML);
+    } catch (error) {
+      console.error("Error generating statement:", error);
+      res.status(500).json({ message: "Failed to generate statement" });
+    }
+  });
+
   // Joint Account routes
   app.post('/api/joint-accounts', enhancedAuth, async (req: any, res) => {
     try {

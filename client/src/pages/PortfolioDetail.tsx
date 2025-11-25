@@ -115,6 +115,49 @@ export default function PortfolioDetail() {
     }
   };
 
+  const handleDownloadStatement = async () => {
+    if (!userInvestment) {
+      toast({
+        title: "No Investment",
+        description: "You must invest in this portfolio before downloading a statement.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/portfolios/${id}/statement`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate statement');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${portfolio?.name || 'portfolio'}-statement-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Statement Downloaded",
+        description: "Your investment statement has been downloaded.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download statement. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getRiskColor = (risk: string) => {
     switch (risk) {
       case 'low': return 'bg-green-500/10 text-green-500 border-green-500/20';
@@ -273,6 +316,17 @@ export default function PortfolioDetail() {
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   Monthly Report
+                </Button>
+              )}
+              {userInvestment && (
+                <Button 
+                  variant="outline"
+                  onClick={handleDownloadStatement}
+                  className="flex-1"
+                  data-testid="button-download-statement"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Statement
                 </Button>
               )}
             </div>
