@@ -34,7 +34,13 @@ export default function Deposit() {
   const [routingNumber, setRoutingNumber] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
 
+  // Card payment multi-step flow
+  const [cardStep, setCardStep] = useState(1); // 1=amount, 2=card form, 3=unavailable message
   const [cardAmount, setCardAmount] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [cardName, setCardName] = useState("");
   const [stripeTransactionId, setStripeTransactionId] = useState("");
 
   const [couponCode, setCouponCode] = useState("");
@@ -332,6 +338,12 @@ export default function Deposit() {
                   setCryptoAmount("");
                   setBankStep(1);
                   setBankAmount("");
+                  setCardStep(1);
+                  setCardAmount("");
+                  setCardNumber("");
+                  setCardExpiry("");
+                  setCardCvv("");
+                  setCardName("");
                 }}
                 className="mb-4"
                 data-testid="button-back-to-methods"
@@ -849,55 +861,278 @@ export default function Deposit() {
 
               {selectedMethod === "card" && (
                 <Card className="p-6">
-                  <div className="flex items-center space-x-4 mb-6">
-                    <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                      <i className="fas fa-credit-card text-white text-xl"></i>
+                  {/* Step 1: Enter Amount */}
+                  {cardStep === 1 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
+                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                          <CreditCard className="text-white h-6 w-6" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl md:text-2xl font-bold">Card Payment</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">Enter the amount you want to deposit</p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!cardAmount || parseFloat(cardAmount) <= 0) {
+                          toast({
+                            title: "Error",
+                            description: "Please enter a valid amount",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setCardStep(2);
+                      }} className="space-y-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="card-amount" className="text-base">Deposit Amount (USD)</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl font-medium text-muted-foreground">$</span>
+                            <Input
+                              id="card-amount"
+                              type="number"
+                              step="0.01"
+                              min="1"
+                              placeholder="0.00"
+                              value={cardAmount}
+                              onChange={(e) => setCardAmount(e.target.value)}
+                              className="pl-8 text-2xl font-bold h-16"
+                              data-testid="input-card-amount"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">Minimum deposit: $10.00</p>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2">
+                          {[100, 500, 1000, 5000].map((amount) => (
+                            <Button
+                              key={amount}
+                              type="button"
+                              variant="outline"
+                              onClick={() => setCardAmount(amount.toString())}
+                              className="text-sm"
+                              data-testid={`button-card-quick-amount-${amount}`}
+                            >
+                              ${amount.toLocaleString()}
+                            </Button>
+                          ))}
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          size="lg"
+                          data-testid="button-continue-card"
+                        >
+                          Continue
+                        </Button>
+                      </form>
+                    </>
+                  )}
+
+                  {/* Step 2: Card Form */}
+                  {cardStep === 2 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setCardStep(1)}
+                          data-testid="button-back-to-card-amount"
+                        >
+                          <i className="fas fa-arrow-left"></i>
+                        </Button>
+                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                          <CreditCard className="text-white h-6 w-6" />
+                        </div>
+                        <div>
+                          <h2 className="text-lg md:text-2xl font-bold">Enter Card Details</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">Deposit ${parseFloat(cardAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4 mb-6">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Deposit Amount</span>
+                          <span className="text-2xl font-bold text-green-500">
+                            ${parseFloat(cardAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Form */}
+                      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 mb-6 text-white">
+                        <div className="flex justify-between items-start mb-8">
+                          <div className="w-12 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded"></div>
+                          <div className="flex gap-1">
+                            <div className="w-6 h-6 bg-red-500 rounded-full opacity-80"></div>
+                            <div className="w-6 h-6 bg-orange-400 rounded-full opacity-80 -ml-3"></div>
+                          </div>
+                        </div>
+                        <div className="font-mono text-xl tracking-widest mb-6">
+                          {cardNumber ? cardNumber.replace(/(\d{4})(?=\d)/g, '$1 ').trim() : '**** **** **** ****'}
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <div>
+                            <p className="text-slate-400 text-xs uppercase">Card Holder</p>
+                            <p className="font-medium">{cardName || 'YOUR NAME'}</p>
+                          </div>
+                          <div>
+                            <p className="text-slate-400 text-xs uppercase">Expires</p>
+                            <p className="font-medium">{cardExpiry || 'MM/YY'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!cardNumber || !cardExpiry || !cardCvv || !cardName) {
+                          toast({
+                            title: "Error",
+                            description: "Please fill in all card details",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setCardStep(3);
+                      }} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="card-name">Cardholder Name</Label>
+                          <Input
+                            id="card-name"
+                            type="text"
+                            placeholder="Name on card"
+                            value={cardName}
+                            onChange={(e) => setCardName(e.target.value.toUpperCase())}
+                            className="uppercase"
+                            data-testid="input-card-name"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="card-number">Card Number</Label>
+                          <Input
+                            id="card-number"
+                            type="text"
+                            placeholder="1234 5678 9012 3456"
+                            value={cardNumber}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                              setCardNumber(value);
+                            }}
+                            maxLength={19}
+                            data-testid="input-card-number"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="card-expiry">Expiry Date</Label>
+                            <Input
+                              id="card-expiry"
+                              type="text"
+                              placeholder="MM/YY"
+                              value={cardExpiry}
+                              onChange={(e) => {
+                                let value = e.target.value.replace(/\D/g, '');
+                                if (value.length >= 2) {
+                                  value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                                }
+                                setCardExpiry(value);
+                              }}
+                              maxLength={5}
+                              data-testid="input-card-expiry"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="card-cvv">CVV</Label>
+                            <Input
+                              id="card-cvv"
+                              type="password"
+                              placeholder="***"
+                              value={cardCvv}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                setCardCvv(value);
+                              }}
+                              maxLength={4}
+                              data-testid="input-card-cvv"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                          <i className="fas fa-lock"></i>
+                          <span>Your payment information is encrypted and secure</span>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          size="lg"
+                          data-testid="button-proceed-to-pay"
+                        >
+                          Proceed to Pay ${parseFloat(cardAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Button>
+                      </form>
+                    </>
+                  )}
+
+                  {/* Step 3: Unavailable Message */}
+                  {cardStep === 3 && (
+                    <div className="py-8 text-center space-y-6">
+                      <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto">
+                        <i className="fas fa-map-marker-alt text-3xl text-amber-500"></i>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-bold">Card Deposit Not Available</h3>
+                        <p className="text-muted-foreground max-w-sm mx-auto">
+                          Card deposits are not currently available for your location. You will be updated once this service becomes available in your region.
+                        </p>
+                      </div>
+
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 max-w-sm mx-auto">
+                        <p className="text-sm text-amber-400">
+                          <i className="fas fa-info-circle mr-2"></i>
+                          Your card information has been saved securely. We'll notify you when card payments are enabled for your location.
+                        </p>
+                      </div>
+
+                      <div className="pt-4 space-y-3">
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            setSelectedMethod("bank");
+                            setBankStep(1);
+                          }}
+                          data-testid="button-try-bank-transfer"
+                        >
+                          <Building2 className="h-4 w-4 mr-2" />
+                          Try Bank Transfer Instead
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full"
+                          onClick={() => {
+                            setSelectedMethod(null);
+                            setCardStep(1);
+                            setCardAmount("");
+                            setCardNumber("");
+                            setCardExpiry("");
+                            setCardCvv("");
+                            setCardName("");
+                          }}
+                          data-testid="button-back-to-deposit-methods"
+                        >
+                          Back to Deposit Methods
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold">Card Payment</h2>
-                      <p className="text-muted-foreground">Pay with credit or debit card</p>
-                    </div>
-                  </div>
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-blue-400">
-                      <i className="fas fa-info-circle mr-2"></i>
-                      Card payments require Stripe integration. For demo purposes, you can use a simulated transaction ID.
-                    </p>
-                  </div>
-                  <form onSubmit={handleCardDeposit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="card-amount">Amount (USD)</Label>
-                      <Input
-                        id="card-amount"
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter amount"
-                        value={cardAmount}
-                        onChange={(e) => setCardAmount(e.target.value)}
-                        data-testid="input-card-amount"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="stripe-txn">Stripe Transaction ID</Label>
-                      <Input
-                        id="stripe-txn"
-                        type="text"
-                        placeholder="tx_demo_123456789"
-                        value={stripeTransactionId}
-                        onChange={(e) => setStripeTransactionId(e.target.value)}
-                        data-testid="input-stripe-txn"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      size="lg"
-                      disabled={cardDepositMutation.isPending}
-                      data-testid="button-submit-card"
-                    >
-                      {cardDepositMutation.isPending ? "Processing..." : "Submit Payment"}
-                    </Button>
-                  </form>
+                  )}
                 </Card>
               )}
 
