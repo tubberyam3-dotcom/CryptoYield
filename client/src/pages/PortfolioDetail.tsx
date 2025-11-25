@@ -86,17 +86,19 @@ export default function PortfolioDetail() {
       const response = await fetch(`/api/portfolios/${id}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
 
       if (!response.ok) {
         throw new Error('Failed to generate report');
       }
 
-      const blob = await response.blob();
+      const html = await response.text();
+      const blob = new Blob([html], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${portfolio?.name || 'portfolio'}-investment-report-${new Date().toISOString().slice(0, 7)}.pdf`;
+      a.download = `${portfolio?.name || 'portfolio'}-investment-report-${new Date().toISOString().slice(0, 7)}.html`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -104,7 +106,7 @@ export default function PortfolioDetail() {
 
       toast({
         title: "Report Generated",
-        description: "Your monthly investment report has been downloaded.",
+        description: "Your monthly investment report has been downloaded. Open the file in a browser to view.",
       });
     } catch (error) {
       toast({
@@ -129,17 +131,19 @@ export default function PortfolioDetail() {
       const response = await fetch(`/api/portfolios/${id}/statement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
 
       if (!response.ok) {
         throw new Error('Failed to generate statement');
       }
 
-      const blob = await response.blob();
+      const html = await response.text();
+      const blob = new Blob([html], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${portfolio?.name || 'portfolio'}-statement-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.download = `${portfolio?.name || 'portfolio'}-statement-${new Date().toISOString().slice(0, 10)}.html`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -147,7 +151,7 @@ export default function PortfolioDetail() {
 
       toast({
         title: "Statement Downloaded",
-        description: "Your investment statement has been downloaded.",
+        description: "Your investment statement has been downloaded. Open the file in a browser to view.",
       });
     } catch (error) {
       toast({
