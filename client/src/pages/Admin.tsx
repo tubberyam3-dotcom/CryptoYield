@@ -19,6 +19,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { StockManagement } from "@/components/admin/StockManagement";
 import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApprovals";
+import { Building2, Save } from "lucide-react";
 import type { Portfolio, StakingPlan, CommunityChallenge } from "@shared/schema";
 
 export default function Admin() {
@@ -39,6 +40,15 @@ export default function Admin() {
     apy: "",
     minAmount: "",
   });
+  const [bankSettings, setBankSettings] = useState({
+    bankName: "",
+    accountName: "",
+    accountNumber: "",
+    routingNumber: "",
+    swiftCode: "",
+    bankAddress: "",
+    instructions: "",
+  });
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -54,6 +64,26 @@ export default function Admin() {
   const { data: challenges } = useQuery<CommunityChallenge[]>({
     queryKey: ["/api/challenges"],
   });
+
+  // Bank transfer settings query
+  const { data: fetchedBankSettings } = useQuery<{
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    routingNumber: string;
+    swiftCode: string;
+    bankAddress: string;
+    instructions: string;
+  }>({
+    queryKey: ['/api/settings/bank-transfer'],
+  });
+
+  // Populate bank settings when data is fetched
+  useEffect(() => {
+    if (fetchedBankSettings) {
+      setBankSettings(fetchedBankSettings);
+    }
+  }, [fetchedBankSettings]);
 
   const createPortfolioMutation = useMutation({
     mutationFn: async (portfolioData: any) => {
@@ -129,6 +159,41 @@ export default function Admin() {
     },
   });
 
+  // Bank transfer settings mutation
+  const updateBankSettingsMutation = useMutation({
+    mutationFn: async (settings: typeof bankSettings) => {
+      const response = await apiRequest("PUT", "/api/admin/settings/bank-transfer", settings);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Settings Updated",
+        description: "Bank transfer settings have been saved successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/bank-transfer'] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "Please log in to continue",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Failed to Update Settings",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleUpdateBankSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateBankSettingsMutation.mutate(bankSettings);
+  };
+
   // Authentication and admin access is handled by App component routing
   // Admin role check could be added to the route protection level
 
@@ -186,7 +251,7 @@ export default function Admin() {
           </div>
 
           <Tabs defaultValue="users" className="space-y-4 sm:space-y-6">
-            <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full max-w-4xl h-auto gap-1">
+            <TabsList className="grid grid-cols-4 sm:grid-cols-7 w-full max-w-5xl h-auto gap-1">
               <TabsTrigger value="users" data-testid="tab-users" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
                 <span className="hidden xs:inline">Users</span>
                 <span className="xs:hidden">👥</span>
@@ -210,6 +275,10 @@ export default function Admin() {
               <TabsTrigger value="challenges" data-testid="tab-challenges" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
                 <span className="hidden xs:inline">Challenges</span>
                 <span className="xs:hidden">🏆</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" data-testid="tab-settings" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+                <span className="hidden xs:inline">Settings</span>
+                <span className="xs:hidden">⚙️</span>
               </TabsTrigger>
             </TabsList>
             
@@ -497,6 +566,117 @@ export default function Admin() {
             
             <TabsContent value="users" className="space-y-4 sm:space-y-6 mt-4">
               <UserManagement />
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-4 sm:space-y-6 mt-4">
+              <h3 className="text-xl font-semibold">Platform Settings</h3>
+              
+              {/* Bank Transfer Settings */}
+              <Card className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-lg">Bank Transfer Settings</h4>
+                    <p className="text-sm text-muted-foreground">Configure the bank account details shown to users for deposits</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleUpdateBankSettings} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-name">Bank Name</Label>
+                      <Input
+                        id="bank-name"
+                        placeholder="e.g., Chase Bank"
+                        value={bankSettings.bankName}
+                        onChange={(e) => setBankSettings({ ...bankSettings, bankName: e.target.value })}
+                        data-testid="input-admin-bank-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="account-name">Account Name</Label>
+                      <Input
+                        id="account-name"
+                        placeholder="e.g., Reflux Capital LLC"
+                        value={bankSettings.accountName}
+                        onChange={(e) => setBankSettings({ ...bankSettings, accountName: e.target.value })}
+                        data-testid="input-admin-account-name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="account-number">Account Number</Label>
+                      <Input
+                        id="account-number"
+                        placeholder="e.g., 8827364519"
+                        value={bankSettings.accountNumber}
+                        onChange={(e) => setBankSettings({ ...bankSettings, accountNumber: e.target.value })}
+                        data-testid="input-admin-account-number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="routing-number">Routing Number (ACH)</Label>
+                      <Input
+                        id="routing-number"
+                        placeholder="e.g., 021000021"
+                        value={bankSettings.routingNumber}
+                        onChange={(e) => setBankSettings({ ...bankSettings, routingNumber: e.target.value })}
+                        data-testid="input-admin-routing-number"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="swift-code">SWIFT/BIC Code (International)</Label>
+                      <Input
+                        id="swift-code"
+                        placeholder="e.g., CHASUS33"
+                        value={bankSettings.swiftCode}
+                        onChange={(e) => setBankSettings({ ...bankSettings, swiftCode: e.target.value })}
+                        data-testid="input-admin-swift-code"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-address">Bank Address</Label>
+                      <Input
+                        id="bank-address"
+                        placeholder="e.g., 270 Park Avenue, New York, NY 10017"
+                        value={bankSettings.bankAddress}
+                        onChange={(e) => setBankSettings({ ...bankSettings, bankAddress: e.target.value })}
+                        data-testid="input-admin-bank-address"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="instructions">Transfer Instructions</Label>
+                    <Textarea
+                      id="instructions"
+                      placeholder="Instructions for users making bank transfers..."
+                      value={bankSettings.instructions}
+                      onChange={(e) => setBankSettings({ ...bankSettings, instructions: e.target.value })}
+                      className="min-h-[80px]"
+                      data-testid="input-admin-instructions"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <Button 
+                      type="submit" 
+                      disabled={updateBankSettingsMutation.isPending}
+                      data-testid="button-save-bank-settings"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {updateBankSettingsMutation.isPending ? "Saving..." : "Save Settings"}
+                    </Button>
+                  </div>
+                </form>
+              </Card>
             </TabsContent>
           </Tabs>
 

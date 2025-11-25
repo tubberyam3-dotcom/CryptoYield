@@ -1529,6 +1529,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bank transfer settings - public endpoint to get deposit info
+  app.get('/api/settings/bank-transfer', async (req, res) => {
+    try {
+      const settings = {
+        bankName: await storage.getSetting('bank_transfer_bank_name'),
+        accountName: await storage.getSetting('bank_transfer_account_name'),
+        accountNumber: await storage.getSetting('bank_transfer_account_number'),
+        routingNumber: await storage.getSetting('bank_transfer_routing_number'),
+        swiftCode: await storage.getSetting('bank_transfer_swift_code'),
+        bankAddress: await storage.getSetting('bank_transfer_bank_address'),
+        instructions: await storage.getSetting('bank_transfer_instructions'),
+      };
+      
+      res.json({
+        bankName: settings.bankName?.settingValue || 'Reflux Capital Bank',
+        accountName: settings.accountName?.settingValue || 'Reflux Capital LLC',
+        accountNumber: settings.accountNumber?.settingValue || '8827364519',
+        routingNumber: settings.routingNumber?.settingValue || '021000021',
+        swiftCode: settings.swiftCode?.settingValue || 'CHASUS33',
+        bankAddress: settings.bankAddress?.settingValue || '270 Park Avenue, New York, NY 10017',
+        instructions: settings.instructions?.settingValue || 'Please include your account ID in the transfer reference. Deposits are typically credited within 1-3 business days.',
+      });
+    } catch (error) {
+      console.error("Error fetching bank transfer settings:", error);
+      res.status(500).json({ message: "Failed to fetch bank transfer settings" });
+    }
+  });
+
+  // Admin endpoint to update bank transfer settings
+  app.put('/api/admin/settings/bank-transfer', adminAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { bankName, accountName, accountNumber, routingNumber, swiftCode, bankAddress, instructions } = req.body;
+
+      const settingsToUpdate = [
+        { key: 'bank_transfer_bank_name', value: bankName, description: 'Bank name for deposits' },
+        { key: 'bank_transfer_account_name', value: accountName, description: 'Account holder name for deposits' },
+        { key: 'bank_transfer_account_number', value: accountNumber, description: 'Account number for deposits' },
+        { key: 'bank_transfer_routing_number', value: routingNumber, description: 'Routing number for deposits' },
+        { key: 'bank_transfer_swift_code', value: swiftCode, description: 'SWIFT/BIC code for international transfers' },
+        { key: 'bank_transfer_bank_address', value: bankAddress, description: 'Bank address for deposits' },
+        { key: 'bank_transfer_instructions', value: instructions, description: 'Instructions for bank transfers' },
+      ];
+
+      for (const setting of settingsToUpdate) {
+        if (setting.value !== undefined) {
+          await storage.setSetting({
+            settingKey: setting.key,
+            settingValue: setting.value,
+            description: setting.description,
+            updatedBy: userId,
+          });
+        }
+      }
+
+      res.json({ message: "Bank transfer settings updated successfully" });
+    } catch (error) {
+      console.error("Error updating bank transfer settings:", error);
+      res.status(500).json({ message: "Failed to update bank transfer settings" });
+    }
+  });
+
   app.patch('/api/admin/users/:id/role', adminAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
