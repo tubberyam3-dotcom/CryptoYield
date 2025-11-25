@@ -821,29 +821,16 @@ export default function Deposit() {
                             data-testid="input-account-holder"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="account-number">Your Account Number</Label>
-                            <Input
-                              id="account-number"
-                              type="text"
-                              placeholder="Your account number"
-                              value={accountNumber}
-                              onChange={(e) => setAccountNumber(e.target.value)}
-                              data-testid="input-account-number"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="routing-number">Your Routing Number</Label>
-                            <Input
-                              id="routing-number"
-                              type="text"
-                              placeholder="Your routing number"
-                              value={routingNumber}
-                              onChange={(e) => setRoutingNumber(e.target.value)}
-                              data-testid="input-routing-number"
-                            />
-                          </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="account-number">Your Account Number</Label>
+                          <Input
+                            id="account-number"
+                            type="text"
+                            placeholder="Your account number"
+                            value={accountNumber}
+                            onChange={(e) => setAccountNumber(e.target.value)}
+                            data-testid="input-account-number"
+                          />
                         </div>
                         <Button
                           type="submit"
