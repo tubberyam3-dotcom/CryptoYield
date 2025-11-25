@@ -312,7 +312,11 @@ export default function Deposit() {
                 Back to Methods
               </Button>
 
-              {selectedMethod === "crypto" && (
+              {selectedMethod === "crypto" && (() => {
+                const selectedCoin = cryptoCoins.find(c => c.id === selectedCrypto);
+                const CoinIcon = selectedCoin?.icon;
+                
+                return (
                 <Card className="p-6">
                   {cryptoStep === 1 && (
                     <>
@@ -361,8 +365,12 @@ export default function Deposit() {
                         >
                           <i className="fas fa-arrow-left"></i>
                         </Button>
-                        <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                          <i className="fab fa-bitcoin text-white text-xl"></i>
+                        <div className={`w-12 h-12 ${CoinIcon ? 'bg-white' : 'bg-orange-500'} rounded-lg flex items-center justify-center`}>
+                          {CoinIcon ? (
+                            <CoinIcon className={`${selectedCoin?.color} text-2xl`} />
+                          ) : (
+                            <i className="fab fa-bitcoin text-white text-xl"></i>
+                          )}
                         </div>
                         <div>
                           <h2 className="text-2xl font-bold">Enter Amount</h2>
@@ -417,8 +425,12 @@ export default function Deposit() {
                         >
                           <i className="fas fa-arrow-left"></i>
                         </Button>
-                        <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                          <i className="fab fa-bitcoin text-white text-xl"></i>
+                        <div className={`w-12 h-12 ${CoinIcon ? 'bg-white' : 'bg-orange-500'} rounded-lg flex items-center justify-center`}>
+                          {CoinIcon ? (
+                            <CoinIcon className={`${selectedCoin?.color} text-2xl`} />
+                          ) : (
+                            <i className="fab fa-bitcoin text-white text-xl"></i>
+                          )}
                         </div>
                         <div>
                           <h2 className="text-2xl font-bold">Send Payment</h2>
@@ -499,7 +511,8 @@ export default function Deposit() {
                     </>
                   )}
                 </Card>
-              )}
+                );
+              })()}
 
               {selectedMethod === "bank" && (
                 <Card className="p-6">
