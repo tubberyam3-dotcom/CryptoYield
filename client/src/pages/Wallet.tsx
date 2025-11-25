@@ -7,14 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import type { Deposit, Withdrawal } from "@shared/schema";
 
 const mockWalletAssets = [
@@ -91,13 +85,7 @@ const mockTransactions = [
 
 export default function Wallet() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [withdrawMethod, setWithdrawMethod] = useState<'crypto' | 'bank_transfer'>('crypto');
-  const [destinationAddress, setDestinationAddress] = useState("");
   const { user, isLoading } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
   const { data: deposits = [] } = useQuery<Deposit[]>({
@@ -110,43 +98,6 @@ export default function Wallet() {
     enabled: !!user,
   });
 
-  const withdrawMutation = useMutation({
-    mutationFn: async (data: { amount: string; withdrawMethod: 'crypto' | 'bank_transfer'; destinationAddress: string }) => {
-      const res = await apiRequest("POST", "/api/withdrawals", data);
-      return res.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Withdrawal Submitted",
-        description: data.message,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/withdrawals"] });
-      setWithdrawDialogOpen(false);
-      setWithdrawAmount("");
-      setDestinationAddress("");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Withdrawal Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleWithdraw = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!withdrawAmount || !destinationAddress) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
-    }
-    withdrawMutation.mutate({ amount: withdrawAmount.replace(/,/g, ''), withdrawMethod, destinationAddress });
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -224,7 +175,7 @@ export default function Wallet() {
                 </Button>
                 <Button 
                   variant="outline"
-                  onClick={() => setWithdrawDialogOpen(true)}
+                  onClick={() => setLocation("/withdrawal")}
                   data-testid="button-withdraw"
                   size="lg"
                   className="flex-1"
@@ -308,7 +259,7 @@ export default function Wallet() {
                   <div className="text-center py-12">
                     <i className="fas fa-arrow-up text-4xl text-muted-foreground mb-4"></i>
                     <p className="text-muted-foreground">No withdrawals yet</p>
-                    <Button onClick={() => setWithdrawDialogOpen(true)} className="mt-4" data-testid="button-first-withdrawal">
+                    <Button onClick={() => setLocation("/withdrawal")} className="mt-4" data-testid="button-first-withdrawal">
                       Make Your First Withdrawal
                     </Button>
                   </div>
@@ -420,81 +371,6 @@ export default function Wallet() {
       </div>
       
       <MobileNav />
-      
-      <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Withdraw Funds</DialogTitle>
-            <DialogDescription>
-              Request a withdrawal from your wallet
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleWithdraw} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="withdraw-amount">Amount (USD)</Label>
-              <Input
-                id="withdraw-amount"
-                type="text"
-                inputMode="decimal"
-                placeholder="Enter amount"
-                value={withdrawAmount}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9.]/g, '');
-                  const parts = value.split('.');
-                  if (parts.length > 2) return;
-                  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                  const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
-                  setWithdrawAmount(formatted);
-                }}
-                className="font-['Archivo']"
-                data-testid="input-withdraw-amount"
-              />
-              <p className="text-sm text-muted-foreground">
-                Available: ${user?.balance ? parseFloat(user.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="withdraw-method">Withdrawal Method</Label>
-              <Select value={withdrawMethod} onValueChange={(value: 'crypto' | 'bank_transfer') => setWithdrawMethod(value)}>
-                <SelectTrigger data-testid="select-withdraw-method">
-                  <SelectValue placeholder="Select method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="crypto">Cryptocurrency</SelectItem>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="destination">
-                {withdrawMethod === 'crypto' ? 'Crypto Wallet Address' : 'Bank Account Number'}
-              </Label>
-              <Input
-                id="destination"
-                type="text"
-                placeholder={withdrawMethod === 'crypto' ? 'Enter wallet address' : 'Enter account number'}
-                value={destinationAddress}
-                onChange={(e) => setDestinationAddress(e.target.value)}
-                data-testid="input-destination"
-              />
-            </div>
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-              <p className="text-sm text-yellow-500">
-                <i className="fas fa-exclamation-triangle mr-2"></i>
-                Withdrawals require admin approval and may take 2-3 business days to process.
-              </p>
-            </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={withdrawMutation.isPending}
-              data-testid="button-submit-withdrawal"
-            >
-              {withdrawMutation.isPending ? "Processing..." : "Submit Withdrawal"}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -189,7 +189,7 @@ export interface IStorage {
   // Withdrawal operations
   createWithdrawal(withdrawal: InsertWithdrawal): Promise<Withdrawal>;
   getUserWithdrawals(userId: string): Promise<Withdrawal[]>;
-  processWithdrawal(userId: string, amount: string, withdrawMethod: 'crypto' | 'bank_transfer', destinationAddress: string): Promise<Withdrawal>;
+  processWithdrawal(userId: string, amount: string, withdrawMethod: 'crypto' | 'wire_transfer' | 'merchant_pay', destinationAddress: string, metadata?: any): Promise<Withdrawal>;
   approveWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
   rejectWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
   getAllWithdrawals(): Promise<(Withdrawal & { user: { email: string; firstName: string; lastName: string } })[]>;
@@ -1733,8 +1733,9 @@ export class DatabaseStorage implements IStorage {
   async processWithdrawal(
     userId: string,
     amount: string,
-    withdrawMethod: 'crypto' | 'bank_transfer',
-    destinationAddress: string
+    withdrawMethod: 'crypto' | 'wire_transfer' | 'merchant_pay',
+    destinationAddress: string,
+    metadata?: any
   ): Promise<Withdrawal> {
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0 || numericAmount > 1000000) {
@@ -1764,6 +1765,7 @@ export class DatabaseStorage implements IStorage {
       withdrawMethod,
       destinationAddress,
       status: 'pending',
+      metadata,
     });
 
     return withdrawal;

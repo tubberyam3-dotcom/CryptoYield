@@ -2219,12 +2219,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { amount, withdrawMethod, destinationAddress } = validationResult.data;
+      const { amount, withdrawMethod, destinationAddress, metadata } = validationResult.data;
       if (!amount || !withdrawMethod || !destinationAddress) {
         return res.status(400).json({ message: "All fields are required" });
       }
 
-      const withdrawal = await storage.processWithdrawal(userId, amount, withdrawMethod, destinationAddress);
+      const withdrawal = await storage.processWithdrawal(userId, amount, withdrawMethod, destinationAddress, metadata);
 
       res.json({
         success: true,

@@ -17,6 +17,7 @@ import Challenges from "@/pages/Challenges";
 import TransactionHistory from "@/pages/TransactionHistory";
 import Wallet from "@/pages/Wallet";
 import Deposit from "@/pages/Deposit";
+import Withdrawal from "@/pages/Withdrawal";
 import Settings from "@/pages/Settings";
 import Rewards from "@/pages/Rewards";
 import Admin from "@/pages/Admin";
@@ -88,6 +89,7 @@ function Router() {
           <Route path="/transactions" component={TransactionHistory} />
           <Route path="/wallet" component={Wallet} />
           <Route path="/deposit" component={Deposit} />
+          <Route path="/withdrawal" component={Withdrawal} />
           <Route path="/rewards" component={Rewards} />
           <Route path="/settings" component={Settings} />
         </>

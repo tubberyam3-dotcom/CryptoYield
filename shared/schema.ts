@@ -250,7 +250,7 @@ export const withdrawals = pgTable("withdrawals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
   amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
-  withdrawMethod: varchar("withdraw_method", { enum: ['crypto', 'bank_transfer'] }).notNull(),
+  withdrawMethod: varchar("withdraw_method", { enum: ['crypto', 'wire_transfer', 'merchant_pay'] }).notNull(),
   status: varchar("status", { enum: ['pending', 'completed', 'rejected'] }).default('pending'),
   destinationAddress: varchar("destination_address"), // Crypto address or bank account
   metadata: jsonb("metadata"), // Additional data
