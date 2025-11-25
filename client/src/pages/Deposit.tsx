@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { SiBitcoin, SiEthereum, SiTether, SiBinance, SiSolana, SiRipple, SiCardano, SiDogecoin, SiPolygon, SiLitecoin } from "react-icons/si";
 
 export default function Deposit() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,16 +36,16 @@ export default function Deposit() {
   const [couponCode, setCouponCode] = useState("");
 
   const cryptoCoins = [
-    { id: "BTC", name: "Bitcoin", icon: "fab fa-bitcoin", color: "text-orange-500", address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" },
-    { id: "ETH", name: "Ethereum", icon: "fab fa-ethereum", color: "text-blue-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
-    { id: "USDT", name: "Tether", icon: "fas fa-dollar-sign", color: "text-green-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
-    { id: "BNB", name: "Binance Coin", icon: "fas fa-coins", color: "text-yellow-500", address: "bnb1grpf0955h0ykzq3ar5nmum7y6gdfl6lxfn46h2" },
-    { id: "SOL", name: "Solana", icon: "fas fa-sun", color: "text-purple-500", address: "SoLEao8wTzSfqhuou8rcYsVoLjthVmiXuEjzdNPMnCz" },
-    { id: "XRP", name: "Ripple", icon: "fas fa-wave-square", color: "text-blue-400", address: "rN7n7otQDd6FczFgLdzmFgFgWv4NJpRkBP" },
-    { id: "ADA", name: "Cardano", icon: "fas fa-chart-line", color: "text-cyan-500", address: "addr1qxy3v9ackjr98vxl7k8sfykj3dcxl8f8e6vnr8xf" },
-    { id: "DOGE", name: "Dogecoin", icon: "fas fa-dog", color: "text-yellow-600", address: "DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L" },
-    { id: "MATIC", name: "Polygon", icon: "fas fa-layer-group", color: "text-purple-600", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
-    { id: "LTC", name: "Litecoin", icon: "fas fa-circle", color: "text-gray-500", address: "LdP8Qox1VAhCzLJNqrr74YovaWYyNBUWvL" },
+    { id: "BTC", name: "Bitcoin", icon: SiBitcoin, color: "text-orange-500", address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" },
+    { id: "ETH", name: "Ethereum", icon: SiEthereum, color: "text-blue-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
+    { id: "USDT", name: "Tether", icon: SiTether, color: "text-green-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
+    { id: "BNB", name: "Binance Coin", icon: SiBinance, color: "text-yellow-500", address: "bnb1grpf0955h0ykzq3ar5nmum7y6gdfl6lxfn46h2" },
+    { id: "SOL", name: "Solana", icon: SiSolana, color: "text-purple-500", address: "SoLEao8wTzSfqhuou8rcYsVoLjthVmiXuEjzdNPMnCz" },
+    { id: "XRP", name: "Ripple", icon: SiRipple, color: "text-blue-400", address: "rN7n7otQDd6FczFgLdzmFgFgWv4NJpRkBP" },
+    { id: "ADA", name: "Cardano", icon: SiCardano, color: "text-cyan-500", address: "addr1qxy3v9ackjr98vxl7k8sfykj3dcxl8f8e6vnr8xf" },
+    { id: "DOGE", name: "Dogecoin", icon: SiDogecoin, color: "text-yellow-600", address: "DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L" },
+    { id: "MATIC", name: "Polygon", icon: SiPolygon, color: "text-purple-600", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" },
+    { id: "LTC", name: "Litecoin", icon: SiLitecoin, color: "text-gray-500", address: "LdP8Qox1VAhCzLJNqrr74YovaWYyNBUWvL" },
   ];
 
   useEffect(() => {
@@ -339,7 +340,7 @@ export default function Deposit() {
                             data-testid={`card-crypto-${coin.id}`}
                           >
                             <div className="flex flex-col items-center space-y-2">
-                              <i className={`${coin.icon} ${coin.color} text-3xl`}></i>
+                              <coin.icon className={`${coin.color} text-4xl`} />
                               <span className="font-semibold text-sm text-center">{coin.name}</span>
                               <span className="text-xs text-muted-foreground">{coin.id}</span>
                             </div>
