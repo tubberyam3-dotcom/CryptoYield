@@ -267,10 +267,12 @@ export default function Deposit() {
               <h1 className="text-2xl font-bold mb-2">Choose Deposit Method</h1>
               <p className="text-muted-foreground">Select how you'd like to add funds to your wallet</p>
             </div>
-            <Button variant="outline" onClick={() => setLocation("/wallet")} data-testid="button-back">
-              <i className="fas fa-arrow-left mr-2"></i>
-              Back to Wallet
-            </Button>
+            {!selectedMethod && (
+              <Button variant="outline" onClick={() => setLocation("/wallet")} data-testid="button-back">
+                <i className="fas fa-arrow-left mr-2"></i>
+                Back to Wallet
+              </Button>
+            )}
           </div>
 
           {!selectedMethod ? (
