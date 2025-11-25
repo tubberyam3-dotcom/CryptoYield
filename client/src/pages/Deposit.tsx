@@ -27,6 +27,8 @@ export default function Deposit() {
   const [cryptoAddress, setCryptoAddress] = useState("");
   const [timeRemaining, setTimeRemaining] = useState(900);
 
+  // Bank transfer multi-step flow
+  const [bankStep, setBankStep] = useState(1); // 1=amount, 2=loading, 3=details
   const [bankAmount, setBankAmount] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [routingNumber, setRoutingNumber] = useState("");
@@ -328,6 +330,8 @@ export default function Deposit() {
                   setCryptoStep(1);
                   setSelectedCrypto(null);
                   setCryptoAmount("");
+                  setBankStep(1);
+                  setBankAmount("");
                 }}
                 className="mb-4"
                 data-testid="button-back-to-methods"
@@ -559,184 +563,300 @@ export default function Deposit() {
 
               {selectedMethod === "bank" && (
                 <Card className="p-6">
-                  <div className="flex items-center space-x-4 mb-6">
-                    <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                      <Building2 className="text-white h-6 w-6" />
+                  {/* Step 1: Enter Amount */}
+                  {bankStep === 1 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
+                        <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <Building2 className="text-white h-6 w-6" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl md:text-2xl font-bold">Bank Transfer</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">Enter the amount you want to deposit</p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!bankAmount || parseFloat(bankAmount) <= 0) {
+                          toast({
+                            title: "Error",
+                            description: "Please enter a valid amount",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setBankStep(2);
+                        setTimeout(() => {
+                          setBankStep(3);
+                        }, 3500);
+                      }} className="space-y-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="bank-amount" className="text-base">Deposit Amount (USD)</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl font-medium text-muted-foreground">$</span>
+                            <Input
+                              id="bank-amount"
+                              type="number"
+                              step="0.01"
+                              min="1"
+                              placeholder="0.00"
+                              value={bankAmount}
+                              onChange={(e) => setBankAmount(e.target.value)}
+                              className="pl-8 text-2xl font-bold h-16"
+                              data-testid="input-bank-amount"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">Minimum deposit: $10.00</p>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2">
+                          {[100, 500, 1000, 5000].map((amount) => (
+                            <Button
+                              key={amount}
+                              type="button"
+                              variant="outline"
+                              onClick={() => setBankAmount(amount.toString())}
+                              className="text-sm"
+                              data-testid={`button-quick-amount-${amount}`}
+                            >
+                              ${amount.toLocaleString()}
+                            </Button>
+                          ))}
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          size="lg"
+                          data-testid="button-continue-bank"
+                        >
+                          Continue
+                        </Button>
+                      </form>
+                    </>
+                  )}
+
+                  {/* Step 2: Loading Animation - Pairing with Merchant */}
+                  {bankStep === 2 && (
+                    <div className="py-12 flex flex-col items-center justify-center space-y-6">
+                      <div className="relative">
+                        <div className="w-24 h-24 border-4 border-blue-500/20 rounded-full"></div>
+                        <div className="absolute top-0 left-0 w-24 h-24 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                          <Building2 className="h-10 w-10 text-blue-500" />
+                        </div>
+                      </div>
+                      
+                      <div className="text-center space-y-2">
+                        <h3 className="text-xl font-bold">Pairing Your Deposit</h3>
+                        <p className="text-muted-foreground animate-pulse">
+                          Finding an accredited merchant nearby...
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span>Secure connection established</span>
+                      </div>
+
+                      <div className="w-full max-w-xs bg-muted/50 rounded-full h-2 overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full animate-[loading_3s_ease-in-out_forwards]" 
+                          style={{
+                            animation: 'loading 3s ease-in-out forwards',
+                          }}
+                        ></div>
+                      </div>
+                      
+                      <style>{`
+                        @keyframes loading {
+                          0% { width: 0%; }
+                          100% { width: 100%; }
+                        }
+                      `}</style>
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold">Bank Transfer</h2>
-                      <p className="text-muted-foreground">Deposit via bank account transfer</p>
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Bank Account Details Section */}
-                  <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-5 mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <CreditCard className="h-5 w-5 text-blue-400" />
-                      <h3 className="font-semibold text-lg">Transfer to This Account</h3>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {/* Bank Name */}
-                      <div className="flex justify-between items-center py-2 border-b border-border/50">
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Name</p>
-                          <p className="font-medium" data-testid="text-bank-name">{bankSettings?.bankName || 'Loading...'}</p>
-                        </div>
+                  {/* Step 3: Bank Account Details */}
+                  {bankStep === 3 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
                         <Button
                           variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(bankSettings?.bankName || '', 'Bank Name')}
-                          data-testid="button-copy-bank-name"
+                          size="icon"
+                          onClick={() => setBankStep(1)}
+                          data-testid="button-back-to-amount"
                         >
-                          {copiedField === 'Bank Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                          <i className="fas fa-arrow-left"></i>
                         </Button>
-                      </div>
-
-                      {/* Account Name */}
-                      <div className="flex justify-between items-center py-2 border-b border-border/50">
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Name</p>
-                          <p className="font-medium" data-testid="text-account-name">{bankSettings?.accountName || 'Loading...'}</p>
+                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                          <Check className="text-white h-6 w-6" />
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(bankSettings?.accountName || '', 'Account Name')}
-                          data-testid="button-copy-account-name"
-                        >
-                          {copiedField === 'Account Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                      </div>
-
-                      {/* Account Number */}
-                      <div className="flex justify-between items-center py-2 border-b border-border/50">
                         <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Number</p>
-                          <p className="font-mono font-bold text-lg" data-testid="text-account-number">{bankSettings?.accountNumber || 'Loading...'}</p>
+                          <h2 className="text-lg md:text-2xl font-bold">Merchant Paired!</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">Transfer ${parseFloat(bankAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to complete your deposit</p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(bankSettings?.accountNumber || '', 'Account Number')}
-                          data-testid="button-copy-account-number"
-                        >
-                          {copiedField === 'Account Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                        </Button>
                       </div>
 
-                      {/* Routing Number */}
-                      <div className="flex justify-between items-center py-2 border-b border-border/50">
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Routing Number (ACH)</p>
-                          <p className="font-mono font-bold text-lg" data-testid="text-routing-number">{bankSettings?.routingNumber || 'Loading...'}</p>
+                      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4 mb-6">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Deposit Amount</span>
+                          <span className="text-2xl font-bold text-green-500">
+                            ${parseFloat(bankAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(bankSettings?.routingNumber || '', 'Routing Number')}
-                          data-testid="button-copy-routing-number"
-                        >
-                          {copiedField === 'Routing Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                        </Button>
                       </div>
 
-                      {/* SWIFT Code */}
-                      <div className="flex justify-between items-center py-2 border-b border-border/50">
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide">SWIFT/BIC Code</p>
-                            <p className="font-mono font-bold" data-testid="text-swift-code">{bankSettings?.swiftCode || 'Loading...'}</p>
+                      <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-5 mb-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <CreditCard className="h-5 w-5 text-blue-400" />
+                          <h3 className="font-semibold text-lg">Transfer to This Account</h3>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center py-2 border-b border-border/50">
+                            <div>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Name</p>
+                              <p className="font-medium" data-testid="text-bank-name">{bankSettings?.bankName || 'Loading...'}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(bankSettings?.bankName || '', 'Bank Name')}
+                              data-testid="button-copy-bank-name"
+                            >
+                              {copiedField === 'Bank Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+
+                          <div className="flex justify-between items-center py-2 border-b border-border/50">
+                            <div>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Name</p>
+                              <p className="font-medium" data-testid="text-account-name">{bankSettings?.accountName || 'Loading...'}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(bankSettings?.accountName || '', 'Account Name')}
+                              data-testid="button-copy-account-name"
+                            >
+                              {copiedField === 'Account Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+
+                          <div className="flex justify-between items-center py-2 border-b border-border/50">
+                            <div>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Number</p>
+                              <p className="font-mono font-bold text-lg" data-testid="text-account-number">{bankSettings?.accountNumber || 'Loading...'}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(bankSettings?.accountNumber || '', 'Account Number')}
+                              data-testid="button-copy-account-number"
+                            >
+                              {copiedField === 'Account Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+
+                          <div className="flex justify-between items-center py-2 border-b border-border/50">
+                            <div>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Routing Number (ACH)</p>
+                              <p className="font-mono font-bold text-lg" data-testid="text-routing-number">{bankSettings?.routingNumber || 'Loading...'}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(bankSettings?.routingNumber || '', 'Routing Number')}
+                              data-testid="button-copy-routing-number"
+                            >
+                              {copiedField === 'Routing Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+
+                          <div className="flex justify-between items-center py-2 border-b border-border/50">
+                            <div className="flex items-center gap-2">
+                              <Globe className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">SWIFT/BIC Code</p>
+                                <p className="font-mono font-bold" data-testid="text-swift-code">{bankSettings?.swiftCode || 'Loading...'}</p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(bankSettings?.swiftCode || '', 'SWIFT Code')}
+                              data-testid="button-copy-swift-code"
+                            >
+                              {copiedField === 'SWIFT Code' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+
+                          <div className="py-2">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Address</p>
+                            <p className="text-sm" data-testid="text-bank-address">{bankSettings?.bankAddress || 'Loading...'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 mb-6">
+                        <p className="text-sm text-amber-400">
+                          <i className="fas fa-info-circle mr-2"></i>
+                          {bankSettings?.instructions || 'Please include your account email as the payment reference. Deposits are typically processed within 1-2 business days.'}
+                        </p>
+                      </div>
+
+                      <form onSubmit={handleBankDeposit} className="space-y-4">
+                        <div className="border-t border-border pt-4">
+                          <h3 className="font-semibold mb-4">Confirm Your Transfer Details</h3>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="account-holder">Your Name (as it appears on your bank account)</Label>
+                          <Input
+                            id="account-holder"
+                            type="text"
+                            placeholder="Full name"
+                            value={accountHolderName}
+                            onChange={(e) => setAccountHolderName(e.target.value)}
+                            data-testid="input-account-holder"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="account-number">Your Account Number</Label>
+                            <Input
+                              id="account-number"
+                              type="text"
+                              placeholder="Your account number"
+                              value={accountNumber}
+                              onChange={(e) => setAccountNumber(e.target.value)}
+                              data-testid="input-account-number"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="routing-number">Your Routing Number</Label>
+                            <Input
+                              id="routing-number"
+                              type="text"
+                              placeholder="Your routing number"
+                              value={routingNumber}
+                              onChange={(e) => setRoutingNumber(e.target.value)}
+                              data-testid="input-routing-number"
+                            />
                           </div>
                         </div>
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(bankSettings?.swiftCode || '', 'SWIFT Code')}
-                          data-testid="button-copy-swift-code"
+                          type="submit"
+                          className="w-full"
+                          size="lg"
+                          disabled={bankDepositMutation.isPending}
+                          data-testid="button-submit-bank"
                         >
-                          {copiedField === 'SWIFT Code' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                          {bankDepositMutation.isPending ? "Processing..." : "I've Completed the Transfer"}
                         </Button>
-                      </div>
-
-                      {/* Bank Address */}
-                      <div className="py-2">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Address</p>
-                        <p className="text-sm" data-testid="text-bank-address">{bankSettings?.bankAddress || 'Loading...'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Instructions */}
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-amber-400">
-                      <i className="fas fa-info-circle mr-2"></i>
-                      {bankSettings?.instructions || 'Loading instructions...'}
-                    </p>
-                  </div>
-
-                  <form onSubmit={handleBankDeposit} className="space-y-4">
-                    <div className="border-t border-border pt-4">
-                      <h3 className="font-semibold mb-4">Confirm Your Transfer Details</h3>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="bank-amount">Amount You're Transferring (USD)</Label>
-                      <Input
-                        id="bank-amount"
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter amount"
-                        value={bankAmount}
-                        onChange={(e) => setBankAmount(e.target.value)}
-                        data-testid="input-bank-amount"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="account-holder">Your Name (as it appears on your bank account)</Label>
-                      <Input
-                        id="account-holder"
-                        type="text"
-                        placeholder="Full name"
-                        value={accountHolderName}
-                        onChange={(e) => setAccountHolderName(e.target.value)}
-                        data-testid="input-account-holder"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="account-number">Your Account Number</Label>
-                        <Input
-                          id="account-number"
-                          type="text"
-                          placeholder="Your account number"
-                          value={accountNumber}
-                          onChange={(e) => setAccountNumber(e.target.value)}
-                          data-testid="input-account-number"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="routing-number">Your Routing Number</Label>
-                        <Input
-                          id="routing-number"
-                          type="text"
-                          placeholder="Your routing number"
-                          value={routingNumber}
-                          onChange={(e) => setRoutingNumber(e.target.value)}
-                          data-testid="input-routing-number"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      size="lg"
-                      disabled={bankDepositMutation.isPending}
-                      data-testid="button-submit-bank"
-                    >
-                      {bankDepositMutation.isPending ? "Processing..." : "I've Initiated the Transfer"}
-                    </Button>
-                  </form>
+                      </form>
+                    </>
+                  )}
                 </Card>
               )}
 
