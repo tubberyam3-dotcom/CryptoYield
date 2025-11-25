@@ -251,10 +251,10 @@ export default function StockDetail() {
                 
                 <div className="text-left md:text-right">
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-5xl font-bold tracking-tight">${quote.price.toFixed(2)}</span>
+                    <span className="text-5xl font-bold tracking-tight">${quote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className={`text-lg font-semibold ${quote.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)} Today
+                    {quote.change >= 0 ? '+' : ''}${Math.abs(quote.change).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Today
                   </div>
                 </div>
               </div>
@@ -272,15 +272,15 @@ export default function StockDetail() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Previous Close</p>
-                      <p className="text-xl font-semibold">${quote.previousClose?.toFixed(2) || 'N/A'}</p>
+                      <p className="text-xl font-semibold">${quote.previousClose?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Day High</p>
-                      <p className="text-xl font-semibold text-green-500">${quote.dayHigh?.toFixed(2) || 'N/A'}</p>
+                      <p className="text-xl font-semibold text-green-500">${quote.dayHigh?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Day Low</p>
-                      <p className="text-xl font-semibold text-red-500">${quote.dayLow?.toFixed(2) || 'N/A'}</p>
+                      <p className="text-xl font-semibold text-red-500">${quote.dayLow?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Volume</p>
@@ -331,7 +331,7 @@ export default function StockDetail() {
                           <div className="space-y-2">
                             <p className="text-xs text-muted-foreground">Current Price</p>
                             <div className="flex items-baseline gap-2">
-                              <span className="text-3xl font-bold">${quote.price.toFixed(2)}</span>
+                              <span className="text-3xl font-bold">${quote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               <span className="text-sm text-muted-foreground">per share</span>
                             </div>
                             <Badge className={quote.changePercent >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}>
@@ -373,7 +373,7 @@ export default function StockDetail() {
                             <div className="space-y-3">
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Price per share</span>
-                                <span className="font-medium">${quote.price.toFixed(2)}</span>
+                                <span className="font-medium">${quote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Quantity</span>
@@ -382,7 +382,7 @@ export default function StockDetail() {
                               <Separator />
                               <div className="flex justify-between items-center">
                                 <span className="font-semibold">Total Cost</span>
-                                <span className="text-2xl font-bold text-primary">${totalCost.toFixed(2)}</span>
+                                <span className="text-2xl font-bold text-primary">${totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               </div>
                             </div>
                           </Card>
@@ -440,10 +440,10 @@ export default function StockDetail() {
                         <>
                           <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
                             <p className="text-xs text-muted-foreground mb-1">Current Price</p>
-                            <p className="text-3xl font-bold">${quote.price?.toFixed(2) || 'N/A'}</p>
+                            <p className="text-3xl font-bold">${quote.price?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
                             <Badge className={`mt-2 ${quote.change >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
                               {quote.changePercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-                              {quote.change >= 0 ? '+' : ''}{quote.change?.toFixed(2)} ({quote.changePercent?.toFixed(2)}%)
+                              {quote.change >= 0 ? '+' : ''}{Math.abs(quote.change).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({quote.changePercent?.toFixed(2)}%)
                             </Badge>
                           </div>
                           
@@ -452,11 +452,11 @@ export default function StockDetail() {
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Day High</span>
-                              <span className="font-medium text-green-600">${quote.dayHigh?.toFixed(2) || 'N/A'}</span>
+                              <span className="font-medium text-green-600">${quote.dayHigh?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Day Low</span>
-                              <span className="font-medium text-red-600">${quote.dayLow?.toFixed(2) || 'N/A'}</span>
+                              <span className="font-medium text-red-600">${quote.dayLow?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Volume</span>

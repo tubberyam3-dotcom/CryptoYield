@@ -126,15 +126,15 @@ export function SystemSettings() {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>100 XP =</span>
-                <span className="font-semibold">${(100 * parseFloat(conversionRate || "0")).toFixed(2)}</span>
+                <span className="font-semibold">${(100 * parseFloat(conversionRate || "0")).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between">
                 <span>500 XP =</span>
-                <span className="font-semibold">${(500 * parseFloat(conversionRate || "0")).toFixed(2)}</span>
+                <span className="font-semibold">${(500 * parseFloat(conversionRate || "0")).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between">
                 <span>1000 XP =</span>
-                <span className="font-semibold">${(1000 * parseFloat(conversionRate || "0")).toFixed(2)}</span>
+                <span className="font-semibold">${(1000 * parseFloat(conversionRate || "0")).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>

@@ -291,7 +291,7 @@ export default function Wallet() {
                         
                         <div className="text-right">
                           <p className="font-medium text-lg" data-testid={`text-deposit-amount-${deposit.id}`}>
-                            ${parseFloat(deposit.amount).toFixed(2)}
+                            ${parseFloat(deposit.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                         </div>
                       </div>
@@ -356,7 +356,7 @@ export default function Wallet() {
                         
                         <div className="text-right">
                           <p className="font-medium text-lg text-orange-500" data-testid={`text-withdrawal-amount-${withdrawal.id}`}>
-                            -${parseFloat(withdrawal.amount).toFixed(2)}
+                            -${parseFloat(withdrawal.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                         </div>
                       </div>
@@ -442,7 +442,7 @@ export default function Wallet() {
                 data-testid="input-withdraw-amount"
               />
               <p className="text-sm text-muted-foreground">
-                Available: ${user?.balance ? parseFloat(user.balance).toFixed(2) : '0.00'}
+                Available: ${user?.balance ? parseFloat(user.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
               </p>
             </div>
             <div className="space-y-2">

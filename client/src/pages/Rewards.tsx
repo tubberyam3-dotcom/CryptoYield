@@ -46,7 +46,7 @@ export default function RewardsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       toast({
         title: "Success!",
-        description: `Redeemed $${parseFloat(data.redeemedAmount).toFixed(2)} to your balance!`,
+        description: `Redeemed $${parseFloat(data.redeemedAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to your balance!`,
       });
     },
     onError: (error: any) => {
@@ -67,7 +67,7 @@ export default function RewardsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       toast({
         title: "🎉 Coupon Redeemed!",
-        description: `${data.message} +$${parseFloat(data.rewardAmount).toFixed(2)} added to your balance!`,
+        description: `${data.message} +$${parseFloat(data.rewardAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} added to your balance!`,
       });
       setCouponCode("");
     },
@@ -122,7 +122,7 @@ export default function RewardsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/settings'] });
       toast({
         title: "💰 XP Converted!",
-        description: `Converted to $${parseFloat(data.convertedAmount).toFixed(2)}!`,
+        description: `Converted to $${parseFloat(data.convertedAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}!`,
       });
       setXpToConvert("");
     },
@@ -191,7 +191,7 @@ export default function RewardsPage() {
               </CardHeader>
               <CardContent className="p-3 md:p-6 pt-0">
                 <div className="text-2xl md:text-3xl font-bold text-amber-950 dark:text-amber-50" data-testid="text-pending-amount">
-                  ${pendingAmount.toFixed(2)}
+                  ${pendingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5 md:mt-1">
                   Ready to redeem
@@ -208,7 +208,7 @@ export default function RewardsPage() {
               </CardHeader>
               <CardContent className="p-3 md:p-6 pt-0">
                 <div className="text-2xl md:text-3xl font-bold" data-testid="text-total-claimed">
-                  ${parseFloat(stats.totalClaimed).toFixed(2)}
+                  ${parseFloat(stats.totalClaimed).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5 md:mt-1">
                   Lifetime earnings
@@ -225,7 +225,7 @@ export default function RewardsPage() {
               </CardHeader>
               <CardContent className="p-3 md:p-6 pt-0">
                 <div className="text-2xl md:text-3xl font-bold" data-testid="text-total-redeemed">
-                  ${parseFloat(stats.totalRedeemed).toFixed(2)}
+                  ${parseFloat(stats.totalRedeemed).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5 md:mt-1">
                   Converted to cash
@@ -258,7 +258,7 @@ export default function RewardsPage() {
                   ) : (
                     <>
                       <Gift className="h-4 w-4 mr-2" />
-                      Redeem ${pendingAmount.toFixed(2)}
+                      Redeem ${pendingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </>
                   )}
                 </Button>
@@ -422,7 +422,7 @@ export default function RewardsPage() {
                         </div>
                         <div>
                           <div className="text-sm md:text-base font-semibold" data-testid={`text-bonus-amount-${bonus.id}`}>
-                            ${parseFloat(bonus.amount).toFixed(2)}
+                            ${parseFloat(bonus.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
                           <div className="text-xs md:text-sm text-muted-foreground flex items-center gap-1 md:gap-2">
                             <Calendar className="h-3 w-3" />

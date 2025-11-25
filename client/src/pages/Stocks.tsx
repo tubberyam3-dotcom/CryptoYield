@@ -301,20 +301,20 @@ export default function Stocks() {
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Purchase Price</span>
-                          <span className="font-medium">${purchasePrice.toFixed(2)}</span>
+                          <span className="font-medium">${purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Current Price</span>
-                          <span className="font-medium">${currentPrice.toFixed(2)}</span>
+                          <span className="font-medium">${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between text-sm pt-2 border-t">
                           <span className="text-muted-foreground">Total Value</span>
-                          <span className="font-bold">${currentValue.toFixed(2)}</span>
+                          <span className="font-bold">${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Profit/Loss</span>
                           <span className={`font-bold ${profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)}
+                            {profitLoss >= 0 ? '+' : ''}${Math.abs(profitLoss).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </div>
                       </div>
@@ -364,9 +364,9 @@ export default function Stocks() {
                       <div className="mb-4">
                         {quote ? (
                           <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-bold">${quote.price.toFixed(2)}</span>
+                            <span className="text-2xl font-bold">${quote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             <span className={`text-sm ${quote.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {quote.change >= 0 ? '+' : ''}{quote.change.toFixed(2)}
+                              {quote.change >= 0 ? '+' : ''}{quote.change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
                         ) : (
@@ -402,7 +402,7 @@ export default function Stocks() {
                             <div>
                               <p className="text-sm font-medium mb-2">{stock.name}</p>
                               {quote && (
-                                <p className="text-2xl font-bold">${quote.price.toFixed(2)} per share</p>
+                                <p className="text-2xl font-bold">${quote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per share</p>
                               )}
                             </div>
                             
@@ -430,7 +430,7 @@ export default function Stocks() {
                                 <div className="flex justify-between">
                                   <span className="text-sm text-muted-foreground">Total Cost</span>
                                   <span className="font-bold">
-                                    ${(purchaseForm.watch('quantity') * quote.price).toFixed(2)}
+                                    ${(purchaseForm.watch('quantity') * quote.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 </div>
                               </div>
@@ -660,7 +660,7 @@ export default function Stocks() {
                     <div className="space-y-2 sm:space-y-3">
                       <div className="flex justify-between text-xs sm:text-sm">
                         <span className="text-muted-foreground font-medium">Price per share</span>
-                        <span className="font-bold text-foreground">${selectedTopStock.price.toFixed(2)}</span>
+                        <span className="font-bold text-foreground">${selectedTopStock.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between text-xs sm:text-sm">
                         <span className="text-muted-foreground font-medium">Quantity</span>
@@ -670,7 +670,7 @@ export default function Stocks() {
                       <div className="flex justify-between items-center pt-1 sm:pt-2">
                         <span className="font-bold text-sm sm:text-base">Total Investment</span>
                         <span className="text-2xl sm:text-3xl font-bold text-primary">
-                          ${(purchaseForm.watch('quantity') * selectedTopStock.price).toFixed(2)}
+                          ${(purchaseForm.watch('quantity') * selectedTopStock.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>

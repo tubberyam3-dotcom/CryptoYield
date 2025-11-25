@@ -299,7 +299,7 @@ export function CouponManagement() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Reward</span>
                 <span className="font-semibold text-green-600 dark:text-green-500">
-                  ${parseFloat(coupon.rewardAmount).toFixed(2)}
+                  ${parseFloat(coupon.rewardAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               {coupon.maxUses && (

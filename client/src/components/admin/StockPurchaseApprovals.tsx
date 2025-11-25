@@ -122,12 +122,12 @@ export function StockPurchaseApprovals() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Purchase Price</span>
-                  <span className="font-medium">${parseFloat(purchase.purchasePrice).toFixed(2)}</span>
+                  <span className="font-medium">${parseFloat(purchase.purchasePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Amount</span>
                   <span className="font-bold text-base">
-                    ${parseFloat(purchase.totalInvested).toFixed(2)}
+                    ${parseFloat(purchase.totalInvested).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
