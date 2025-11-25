@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { SiBitcoin, SiEthereum, SiTether, SiBinance, SiSolana, SiRipple, SiCardano, SiDogecoin, SiPolygon, SiLitecoin } from "react-icons/si";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function Deposit() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -467,9 +468,12 @@ export default function Deposit() {
                       <div className="space-y-6">
                         <div className="flex justify-center">
                           <div className="bg-white p-4 rounded-lg">
-                            <div className="w-48 h-48 bg-gray-200 flex items-center justify-center">
-                              <i className="fas fa-qrcode text-gray-400 text-6xl"></i>
-                            </div>
+                            <QRCodeSVG 
+                              value={cryptoAddress} 
+                              size={192}
+                              level="H"
+                              includeMargin={false}
+                            />
                           </div>
                         </div>
 
