@@ -93,12 +93,11 @@ export default function PortfolioDetail() {
         throw new Error('Failed to generate report');
       }
 
-      const html = await response.text();
-      const blob = new Blob([html], { type: 'text/html' });
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${portfolio?.name || 'portfolio'}-investment-report-${new Date().toISOString().slice(0, 7)}.html`;
+      a.download = `${portfolio?.name || 'portfolio'}-investment-report-${new Date().toISOString().slice(0, 7)}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -106,7 +105,7 @@ export default function PortfolioDetail() {
 
       toast({
         title: "Report Generated",
-        description: "Your monthly investment report has been downloaded. Open the file in a browser to view.",
+        description: "Your monthly investment report PDF has been downloaded.",
       });
     } catch (error) {
       toast({
@@ -138,12 +137,11 @@ export default function PortfolioDetail() {
         throw new Error('Failed to generate statement');
       }
 
-      const html = await response.text();
-      const blob = new Blob([html], { type: 'text/html' });
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${portfolio?.name || 'portfolio'}-statement-${new Date().toISOString().slice(0, 10)}.html`;
+      a.download = `${portfolio?.name || 'portfolio'}-statement-${new Date().toISOString().slice(0, 10)}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -151,7 +149,7 @@ export default function PortfolioDetail() {
 
       toast({
         title: "Statement Downloaded",
-        description: "Your investment statement has been downloaded. Open the file in a browser to view.",
+        description: "Your investment statement PDF has been downloaded.",
       });
     } catch (error) {
       toast({

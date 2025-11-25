@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import YahooFinance from "yahoo-finance2";
+import PDFDocument from "pdfkit";
 
 const yahooFinance = new YahooFinance();
 
@@ -559,7 +560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate monthly investment report
+  // Generate monthly investment report as PDF
   app.post('/api/portfolios/:id/report', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -579,94 +580,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Portfolio not found" });
       }
 
-      // Generate simple text-based report (can be enhanced to PDF in future)
+      // Get user details for gamification
+      const user = await storage.getUser(userId);
+      const xpBalance = parseFloat(user?.xpBalance || '0');
+      const totalInvested = parseFloat(user?.walletBalance || '0') + parseFloat(userInvestment.investedAmount);
+
+      // Calculate investment tier based on total invested
+      let investorTier = 'Bronze';
+      let tierColor = [205, 127, 50];
+      if (totalInvested >= 100000) { investorTier = 'Platinum'; tierColor = [229, 228, 226]; }
+      else if (totalInvested >= 50000) { investorTier = 'Gold'; tierColor = [255, 215, 0]; }
+      else if (totalInvested >= 10000) { investorTier = 'Silver'; tierColor = [192, 192, 192]; }
+
       const currentDate = new Date();
       const monthYear = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       
-      const reportData = {
-        title: `Monthly Investment Report - ${monthYear}`,
-        portfolio: portfolio.name,
-        strategyTag: portfolio.strategyTag || 'General',
-        riskLevel: portfolio.riskLevel,
-        investedAmount: parseFloat(userInvestment.investedAmount),
-        currentValue: parseFloat(userInvestment.currentValue),
-        returns: parseFloat(userInvestment.returns || '0'),
-        returnPercentage: ((parseFloat(userInvestment.returns || '0') / parseFloat(userInvestment.investedAmount)) * 100).toFixed(2),
-        reportDate: currentDate.toLocaleDateString('en-US'),
-      };
+      const investedAmount = parseFloat(userInvestment.investedAmount);
+      const currentValue = parseFloat(userInvestment.currentValue);
+      const returns = parseFloat(userInvestment.returns || '0');
+      const returnPercentage = ((returns / investedAmount) * 100).toFixed(2);
 
-      // Create a simple HTML/text report
-      const reportHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>${reportData.title}</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
-    h1 { color: #333; border-bottom: 3px solid #0066cc; padding-bottom: 10px; }
-    h2 { color: #666; margin-top: 30px; }
-    .header { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
-    .stat { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
-    .stat label { font-weight: bold; color: #666; }
-    .stat value { color: #333; }
-    .positive { color: #22c55e; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 12px; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Reflux Capital - Investment Report</h1>
-    <p><strong>Report Period:</strong> ${reportData.title}</p>
-    <p><strong>Generated:</strong> ${reportData.reportDate}</p>
-  </div>
-  
-  <h2>Portfolio Summary</h2>
-  <div class="stat">
-    <label>Portfolio Name:</label>
-    <value>${reportData.portfolio}</value>
-  </div>
-  <div class="stat">
-    <label>Strategy:</label>
-    <value>${reportData.strategyTag}</value>
-  </div>
-  <div class="stat">
-    <label>Risk Level:</label>
-    <value>${reportData.riskLevel.toUpperCase()}</value>
-  </div>
-  
-  <h2>Investment Performance</h2>
-  <div class="stat">
-    <label>Invested Amount:</label>
-    <value>$${reportData.investedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</value>
-  </div>
-  <div class="stat">
-    <label>Current Value:</label>
-    <value>$${reportData.currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</value>
-  </div>
-  <div class="stat">
-    <label>Total Returns:</label>
-    <value class="positive">+$${reportData.returns.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (+${reportData.returnPercentage}%)</value>
-  </div>
-  
-  <div class="footer">
-    <p>This report is for informational purposes only. Past performance does not guarantee future results.</p>
-    <p>&copy; ${currentDate.getFullYear()} Reflux Capital. All rights reserved.</p>
-  </div>
-</body>
-</html>
-      `;
+      // Create PDF document
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="investment-report-${monthYear.replace(' ', '-')}.pdf"`);
+      
+      doc.pipe(res);
 
-      // Send as HTML (browser will handle print-to-PDF)
-      res.setHeader('Content-Type', 'text/html');
-      res.setHeader('Content-Disposition', `attachment; filename="investment-report-${monthYear.replace(' ', '-')}.html"`);
-      res.send(reportHTML);
+      // Header with branding
+      doc.fillColor('#0066cc').fontSize(28).font('Helvetica-Bold').text('REFLUX CAPITAL', 50, 50);
+      doc.fillColor('#666666').fontSize(10).font('Helvetica').text('INVESTMENT BROKERAGE & ADVISORY', 50, 82);
+      
+      // Decorative line
+      doc.strokeColor('#0066cc').lineWidth(3).moveTo(50, 100).lineTo(545, 100).stroke();
+      
+      // Report title
+      doc.fillColor('#333333').fontSize(20).font('Helvetica-Bold').text('Monthly Investment Report', 50, 120);
+      doc.fillColor('#666666').fontSize(12).font('Helvetica').text(monthYear, 50, 145);
+      doc.text(`Generated: ${currentDate.toLocaleDateString('en-US')}`, 50, 160);
+
+      // Gamification Section - Investor Badge
+      doc.roundedRect(380, 115, 165, 60, 8).fillAndStroke(`rgb(${tierColor[0]}, ${tierColor[1]}, ${tierColor[2]})`, '#333333');
+      doc.fillColor('#333333').fontSize(10).font('Helvetica').text('INVESTOR STATUS', 390, 125, { width: 145, align: 'center' });
+      doc.fontSize(16).font('Helvetica-Bold').text(investorTier.toUpperCase(), 390, 142, { width: 145, align: 'center' });
+      doc.fontSize(9).font('Helvetica').text(`${xpBalance.toLocaleString()} XP`, 390, 162, { width: 145, align: 'center' });
+
+      // Portfolio Summary Box
+      doc.roundedRect(50, 195, 495, 100, 8).fill('#f8f9fa');
+      doc.fillColor('#0066cc').fontSize(14).font('Helvetica-Bold').text('Portfolio Summary', 65, 210);
+      
+      doc.fillColor('#666666').fontSize(11).font('Helvetica');
+      doc.text('Portfolio:', 65, 235).fillColor('#333333').font('Helvetica-Bold').text(portfolio.name, 150, 235);
+      doc.fillColor('#666666').font('Helvetica').text('Strategy:', 65, 255).fillColor('#333333').font('Helvetica-Bold').text(portfolio.strategyTag || 'General', 150, 255);
+      doc.fillColor('#666666').font('Helvetica').text('Risk Level:', 65, 275).fillColor('#333333').font('Helvetica-Bold').text(portfolio.riskLevel.toUpperCase(), 150, 275);
+      
+      doc.fillColor('#666666').font('Helvetica').text('Current Return:', 320, 235).fillColor('#22c55e').font('Helvetica-Bold').text(`+${portfolio.currentReturn}%`, 420, 235);
+      doc.fillColor('#666666').font('Helvetica').text('Assets:', 320, 255);
+      const assets = Array.isArray(portfolio.assets) ? portfolio.assets : [];
+      doc.fillColor('#333333').font('Helvetica-Bold').text(`${assets.length} Holdings`, 420, 255);
+
+      // Investment Performance Section
+      doc.fillColor('#0066cc').fontSize(14).font('Helvetica-Bold').text('Investment Performance', 50, 320);
+      doc.strokeColor('#eeeeee').lineWidth(1).moveTo(50, 340).lineTo(545, 340).stroke();
+
+      // Performance metrics grid
+      const metrics = [
+        { label: 'Invested Amount', value: `$${investedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#333333' },
+        { label: 'Current Value', value: `$${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#0066cc' },
+        { label: 'Total Returns', value: `+$${returns.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#22c55e' },
+        { label: 'Return Rate', value: `+${returnPercentage}%`, color: '#22c55e' },
+      ];
+
+      let yPos = 355;
+      metrics.forEach((metric, i) => {
+        const xPos = i % 2 === 0 ? 50 : 300;
+        if (i === 2) yPos += 45;
+        
+        doc.roundedRect(xPos, yPos, 230, 40, 5).fill('#f8f9fa');
+        doc.fillColor('#666666').fontSize(10).font('Helvetica').text(metric.label, xPos + 15, yPos + 8);
+        doc.fillColor(metric.color).fontSize(16).font('Helvetica-Bold').text(metric.value, xPos + 15, yPos + 22);
+      });
+
+      // Gamification Achievements Section
+      doc.fillColor('#0066cc').fontSize(14).font('Helvetica-Bold').text('Your Achievements', 50, 465);
+      doc.strokeColor('#eeeeee').lineWidth(1).moveTo(50, 485).lineTo(545, 485).stroke();
+
+      // Achievement badges
+      const achievements = [];
+      if (investedAmount >= 1000) achievements.push({ name: 'First Investor', icon: '🏆', desc: 'Made your first investment' });
+      if (returns > 0) achievements.push({ name: 'Profit Maker', icon: '📈', desc: 'Earned positive returns' });
+      if (xpBalance >= 100) achievements.push({ name: 'XP Collector', icon: '⭐', desc: 'Collected 100+ XP points' });
+      if (investedAmount >= 5000) achievements.push({ name: 'Serious Investor', icon: '💎', desc: 'Invested $5,000+' });
+      
+      if (achievements.length === 0) {
+        achievements.push({ name: 'Getting Started', icon: '🚀', desc: 'Your investment journey begins!' });
+      }
+
+      let achY = 500;
+      achievements.slice(0, 3).forEach((ach, i) => {
+        doc.roundedRect(50 + (i * 170), achY, 160, 50, 5).fillAndStroke('#fff9e6', '#ffc107');
+        doc.fontSize(20).text(ach.icon, 60 + (i * 170), achY + 8);
+        doc.fillColor('#333333').fontSize(10).font('Helvetica-Bold').text(ach.name, 85 + (i * 170), achY + 10, { width: 115 });
+        doc.fillColor('#666666').fontSize(8).font('Helvetica').text(ach.desc, 85 + (i * 170), achY + 25, { width: 115 });
+      });
+
+      // XP Progress Section
+      doc.fillColor('#0066cc').fontSize(14).font('Helvetica-Bold').text('XP Progress', 50, 575);
+      doc.strokeColor('#eeeeee').lineWidth(1).moveTo(50, 595).lineTo(545, 595).stroke();
+
+      const nextTierXP = xpBalance < 500 ? 500 : xpBalance < 1000 ? 1000 : xpBalance < 5000 ? 5000 : 10000;
+      const progress = Math.min((xpBalance / nextTierXP) * 100, 100);
+
+      doc.fillColor('#666666').fontSize(10).font('Helvetica').text(`${xpBalance.toLocaleString()} XP / ${nextTierXP.toLocaleString()} XP to next level`, 50, 610);
+      
+      // Progress bar
+      doc.roundedRect(50, 630, 495, 15, 5).fill('#e0e0e0');
+      doc.roundedRect(50, 630, 495 * (progress / 100), 15, 5).fill('#0066cc');
+
+      // Daily bonus reminder
+      doc.roundedRect(50, 660, 495, 40, 5).fillAndStroke('#e6f7ff', '#0066cc');
+      doc.fillColor('#0066cc').fontSize(11).font('Helvetica-Bold').text('💰 Daily Bonus Reminder', 65, 670);
+      doc.fillColor('#333333').fontSize(9).font('Helvetica').text('Claim your $100 daily bonus and 50 XP in the Rewards section!', 65, 685);
+
+      // Footer
+      doc.strokeColor('#eeeeee').lineWidth(1).moveTo(50, 720).lineTo(545, 720).stroke();
+      doc.fillColor('#999999').fontSize(8).font('Helvetica')
+        .text('This report is for informational purposes only. Past performance does not guarantee future results.', 50, 730, { width: 495, align: 'center' })
+        .text(`© ${currentDate.getFullYear()} Reflux Capital. All rights reserved. | Member SIPC`, 50, 745, { width: 495, align: 'center' });
+
+      doc.end();
     } catch (error) {
       console.error("Error generating report:", error);
       res.status(500).json({ message: "Failed to generate report" });
     }
   });
 
-  // Generate investment statement
+  // Generate investment statement as PDF
   app.post('/api/portfolios/:id/statement', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -688,6 +738,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get user details
       const user = await storage.getUser(userId);
+      const xpBalance = parseFloat(user?.xpBalance || '0');
+      const dailyBonusBalance = parseFloat(user?.dailyBonusBalance || '0');
+
+      // Calculate investor tier
+      const totalInvested = parseFloat(user?.walletBalance || '0') + parseFloat(userInvestment.investedAmount);
+      let investorTier = 'Bronze';
+      let tierColor = [205, 127, 50];
+      if (totalInvested >= 100000) { investorTier = 'Platinum'; tierColor = [229, 228, 226]; }
+      else if (totalInvested >= 50000) { investorTier = 'Gold'; tierColor = [255, 215, 0]; }
+      else if (totalInvested >= 10000) { investorTier = 'Silver'; tierColor = [192, 192, 192]; }
 
       const currentDate = new Date();
       const statementDate = currentDate.toLocaleDateString('en-US', { 
@@ -707,125 +767,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
         day: 'numeric'
       });
 
-      // Generate statement HTML
-      const statementHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Investment Statement - Reflux Capital</title>
-  <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; background: #fff; color: #333; }
-    .header { text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 20px; margin-bottom: 30px; }
-    .logo { font-size: 28px; font-weight: bold; color: #0066cc; margin-bottom: 5px; }
-    .tagline { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
-    .statement-title { font-size: 24px; color: #333; margin: 20px 0 10px; }
-    .statement-date { color: #666; font-size: 14px; }
-    
-    .account-section { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-    .section-title { font-size: 16px; font-weight: 600; color: #0066cc; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
-    
-    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .info-row:last-child { border-bottom: none; }
-    .info-label { color: #666; }
-    .info-value { font-weight: 600; color: #333; }
-    
-    .summary-box { background: linear-gradient(135deg, #0066cc 0%, #004499 100%); color: white; padding: 25px; border-radius: 8px; margin: 30px 0; }
-    .summary-title { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
-    .summary-value { font-size: 32px; font-weight: bold; }
-    .summary-change { font-size: 16px; margin-top: 10px; }
-    .positive { color: #4ade80; }
-    
-    .performance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
-    .performance-item { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
-    .performance-label { font-size: 12px; color: #666; margin-bottom: 5px; }
-    .performance-value { font-size: 20px; font-weight: 600; color: #333; }
-    
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 11px; color: #999; text-align: center; }
-    .footer p { margin: 5px 0; }
-    
-    .watermark { position: fixed; bottom: 20px; right: 20px; opacity: 0.1; font-size: 60px; font-weight: bold; color: #0066cc; transform: rotate(-15deg); }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="logo">REFLUX CAPITAL</div>
-    <div class="tagline">Investment Brokerage & Advisory</div>
-    <div class="statement-title">Investment Statement</div>
-    <div class="statement-date">${statementDate}</div>
-  </div>
-  
-  <div class="account-section">
-    <div class="section-title">Account Information</div>
-    <div class="info-row">
-      <span class="info-label">Account Holder</span>
-      <span class="info-value">${user?.firstName || 'Investor'} ${user?.lastName || ''}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Account ID</span>
-      <span class="info-value">${userId.substring(0, 8).toUpperCase()}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Statement Period</span>
-      <span class="info-value">${investmentDate} - Present</span>
-    </div>
-  </div>
-  
-  <div class="account-section">
-    <div class="section-title">Portfolio Details</div>
-    <div class="info-row">
-      <span class="info-label">Portfolio Name</span>
-      <span class="info-value">${portfolio.name}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Strategy</span>
-      <span class="info-value">${portfolio.strategyTag || 'General'}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Risk Level</span>
-      <span class="info-value">${portfolio.riskLevel.toUpperCase()}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Investment Date</span>
-      <span class="info-value">${investmentDate}</span>
-    </div>
-  </div>
-  
-  <div class="summary-box">
-    <div class="summary-title">Current Portfolio Value</div>
-    <div class="summary-value">$${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-    <div class="summary-change positive">+$${returns.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (+${returnPercentage}%) since investment</div>
-  </div>
-  
-  <div class="performance-grid">
-    <div class="performance-item">
-      <div class="performance-label">Original Investment</div>
-      <div class="performance-value">$${investedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-    </div>
-    <div class="performance-item">
-      <div class="performance-label">Total Returns</div>
-      <div class="performance-value" style="color: #22c55e;">+$${returns.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-    </div>
-    <div class="performance-item">
-      <div class="performance-label">Return Rate</div>
-      <div class="performance-value" style="color: #22c55e;">+${returnPercentage}%</div>
-    </div>
-  </div>
-  
-  <div class="footer">
-    <p><strong>Important Notice:</strong> This statement is for informational purposes only and does not constitute investment advice.</p>
-    <p>Past performance does not guarantee future results. All investments carry risk, including potential loss of principal.</p>
-    <p>&copy; ${currentDate.getFullYear()} Reflux Capital. All rights reserved. | Member SIPC</p>
-  </div>
-  
-  <div class="watermark">RC</div>
-</body>
-</html>
-      `;
+      // Create PDF document
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="investment-statement-${currentDate.toISOString().slice(0, 10)}.pdf"`);
+      
+      doc.pipe(res);
 
-      // Send as HTML
-      res.setHeader('Content-Type', 'text/html');
-      res.setHeader('Content-Disposition', `attachment; filename="investment-statement-${currentDate.toISOString().slice(0, 10)}.html"`);
-      res.send(statementHTML);
+      // Header with branding
+      doc.fillColor('#0066cc').fontSize(28).font('Helvetica-Bold').text('REFLUX CAPITAL', 50, 50);
+      doc.fillColor('#666666').fontSize(10).font('Helvetica').text('INVESTMENT BROKERAGE & ADVISORY', 50, 82);
+      
+      // Decorative line
+      doc.strokeColor('#0066cc').lineWidth(3).moveTo(50, 100).lineTo(545, 100).stroke();
+      
+      // Statement title
+      doc.fillColor('#333333').fontSize(22).font('Helvetica-Bold').text('Investment Statement', 50, 115);
+      doc.fillColor('#666666').fontSize(11).font('Helvetica').text(statementDate, 50, 140);
+
+      // Investor tier badge
+      doc.roundedRect(400, 110, 145, 45, 8).fillAndStroke(`rgb(${tierColor[0]}, ${tierColor[1]}, ${tierColor[2]})`, '#333333');
+      doc.fillColor('#333333').fontSize(9).font('Helvetica').text('INVESTOR TIER', 410, 118, { width: 125, align: 'center' });
+      doc.fontSize(14).font('Helvetica-Bold').text(investorTier.toUpperCase(), 410, 133, { width: 125, align: 'center' });
+
+      // Account Information Section
+      doc.roundedRect(50, 170, 495, 90, 8).fill('#f8f9fa');
+      doc.fillColor('#0066cc').fontSize(12).font('Helvetica-Bold').text('Account Information', 65, 180);
+      doc.strokeColor('#dddddd').lineWidth(0.5).moveTo(65, 195).lineTo(530, 195).stroke();
+      
+      doc.fillColor('#666666').fontSize(10).font('Helvetica');
+      doc.text('Account Holder:', 65, 210).fillColor('#333333').font('Helvetica-Bold').text(`${user?.firstName || 'Investor'} ${user?.lastName || ''}`, 170, 210);
+      doc.fillColor('#666666').font('Helvetica').text('Account ID:', 65, 228).fillColor('#333333').font('Helvetica-Bold').text(userId.substring(0, 8).toUpperCase(), 170, 228);
+      doc.fillColor('#666666').font('Helvetica').text('Statement Period:', 65, 246).fillColor('#333333').font('Helvetica-Bold').text(`${investmentDate} - Present`, 170, 246);
+      
+      doc.fillColor('#666666').font('Helvetica').text('XP Balance:', 320, 210).fillColor('#0066cc').font('Helvetica-Bold').text(`${xpBalance.toLocaleString()} XP`, 410, 210);
+      doc.fillColor('#666666').font('Helvetica').text('Bonus Balance:', 320, 228).fillColor('#22c55e').font('Helvetica-Bold').text(`$${dailyBonusBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 410, 228);
+
+      // Portfolio Details Section
+      doc.roundedRect(50, 275, 495, 75, 8).fill('#f8f9fa');
+      doc.fillColor('#0066cc').fontSize(12).font('Helvetica-Bold').text('Portfolio Details', 65, 285);
+      doc.strokeColor('#dddddd').lineWidth(0.5).moveTo(65, 300).lineTo(530, 300).stroke();
+      
+      doc.fillColor('#666666').fontSize(10).font('Helvetica');
+      doc.text('Portfolio:', 65, 315).fillColor('#333333').font('Helvetica-Bold').text(portfolio.name, 150, 315);
+      doc.fillColor('#666666').font('Helvetica').text('Strategy:', 65, 333).fillColor('#333333').font('Helvetica-Bold').text(portfolio.strategyTag || 'General', 150, 333);
+      
+      doc.fillColor('#666666').font('Helvetica').text('Risk Level:', 320, 315).fillColor('#333333').font('Helvetica-Bold').text(portfolio.riskLevel.toUpperCase(), 410, 315);
+      doc.fillColor('#666666').font('Helvetica').text('Investment Date:', 320, 333).fillColor('#333333').font('Helvetica-Bold').text(investmentDate, 410, 333);
+
+      // Current Value Highlight Box
+      doc.roundedRect(50, 365, 495, 80, 8).fill('#0066cc');
+      doc.fillColor('#ffffff').fontSize(11).font('Helvetica').text('CURRENT PORTFOLIO VALUE', 65, 380);
+      doc.fontSize(32).font('Helvetica-Bold').text(`$${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 65, 400);
+      doc.fillColor('#4ade80').fontSize(14).font('Helvetica-Bold').text(`+$${returns.toLocaleString('en-US', { minimumFractionDigits: 2 })} (+${returnPercentage}%)`, 65, 432);
+      doc.fillColor('#ffffff').fontSize(10).font('Helvetica').text('since investment', 240, 434);
+
+      // Performance Metrics Grid
+      doc.fillColor('#0066cc').fontSize(12).font('Helvetica-Bold').text('Performance Breakdown', 50, 465);
+      doc.strokeColor('#eeeeee').lineWidth(1).moveTo(50, 480).lineTo(545, 480).stroke();
+
+      const perfMetrics = [
+        { label: 'Original Investment', value: `$${investedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` },
+        { label: 'Current Value', value: `$${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` },
+        { label: 'Total Returns', value: `+$${returns.toLocaleString('en-US', { minimumFractionDigits: 2 })}` },
+      ];
+
+      perfMetrics.forEach((metric, i) => {
+        const xPos = 50 + (i * 170);
+        doc.roundedRect(xPos, 495, 155, 50, 5).fill('#f8f9fa');
+        doc.fillColor('#666666').fontSize(9).font('Helvetica').text(metric.label, xPos + 10, 505);
+        doc.fillColor('#333333').fontSize(14).font('Helvetica-Bold').text(metric.value, xPos + 10, 522);
+      });
+
+      // Gamification Rewards Section
+      doc.fillColor('#0066cc').fontSize(12).font('Helvetica-Bold').text('Your Rewards & Achievements', 50, 565);
+      doc.strokeColor('#eeeeee').lineWidth(1).moveTo(50, 580).lineTo(545, 580).stroke();
+
+      // XP and Bonus info
+      doc.roundedRect(50, 595, 240, 65, 5).fillAndStroke('#e6f7ff', '#0066cc');
+      doc.fillColor('#0066cc').fontSize(10).font('Helvetica-Bold').text('XP REWARDS', 65, 605);
+      doc.fillColor('#333333').fontSize(18).font('Helvetica-Bold').text(`${xpBalance.toLocaleString()} XP`, 65, 625);
+      doc.fillColor('#666666').fontSize(8).font('Helvetica').text('Earn 50 XP daily by claiming rewards!', 65, 648);
+
+      doc.roundedRect(305, 595, 240, 65, 5).fillAndStroke('#f0fff4', '#22c55e');
+      doc.fillColor('#22c55e').fontSize(10).font('Helvetica-Bold').text('DAILY BONUS', 320, 605);
+      doc.fillColor('#333333').fontSize(18).font('Helvetica-Bold').text(`$${dailyBonusBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 320, 625);
+      doc.fillColor('#666666').fontSize(8).font('Helvetica').text('Claim $100 daily in the Rewards section!', 320, 648);
+
+      // Achievement badges
+      const achievements = [];
+      if (investedAmount >= 1000) achievements.push('First Investor');
+      if (returns > 0) achievements.push('Profit Maker');
+      if (xpBalance >= 100) achievements.push('XP Collector');
+      if (dailyBonusBalance >= 500) achievements.push('Bonus Hunter');
+
+      if (achievements.length > 0) {
+        doc.fillColor('#666666').fontSize(9).font('Helvetica').text('Unlocked Badges: ', 50, 680);
+        doc.fillColor('#ffc107').font('Helvetica-Bold').text(achievements.join(' • '), 135, 680);
+      }
+
+      // Footer
+      doc.strokeColor('#eeeeee').lineWidth(1).moveTo(50, 720).lineTo(545, 720).stroke();
+      doc.fillColor('#999999').fontSize(8).font('Helvetica')
+        .text('This statement is for informational purposes only and does not constitute investment advice.', 50, 730, { width: 495, align: 'center' })
+        .text(`© ${currentDate.getFullYear()} Reflux Capital. All rights reserved. | Member SIPC`, 50, 745, { width: 495, align: 'center' });
+
+      doc.end();
     } catch (error) {
       console.error("Error generating statement:", error);
       res.status(500).json({ message: "Failed to generate statement" });
