@@ -1130,13 +1130,6 @@ export default function Deposit() {
                         </p>
                       </div>
 
-                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 max-w-sm mx-auto">
-                        <p className="text-sm text-amber-400">
-                          <i className="fas fa-info-circle mr-2"></i>
-                          Your card information has been saved securely. We'll notify you when card payments are enabled for your location.
-                        </p>
-                      </div>
-
                       <div className="pt-4 space-y-3">
                         <Button
                           variant="outline"
