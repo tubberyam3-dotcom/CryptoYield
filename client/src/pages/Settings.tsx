@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/providers/ThemeProvider";
 import { JointAccountManager } from "@/components/account/JointAccountManager";
 import { cn } from "@/lib/utils";
+import useEmblaCarousel from "embla-carousel-react";
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'preferences';
 type KycStep = 'intro' | 'personal' | 'address' | 'documents' | 'review';
@@ -160,6 +161,40 @@ export default function Settings() {
     { key: 'security', label: 'Security', icon: 'fas fa-shield-alt' },
     { key: 'preferences', label: 'Preferences', icon: 'fas fa-cog' },
   ];
+
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    loop: false,
+    align: 'start',
+    skipSnaps: false,
+    dragFree: false,
+  });
+
+  const onTabSelect = useCallback((index: number) => {
+    if (emblaApi) emblaApi.scrollTo(index);
+    setActiveTab(tabs[index].key);
+  }, [emblaApi]);
+
+  const onSlideChange = useCallback(() => {
+    if (!emblaApi) return;
+    const index = emblaApi.selectedScrollSnap();
+    setActiveTab(tabs[index].key);
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    emblaApi.on('select', onSlideChange);
+    return () => {
+      emblaApi.off('select', onSlideChange);
+    };
+  }, [emblaApi, onSlideChange]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    const index = tabs.findIndex(t => t.key === activeTab);
+    if (index !== -1 && emblaApi.selectedScrollSnap() !== index) {
+      emblaApi.scrollTo(index);
+    }
+  }, [activeTab, emblaApi]);
 
   if (isLoading) {
     return (
@@ -592,11 +627,11 @@ export default function Settings() {
         
         <main className="p-4 md:p-6 pb-24 lg:pb-6">
           <div className="max-w-4xl mx-auto">
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
-              {tabs.map((tab) => (
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+              {tabs.map((tab, index) => (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => onTabSelect(index)}
                   className={cn(
                     "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
                     activeTab === tab.key
@@ -610,7 +645,239 @@ export default function Settings() {
                 </button>
               ))}
             </div>
-            
+
+            <div className="flex items-center justify-center gap-2 mb-4 lg:hidden">
+              {tabs.map((tab, index) => (
+                <button
+                  key={tab.key}
+                  onClick={() => onTabSelect(index)}
+                  className={cn(
+                    "w-2 h-2 rounded-full transition-all",
+                    activeTab === tab.key
+                      ? "bg-primary w-6"
+                      : "bg-muted-foreground/30"
+                  )}
+                  aria-label={`Go to ${tab.label}`}
+                />
+              ))}
+            </div>
+
+            <div className="lg:hidden overflow-hidden" ref={emblaRef}>
+              <div className="flex">
+                <div className="flex-[0_0_100%] min-w-0 px-1">
+                  <div className="space-y-4">
+                    <Card className="p-4" data-testid="card-profile-settings-mobile">
+                      <h3 className="text-lg font-semibold mb-4">Profile Information</h3>
+                      
+                      <div className="flex flex-col items-center gap-4 mb-6">
+                        <Avatar className="w-16 h-16">
+                          <AvatarImage src={user?.profileImageUrl || ""} />
+                          <AvatarFallback className="text-lg bg-gradient-to-br from-primary to-accent text-white">
+                            {getInitials(user?.firstName, user?.lastName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="text-center">
+                          <h4 className="font-semibold text-lg">
+                            {user?.firstName && user?.lastName 
+                              ? `${user.firstName} ${user.lastName}`
+                              : 'User'
+                            }
+                          </h4>
+                          <p className="text-sm text-muted-foreground">{user?.email}</p>
+                          <Badge className={cn("mt-1", getKycStatusColor(user?.kycStatus || 'pending'))}>
+                            KYC: {user?.kycStatus || 'pending'}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3 mb-4">
+                        <div>
+                          <Label htmlFor="firstName-mobile">First Name</Label>
+                          <Input id="firstName-mobile" defaultValue={user?.firstName || ""} />
+                        </div>
+                        <div>
+                          <Label htmlFor="lastName-mobile">Last Name</Label>
+                          <Input id="lastName-mobile" defaultValue={user?.lastName || ""} />
+                        </div>
+                        <div>
+                          <Label htmlFor="email-mobile">Email</Label>
+                          <Input id="email-mobile" type="email" defaultValue={user?.email || ""} disabled />
+                        </div>
+                      </div>
+                      
+                      <Button onClick={handleSaveProfile} className="w-full">Save Changes</Button>
+                    </Card>
+
+                    <Card className="p-4" data-testid="card-kyc-section-mobile">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="font-semibold">Identity Verification</h3>
+                          <p className="text-xs text-muted-foreground">Complete KYC for higher limits</p>
+                        </div>
+                        <Badge className={getKycStatusColor(user?.kycStatus || 'pending')}>
+                          {user?.kycStatus || 'pending'}
+                        </Badge>
+                      </div>
+                      
+                      {user?.kycStatus !== 'approved' && (
+                        <Button className="w-full" onClick={() => setShowKycFlow(true)}>
+                          <i className="fas fa-id-card mr-2"></i>
+                          Start Verification
+                        </Button>
+                      )}
+                    </Card>
+                  </div>
+                </div>
+
+                <div className="flex-[0_0_100%] min-w-0 px-1">
+                  <Card className="p-4" data-testid="card-notification-settings-mobile">
+                    <h3 className="text-lg font-semibold mb-4">Notifications</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Email</p>
+                          <p className="text-xs text-muted-foreground">Receive email updates</p>
+                        </div>
+                        <Switch checked={notifications.email} onCheckedChange={(checked) => setNotifications({ ...notifications, email: checked })} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Push</p>
+                          <p className="text-xs text-muted-foreground">Browser notifications</p>
+                        </div>
+                        <Switch checked={notifications.push} onCheckedChange={(checked) => setNotifications({ ...notifications, push: checked })} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">SMS</p>
+                          <p className="text-xs text-muted-foreground">Text message alerts</p>
+                        </div>
+                        <Switch checked={notifications.sms} onCheckedChange={(checked) => setNotifications({ ...notifications, sms: checked })} />
+                      </div>
+                      
+                      <div className="border-t border-border pt-4">
+                        <h4 className="font-medium mb-3 text-sm">Content</h4>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm">Portfolio</p>
+                            <Switch checked={notifications.portfolio} onCheckedChange={(checked) => setNotifications({ ...notifications, portfolio: checked })} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm">Staking</p>
+                            <Switch checked={notifications.staking} onCheckedChange={(checked) => setNotifications({ ...notifications, staking: checked })} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm">Challenges</p>
+                            <Switch checked={notifications.challenges} onCheckedChange={(checked) => setNotifications({ ...notifications, challenges: checked })} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Button onClick={handleSaveNotifications} className="mt-4 w-full">Save Settings</Button>
+                  </Card>
+                </div>
+
+                <div className="flex-[0_0_100%] min-w-0 px-1">
+                  <Card className="p-4" data-testid="card-security-settings-mobile">
+                    <h3 className="text-lg font-semibold mb-4">Security</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Two-Factor Auth</p>
+                          <p className="text-xs text-muted-foreground">Extra security</p>
+                        </div>
+                        <Switch checked={security.twoFactor} onCheckedChange={(checked) => setSecurity({ ...security, twoFactor: checked })} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Login Alerts</p>
+                          <p className="text-xs text-muted-foreground">New login notifications</p>
+                        </div>
+                        <Switch checked={security.loginAlerts} onCheckedChange={(checked) => setSecurity({ ...security, loginAlerts: checked })} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Device Tracking</p>
+                          <p className="text-xs text-muted-foreground">Monitor devices</p>
+                        </div>
+                        <Switch checked={security.deviceTracking} onCheckedChange={(checked) => setSecurity({ ...security, deviceTracking: checked })} />
+                      </div>
+                    </div>
+                    
+                    <div className="border-t border-border pt-4 mt-4">
+                      <h4 className="font-medium mb-3 text-sm">Sessions</h4>
+                      <div className="bg-muted rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                              <i className="fas fa-desktop text-green-500 text-sm"></i>
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">Current</p>
+                              <p className="text-xs text-muted-foreground">Chrome • Today</p>
+                            </div>
+                          </div>
+                          <Badge className="bg-green-500/10 text-green-500 text-xs">Active</Badge>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Button onClick={handleSaveSecurity} className="mt-4 w-full">Save Settings</Button>
+                  </Card>
+                </div>
+
+                <div className="flex-[0_0_100%] min-w-0 px-1">
+                  <Card className="p-4" data-testid="card-preferences-mobile">
+                    <h3 className="text-lg font-semibold mb-4">Preferences</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Dark Mode</p>
+                          <p className="text-xs text-muted-foreground">Toggle theme</p>
+                        </div>
+                        <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
+                      </div>
+                      
+                      <div className="border-t border-border pt-4">
+                        <h4 className="font-medium mb-3 text-sm">Limits</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <Label htmlFor="dailyLimit-mobile">Daily</Label>
+                            <Input id="dailyLimit-mobile" type="number" defaultValue="10000" />
+                          </div>
+                          <div>
+                            <Label htmlFor="monthlyLimit-mobile">Monthly</Label>
+                            <Input id="monthlyLimit-mobile" type="number" defaultValue="100000" />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t border-border pt-4">
+                        <h4 className="font-medium mb-3 text-sm">Risk</h4>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm">High-Risk Warnings</p>
+                            <Switch defaultChecked />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm">Auto-Rebalancing</p>
+                            <Switch />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Button className="mt-4 w-full">Save Preferences</Button>
+                  </Card>
+                </div>
+              </div>
+            </div>
+
+            <div className="hidden lg:block">
             {activeTab === 'profile' && (
               <div className="space-y-4">
                 <Card className="p-4 md:p-6" data-testid="card-profile-settings">
@@ -941,6 +1208,7 @@ export default function Settings() {
                 </Button>
               </Card>
             )}
+            </div>
           </div>
         </main>
       </div>
