@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -8,15 +8,38 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/providers/ThemeProvider";
 import { JointAccountManager } from "@/components/account/JointAccountManager";
+import { cn } from "@/lib/utils";
+
+type SettingsTab = 'profile' | 'notifications' | 'security' | 'preferences';
+type KycStep = 'intro' | 'personal' | 'address' | 'documents' | 'review';
 
 export default function Settings() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [showKycFlow, setShowKycFlow] = useState(false);
+  const [kycStep, setKycStep] = useState<KycStep>('intro');
+  const [kycData, setKycData] = useState({
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    nationality: '',
+    address: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: '',
+    idType: 'passport',
+    idNumber: '',
+    idFront: null as File | null,
+    idBack: null as File | null,
+    selfie: null as File | null,
+  });
   const [notifications, setNotifications] = useState({
     email: true,
     push: false,
@@ -33,8 +56,6 @@ export default function Settings() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
-
-  // Authentication is handled by App component routing
 
   const handleSaveProfile = () => {
     toast({
@@ -72,6 +93,74 @@ export default function Settings() {
     return (first + last).toUpperCase() || 'U';
   };
 
+  const kycSteps: { key: KycStep; label: string; icon: string }[] = [
+    { key: 'intro', label: 'Start', icon: 'fas fa-play' },
+    { key: 'personal', label: 'Personal', icon: 'fas fa-user' },
+    { key: 'address', label: 'Address', icon: 'fas fa-home' },
+    { key: 'documents', label: 'Documents', icon: 'fas fa-file-alt' },
+    { key: 'review', label: 'Review', icon: 'fas fa-check' },
+  ];
+
+  const getKycProgress = () => {
+    const stepIndex = kycSteps.findIndex(s => s.key === kycStep);
+    return ((stepIndex) / (kycSteps.length - 1)) * 100;
+  };
+
+  const handleKycNext = () => {
+    const currentIndex = kycSteps.findIndex(s => s.key === kycStep);
+    if (currentIndex < kycSteps.length - 1) {
+      setKycStep(kycSteps[currentIndex + 1].key);
+    }
+  };
+
+  const handleKycBack = () => {
+    const currentIndex = kycSteps.findIndex(s => s.key === kycStep);
+    if (currentIndex > 0) {
+      setKycStep(kycSteps[currentIndex - 1].key);
+    }
+  };
+
+  const resetKycData = () => {
+    setKycData({
+      firstName: '',
+      lastName: '',
+      dateOfBirth: '',
+      nationality: '',
+      address: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: '',
+      idType: 'passport',
+      idNumber: '',
+      idFront: null,
+      idBack: null,
+      selfie: null,
+    });
+    setKycStep('intro');
+  };
+
+  const handleKycClose = () => {
+    setShowKycFlow(false);
+    resetKycData();
+  };
+
+  const handleKycSubmit = () => {
+    toast({
+      title: "KYC Submitted",
+      description: "Your verification documents have been submitted for review. This usually takes 1-3 business days.",
+    });
+    setShowKycFlow(false);
+    resetKycData();
+  };
+
+  const tabs: { key: SettingsTab; label: string; icon: string }[] = [
+    { key: 'profile', label: 'Profile', icon: 'fas fa-user' },
+    { key: 'notifications', label: 'Alerts', icon: 'fas fa-bell' },
+    { key: 'security', label: 'Security', icon: 'fas fa-shield-alt' },
+    { key: 'preferences', label: 'Preferences', icon: 'fas fa-cog' },
+  ];
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -83,49 +172,472 @@ export default function Settings() {
     );
   }
 
+  const renderKycFlow = () => {
+    return (
+      <div className="fixed inset-0 bg-background z-50 overflow-y-auto">
+        <div className="min-h-screen p-4 md:p-6">
+          <div className="max-w-lg mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold">Identity Verification</h2>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleKycClose}
+                data-testid="button-close-kyc"
+              >
+                <i className="fas fa-times text-lg"></i>
+              </Button>
+            </div>
+
+            <div className="mb-6">
+              <Progress value={getKycProgress()} className="h-2" />
+              <div className="flex justify-between mt-2">
+                {kycSteps.map((step, index) => (
+                  <div 
+                    key={step.key}
+                    className={cn(
+                      "flex flex-col items-center",
+                      kycSteps.findIndex(s => s.key === kycStep) >= index 
+                        ? "text-primary" 
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs mb-1",
+                      kycSteps.findIndex(s => s.key === kycStep) >= index
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
+                    )}>
+                      <i className={step.icon}></i>
+                    </div>
+                    <span className="text-[10px] hidden sm:block">{step.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Card className="p-4 md:p-6">
+              {kycStep === 'intro' && (
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <i className="fas fa-id-card text-2xl text-primary"></i>
+                  </div>
+                  <h3 className="text-lg font-semibold">Verify Your Identity</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Complete your KYC verification to unlock higher investment limits and full platform access. This process takes about 5 minutes.
+                  </p>
+                  <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
+                    <p className="text-sm font-medium">You'll need:</p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li className="flex items-center gap-2">
+                        <i className="fas fa-check text-green-500 text-xs"></i>
+                        Government-issued ID (passport, driver's license, or national ID)
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <i className="fas fa-check text-green-500 text-xs"></i>
+                        Proof of address (utility bill or bank statement)
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <i className="fas fa-check text-green-500 text-xs"></i>
+                        A clear selfie for verification
+                      </li>
+                    </ul>
+                  </div>
+                  <Button onClick={handleKycNext} className="w-full" data-testid="button-start-kyc">
+                    Start Verification
+                  </Button>
+                </div>
+              )}
+
+              {kycStep === 'personal' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Personal Information</h3>
+                  <p className="text-sm text-muted-foreground">Please enter your legal name as it appears on your ID.</p>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="kyc-firstName">First Name</Label>
+                      <Input
+                        id="kyc-firstName"
+                        value={kycData.firstName}
+                        onChange={(e) => setKycData({ ...kycData, firstName: e.target.value })}
+                        placeholder="John"
+                        data-testid="input-kyc-first-name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="kyc-lastName">Last Name</Label>
+                      <Input
+                        id="kyc-lastName"
+                        value={kycData.lastName}
+                        onChange={(e) => setKycData({ ...kycData, lastName: e.target.value })}
+                        placeholder="Doe"
+                        data-testid="input-kyc-last-name"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="kyc-dob">Date of Birth</Label>
+                    <Input
+                      id="kyc-dob"
+                      type="date"
+                      value={kycData.dateOfBirth}
+                      onChange={(e) => setKycData({ ...kycData, dateOfBirth: e.target.value })}
+                      data-testid="input-kyc-dob"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="kyc-nationality">Nationality</Label>
+                    <Input
+                      id="kyc-nationality"
+                      value={kycData.nationality}
+                      onChange={(e) => setKycData({ ...kycData, nationality: e.target.value })}
+                      placeholder="United States"
+                      data-testid="input-kyc-nationality"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button variant="outline" onClick={handleKycBack} className="flex-1" data-testid="button-kyc-back">
+                      Back
+                    </Button>
+                    <Button onClick={handleKycNext} className="flex-1" data-testid="button-kyc-next">
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {kycStep === 'address' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Residential Address</h3>
+                  <p className="text-sm text-muted-foreground">Enter your current residential address.</p>
+                  
+                  <div>
+                    <Label htmlFor="kyc-address">Street Address</Label>
+                    <Input
+                      id="kyc-address"
+                      value={kycData.address}
+                      onChange={(e) => setKycData({ ...kycData, address: e.target.value })}
+                      placeholder="123 Main Street"
+                      data-testid="input-kyc-address"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="kyc-city">City</Label>
+                      <Input
+                        id="kyc-city"
+                        value={kycData.city}
+                        onChange={(e) => setKycData({ ...kycData, city: e.target.value })}
+                        placeholder="New York"
+                        data-testid="input-kyc-city"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="kyc-state">State/Province</Label>
+                      <Input
+                        id="kyc-state"
+                        value={kycData.state}
+                        onChange={(e) => setKycData({ ...kycData, state: e.target.value })}
+                        placeholder="NY"
+                        data-testid="input-kyc-state"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="kyc-postal">Postal Code</Label>
+                      <Input
+                        id="kyc-postal"
+                        value={kycData.postalCode}
+                        onChange={(e) => setKycData({ ...kycData, postalCode: e.target.value })}
+                        placeholder="10001"
+                        data-testid="input-kyc-postal"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="kyc-country">Country</Label>
+                      <Input
+                        id="kyc-country"
+                        value={kycData.country}
+                        onChange={(e) => setKycData({ ...kycData, country: e.target.value })}
+                        placeholder="United States"
+                        data-testid="input-kyc-country"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button variant="outline" onClick={handleKycBack} className="flex-1" data-testid="button-kyc-back">
+                      Back
+                    </Button>
+                    <Button onClick={handleKycNext} className="flex-1" data-testid="button-kyc-next">
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {kycStep === 'documents' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Upload Documents</h3>
+                  <p className="text-sm text-muted-foreground">Upload clear photos of your identification documents.</p>
+                  
+                  <div>
+                    <Label>ID Type</Label>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      {['passport', 'license', 'national_id'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setKycData({ ...kycData, idType: type })}
+                          className={cn(
+                            "p-3 rounded-lg border text-center text-sm transition-colors",
+                            kycData.idType === type
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border hover:border-primary/50"
+                          )}
+                          data-testid={`button-id-type-${type}`}
+                        >
+                          <i className={cn(
+                            "fas mb-1 block",
+                            type === 'passport' ? 'fa-passport' :
+                            type === 'license' ? 'fa-id-card' : 'fa-address-card'
+                          )}></i>
+                          {type === 'passport' ? 'Passport' :
+                           type === 'license' ? "Driver's License" : 'National ID'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="kyc-id-number">ID Number</Label>
+                    <Input
+                      id="kyc-id-number"
+                      value={kycData.idNumber}
+                      onChange={(e) => setKycData({ ...kycData, idNumber: e.target.value })}
+                      placeholder="Enter your ID number"
+                      data-testid="input-kyc-id-number"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Front of ID</Label>
+                      <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id="id-front"
+                          onChange={(e) => setKycData({ ...kycData, idFront: e.target.files?.[0] || null })}
+                        />
+                        <label htmlFor="id-front" className="cursor-pointer">
+                          <i className="fas fa-cloud-upload-alt text-2xl text-muted-foreground mb-2"></i>
+                          <p className="text-sm text-muted-foreground">
+                            {kycData.idFront ? kycData.idFront.name : 'Click to upload front of ID'}
+                          </p>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Back of ID</Label>
+                      <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id="id-back"
+                          onChange={(e) => setKycData({ ...kycData, idBack: e.target.files?.[0] || null })}
+                        />
+                        <label htmlFor="id-back" className="cursor-pointer">
+                          <i className="fas fa-cloud-upload-alt text-2xl text-muted-foreground mb-2"></i>
+                          <p className="text-sm text-muted-foreground">
+                            {kycData.idBack ? kycData.idBack.name : 'Click to upload back of ID'}
+                          </p>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Selfie with ID</Label>
+                      <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id="selfie"
+                          onChange={(e) => setKycData({ ...kycData, selfie: e.target.files?.[0] || null })}
+                        />
+                        <label htmlFor="selfie" className="cursor-pointer">
+                          <i className="fas fa-camera text-2xl text-muted-foreground mb-2"></i>
+                          <p className="text-sm text-muted-foreground">
+                            {kycData.selfie ? kycData.selfie.name : 'Take a selfie holding your ID'}
+                          </p>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button variant="outline" onClick={handleKycBack} className="flex-1" data-testid="button-kyc-back">
+                      Back
+                    </Button>
+                    <Button onClick={handleKycNext} className="flex-1" data-testid="button-kyc-next">
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {kycStep === 'review' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Review Your Information</h3>
+                  <p className="text-sm text-muted-foreground">Please review your details before submitting.</p>
+                  
+                  <div className="space-y-4">
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <i className="fas fa-user text-primary"></i>
+                        Personal Information
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Name:</span>
+                          <p className="font-medium">{kycData.firstName} {kycData.lastName}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">DOB:</span>
+                          <p className="font-medium">{kycData.dateOfBirth || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Nationality:</span>
+                          <p className="font-medium">{kycData.nationality || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <i className="fas fa-home text-primary"></i>
+                        Address
+                      </h4>
+                      <p className="text-sm">
+                        {kycData.address || 'Not provided'}<br />
+                        {kycData.city}, {kycData.state} {kycData.postalCode}<br />
+                        {kycData.country}
+                      </p>
+                    </div>
+
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <i className="fas fa-file-alt text-primary"></i>
+                        Documents
+                      </h4>
+                      <div className="text-sm space-y-1">
+                        <div className="flex items-center gap-2">
+                          <i className={cn("fas", kycData.idFront ? "fa-check text-green-500" : "fa-times text-red-500")}></i>
+                          <span>Front of ID</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <i className={cn("fas", kycData.idBack ? "fa-check text-green-500" : "fa-times text-red-500")}></i>
+                          <span>Back of ID</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <i className={cn("fas", kycData.selfie ? "fa-check text-green-500" : "fa-times text-red-500")}></i>
+                          <span>Selfie with ID</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                    <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                      <i className="fas fa-info-circle mr-2"></i>
+                      By submitting, you confirm that all information provided is accurate and matches your official documents.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button variant="outline" onClick={handleKycBack} className="flex-1" data-testid="button-kyc-back">
+                      Back
+                    </Button>
+                    <Button onClick={handleKycSubmit} className="flex-1" data-testid="button-kyc-submit">
+                      Submit Verification
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground" data-testid="settings-page">
+      {showKycFlow && renderKycFlow()}
+      
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="ml-0 lg:ml-64 min-h-screen">
         <TopBar title="Settings" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
-        <main className="p-6 pb-20 lg:pb-6">
+        <main className="p-4 md:p-6 pb-24 lg:pb-6">
           <div className="max-w-4xl mx-auto">
-            <Tabs defaultValue="profile" className="space-y-6">
-              <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-                <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
-                <TabsTrigger value="notifications" data-testid="tab-notifications">Notifications</TabsTrigger>
-                <TabsTrigger value="security" data-testid="tab-security">Security</TabsTrigger>
-                <TabsTrigger value="preferences" data-testid="tab-preferences">Preferences</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="profile" className="space-y-6">
-                <Card className="p-6" data-testid="card-profile-settings">
-                  <h3 className="text-lg font-semibold mb-6">Profile Information</h3>
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
+                    activeTab === tab.key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground hover:text-foreground hover:bg-accent"
+                  )}
+                  data-testid={`tab-${tab.key}`}
+                >
+                  <i className={tab.icon}></i>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+            
+            {activeTab === 'profile' && (
+              <div className="space-y-4">
+                <Card className="p-4 md:p-6" data-testid="card-profile-settings">
+                  <h3 className="text-lg font-semibold mb-4 md:mb-6">Profile Information</h3>
                   
-                  <div className="flex items-center space-x-6 mb-6">
-                    <Avatar className="w-20 h-20">
+                  <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+                    <Avatar className="w-16 h-16 md:w-20 md:h-20">
                       <AvatarImage src={user?.profileImageUrl || ""} />
                       <AvatarFallback className="text-lg bg-gradient-to-br from-primary to-accent text-white">
                         {getInitials(user?.firstName, user?.lastName)}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className="text-center sm:text-left">
                       <h4 className="font-semibold text-lg" data-testid="text-user-full-name">
                         {user?.firstName && user?.lastName 
                           ? `${user.firstName} ${user.lastName}`
                           : 'User'
                         }
                       </h4>
-                      <p className="text-muted-foreground" data-testid="text-user-email">{user?.email}</p>
-                      <Badge className={getKycStatusColor(user?.kycStatus || 'pending')}>
+                      <p className="text-sm text-muted-foreground" data-testid="text-user-email">{user?.email}</p>
+                      <Badge className={cn("mt-1", getKycStatusColor(user?.kycStatus || 'pending'))}>
                         KYC: {user?.kycStatus || 'pending'}
                       </Badge>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div>
                       <Label htmlFor="firstName">First Name</Label>
                       <Input
@@ -144,7 +656,7 @@ export default function Settings() {
                     </div>
                   </div>
                   
-                  <div className="mb-6">
+                  <div className="mb-4">
                     <Label htmlFor="email">Email Address</Label>
                     <Input
                       id="email"
@@ -158,18 +670,15 @@ export default function Settings() {
                     </p>
                   </div>
                   
-                  <Button onClick={handleSaveProfile} data-testid="button-save-profile">
+                  <Button onClick={handleSaveProfile} className="w-full sm:w-auto" data-testid="button-save-profile">
                     Save Changes
                   </Button>
                 </Card>
 
-                {/* KYC Section */}
-                <Card className="p-6" data-testid="card-kyc-section">
-                  <h3 className="text-lg font-semibold mb-4">Identity Verification (KYC)</h3>
-                  
+                <Card className="p-4 md:p-6" data-testid="card-kyc-section">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="font-medium">Verification Status</p>
+                      <h3 className="text-lg font-semibold">Identity Verification</h3>
                       <p className="text-sm text-muted-foreground">
                         Complete KYC to unlock higher investment limits
                       </p>
@@ -181,245 +690,257 @@ export default function Settings() {
                   
                   {user?.kycStatus !== 'approved' && (
                     <Button 
-                      variant="outline" 
                       className="w-full"
-                      onClick={() => toast({ title: "KYC Upload", description: "KYC upload functionality coming soon!" })}
-                      data-testid="button-upload-kyc"
+                      onClick={() => setShowKycFlow(true)}
+                      data-testid="button-start-kyc"
                     >
-                      <i className="fas fa-upload mr-2"></i>
-                      Upload KYC Documents
+                      <i className="fas fa-id-card mr-2"></i>
+                      Start Verification
                     </Button>
+                  )}
+
+                  {user?.kycStatus === 'approved' && (
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                          <i className="fas fa-check text-green-500"></i>
+                        </div>
+                        <div>
+                          <p className="font-medium text-green-600 dark:text-green-400">Verified</p>
+                          <p className="text-sm text-muted-foreground">Your identity has been verified</p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </Card>
 
-                {/* Joint Account Management */}
                 <JointAccountManager />
-              </TabsContent>
-              
-              <TabsContent value="notifications" className="space-y-6">
-                <Card className="p-6" data-testid="card-notification-settings">
-                  <h3 className="text-lg font-semibold mb-6">Notification Preferences</h3>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="font-medium mb-4">Delivery Methods</h4>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Email Notifications</p>
-                            <p className="text-sm text-muted-foreground">Receive updates via email</p>
-                          </div>
-                          <Switch
-                            checked={notifications.email}
-                            onCheckedChange={(checked) => setNotifications({ ...notifications, email: checked })}
-                            data-testid="switch-email-notifications"
-                          />
+              </div>
+            )}
+            
+            {activeTab === 'notifications' && (
+              <Card className="p-4 md:p-6" data-testid="card-notification-settings">
+                <h3 className="text-lg font-semibold mb-4 md:mb-6">Notification Preferences</h3>
+                
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-medium mb-4">Delivery Methods</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Email Notifications</p>
+                          <p className="text-xs text-muted-foreground truncate">Receive updates via email</p>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Push Notifications</p>
-                            <p className="text-sm text-muted-foreground">Browser push notifications</p>
-                          </div>
-                          <Switch
-                            checked={notifications.push}
-                            onCheckedChange={(checked) => setNotifications({ ...notifications, push: checked })}
-                            data-testid="switch-push-notifications"
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">SMS Notifications</p>
-                            <p className="text-sm text-muted-foreground">Text message alerts</p>
-                          </div>
-                          <Switch
-                            checked={notifications.sms}
-                            onCheckedChange={(checked) => setNotifications({ ...notifications, sms: checked })}
-                            data-testid="switch-sms-notifications"
-                          />
-                        </div>
+                        <Switch
+                          checked={notifications.email}
+                          onCheckedChange={(checked) => setNotifications({ ...notifications, email: checked })}
+                          data-testid="switch-email-notifications"
+                        />
                       </div>
-                    </div>
-                    
-                    <div className="border-t border-border pt-6">
-                      <h4 className="font-medium mb-4">Content Types</h4>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Portfolio Updates</p>
-                            <p className="text-sm text-muted-foreground">Performance and rebalancing alerts</p>
-                          </div>
-                          <Switch
-                            checked={notifications.portfolio}
-                            onCheckedChange={(checked) => setNotifications({ ...notifications, portfolio: checked })}
-                            data-testid="switch-portfolio-notifications"
-                          />
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Push Notifications</p>
+                          <p className="text-xs text-muted-foreground truncate">Browser push notifications</p>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Staking Rewards</p>
-                            <p className="text-sm text-muted-foreground">Reward payouts and term completions</p>
-                          </div>
-                          <Switch
-                            checked={notifications.staking}
-                            onCheckedChange={(checked) => setNotifications({ ...notifications, staking: checked })}
-                            data-testid="switch-staking-notifications"
-                          />
+                        <Switch
+                          checked={notifications.push}
+                          onCheckedChange={(checked) => setNotifications({ ...notifications, push: checked })}
+                          data-testid="switch-push-notifications"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">SMS Notifications</p>
+                          <p className="text-xs text-muted-foreground truncate">Text message alerts</p>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Challenge Updates</p>
-                            <p className="text-sm text-muted-foreground">Community challenge progress</p>
-                          </div>
-                          <Switch
-                            checked={notifications.challenges}
-                            onCheckedChange={(checked) => setNotifications({ ...notifications, challenges: checked })}
-                            data-testid="switch-challenge-notifications"
-                          />
-                        </div>
+                        <Switch
+                          checked={notifications.sms}
+                          onCheckedChange={(checked) => setNotifications({ ...notifications, sms: checked })}
+                          data-testid="switch-sms-notifications"
+                        />
                       </div>
                     </div>
                   </div>
                   
-                  <Button onClick={handleSaveNotifications} className="mt-6" data-testid="button-save-notifications">
-                    Save Notification Settings
-                  </Button>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="security" className="space-y-6">
-                <Card className="p-6" data-testid="card-security-settings">
-                  <h3 className="text-lg font-semibold mb-6">Security Settings</h3>
-                  
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Two-Factor Authentication</p>
-                        <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
-                      </div>
-                      <Switch
-                        checked={security.twoFactor}
-                        onCheckedChange={(checked) => setSecurity({ ...security, twoFactor: checked })}
-                        data-testid="switch-two-factor"
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Login Alerts</p>
-                        <p className="text-sm text-muted-foreground">Get notified of new login attempts</p>
-                      </div>
-                      <Switch
-                        checked={security.loginAlerts}
-                        onCheckedChange={(checked) => setSecurity({ ...security, loginAlerts: checked })}
-                        data-testid="switch-login-alerts"
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Device Tracking</p>
-                        <p className="text-sm text-muted-foreground">Monitor devices accessing your account</p>
-                      </div>
-                      <Switch
-                        checked={security.deviceTracking}
-                        onCheckedChange={(checked) => setSecurity({ ...security, deviceTracking: checked })}
-                        data-testid="switch-device-tracking"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="border-t border-border pt-6 mt-6">
-                    <h4 className="font-medium mb-4">Connected Sessions</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
-                            <i className="fas fa-desktop text-green-500"></i>
-                          </div>
-                          <div>
-                            <p className="font-medium">Current Session</p>
-                            <p className="text-sm text-muted-foreground">Chrome • Today</p>
-                          </div>
+                  <div className="border-t border-border pt-6">
+                    <h4 className="font-medium mb-4">Content Types</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Portfolio Updates</p>
+                          <p className="text-xs text-muted-foreground truncate">Performance alerts</p>
                         </div>
-                        <Badge className="bg-green-500/10 text-green-500">Active</Badge>
+                        <Switch
+                          checked={notifications.portfolio}
+                          onCheckedChange={(checked) => setNotifications({ ...notifications, portfolio: checked })}
+                          data-testid="switch-portfolio-notifications"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Staking Rewards</p>
+                          <p className="text-xs text-muted-foreground truncate">Reward payouts</p>
+                        </div>
+                        <Switch
+                          checked={notifications.staking}
+                          onCheckedChange={(checked) => setNotifications({ ...notifications, staking: checked })}
+                          data-testid="switch-staking-notifications"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Challenge Updates</p>
+                          <p className="text-xs text-muted-foreground truncate">Community progress</p>
+                        </div>
+                        <Switch
+                          checked={notifications.challenges}
+                          onCheckedChange={(checked) => setNotifications({ ...notifications, challenges: checked })}
+                          data-testid="switch-challenge-notifications"
+                        />
                       </div>
                     </div>
                   </div>
+                </div>
+                
+                <Button onClick={handleSaveNotifications} className="mt-6 w-full sm:w-auto" data-testid="button-save-notifications">
+                  Save Settings
+                </Button>
+              </Card>
+            )}
+            
+            {activeTab === 'security' && (
+              <Card className="p-4 md:p-6" data-testid="card-security-settings">
+                <h3 className="text-lg font-semibold mb-4 md:mb-6">Security Settings</h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">Two-Factor Authentication</p>
+                      <p className="text-xs text-muted-foreground truncate">Extra security layer</p>
+                    </div>
+                    <Switch
+                      checked={security.twoFactor}
+                      onCheckedChange={(checked) => setSecurity({ ...security, twoFactor: checked })}
+                      data-testid="switch-two-factor"
+                    />
+                  </div>
                   
-                  <Button onClick={handleSaveSecurity} className="mt-6" data-testid="button-save-security">
-                    Save Security Settings
-                  </Button>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="preferences" className="space-y-6">
-                <Card className="p-6" data-testid="card-preferences">
-                  <h3 className="text-lg font-semibold mb-6">App Preferences</h3>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">Login Alerts</p>
+                      <p className="text-xs text-muted-foreground truncate">Get notified of new logins</p>
+                    </div>
+                    <Switch
+                      checked={security.loginAlerts}
+                      onCheckedChange={(checked) => setSecurity({ ...security, loginAlerts: checked })}
+                      data-testid="switch-login-alerts"
+                    />
+                  </div>
                   
-                  <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">Device Tracking</p>
+                      <p className="text-xs text-muted-foreground truncate">Monitor device access</p>
+                    </div>
+                    <Switch
+                      checked={security.deviceTracking}
+                      onCheckedChange={(checked) => setSecurity({ ...security, deviceTracking: checked })}
+                      data-testid="switch-device-tracking"
+                    />
+                  </div>
+                </div>
+                
+                <div className="border-t border-border pt-6 mt-6">
+                  <h4 className="font-medium mb-4">Connected Sessions</h4>
+                  <div className="bg-muted rounded-lg p-3">
                     <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center shrink-0">
+                          <i className="fas fa-desktop text-green-500 text-sm"></i>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm">Current Session</p>
+                          <p className="text-xs text-muted-foreground truncate">Chrome • Today</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-green-500/10 text-green-500 shrink-0">Active</Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                <Button onClick={handleSaveSecurity} className="mt-6 w-full sm:w-auto" data-testid="button-save-security">
+                  Save Settings
+                </Button>
+              </Card>
+            )}
+            
+            {activeTab === 'preferences' && (
+              <Card className="p-4 md:p-6" data-testid="card-preferences">
+                <h3 className="text-lg font-semibold mb-4 md:mb-6">App Preferences</h3>
+                
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">Dark Mode</p>
+                      <p className="text-xs text-muted-foreground truncate">Toggle light/dark themes</p>
+                    </div>
+                    <Switch
+                      checked={theme === 'dark'}
+                      onCheckedChange={toggleTheme}
+                      data-testid="switch-dark-mode"
+                    />
+                  </div>
+                  
+                  <div className="border-t border-border pt-6">
+                    <h4 className="font-medium mb-4">Investment Limits</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <p className="font-medium">Dark Mode</p>
-                        <p className="text-sm text-muted-foreground">Toggle between light and dark themes</p>
+                        <Label htmlFor="dailyLimit">Daily Limit</Label>
+                        <Input
+                          id="dailyLimit"
+                          type="number"
+                          defaultValue="10000"
+                          data-testid="input-daily-limit"
+                        />
                       </div>
-                      <Switch
-                        checked={theme === 'dark'}
-                        onCheckedChange={toggleTheme}
-                        data-testid="switch-dark-mode"
-                      />
-                    </div>
-                    
-                    <div className="border-t border-border pt-6">
-                      <h4 className="font-medium mb-4">Investment Limits</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="dailyLimit">Daily Investment Limit</Label>
-                          <Input
-                            id="dailyLimit"
-                            type="number"
-                            defaultValue="10000"
-                            data-testid="input-daily-limit"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="monthlyLimit">Monthly Investment Limit</Label>
-                          <Input
-                            id="monthlyLimit"
-                            type="number"
-                            defaultValue="100000"
-                            data-testid="input-monthly-limit"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="border-t border-border pt-6">
-                      <h4 className="font-medium mb-4">Risk Preferences</h4>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">High-Risk Portfolio Warnings</p>
-                            <p className="text-sm text-muted-foreground">Get alerts before investing in high-risk portfolios</p>
-                          </div>
-                          <Switch defaultChecked data-testid="switch-risk-warnings" />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Auto-Rebalancing</p>
-                            <p className="text-sm text-muted-foreground">Allow automatic portfolio rebalancing</p>
-                          </div>
-                          <Switch data-testid="switch-auto-rebalancing" />
-                        </div>
+                      <div>
+                        <Label htmlFor="monthlyLimit">Monthly Limit</Label>
+                        <Input
+                          id="monthlyLimit"
+                          type="number"
+                          defaultValue="100000"
+                          data-testid="input-monthly-limit"
+                        />
                       </div>
                     </div>
                   </div>
                   
-                  <Button className="mt-6" data-testid="button-save-preferences">
-                    Save Preferences
-                  </Button>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                  <div className="border-t border-border pt-6">
+                    <h4 className="font-medium mb-4">Risk Preferences</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">High-Risk Warnings</p>
+                          <p className="text-xs text-muted-foreground truncate">Alert before risky investments</p>
+                        </div>
+                        <Switch defaultChecked data-testid="switch-risk-warnings" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">Auto-Rebalancing</p>
+                          <p className="text-xs text-muted-foreground truncate">Automatic portfolio rebalancing</p>
+                        </div>
+                        <Switch data-testid="switch-auto-rebalancing" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <Button className="mt-6 w-full sm:w-auto" data-testid="button-save-preferences">
+                  Save Preferences
+                </Button>
+              </Card>
+            )}
           </div>
         </main>
       </div>
