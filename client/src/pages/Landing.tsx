@@ -10,7 +10,7 @@ import { ArrowLeft, TrendingUp, Briefcase, BarChart3, Trophy, LineChart } from "
 type AuthView = 'landing' | 'signup' | 'login';
 
 export default function Landing() {
-  const [authView, setAuthView] = useState<AuthView>('landing');
+  const [authView, setAuthView] = useState<AuthView>('login');
 
   const handleOAuthLogin = () => {
     window.location.href = "/api/login";
@@ -43,7 +43,7 @@ export default function Landing() {
         <SignupForm
           onSuccess={handleAuthSuccess}
           onSwitchToLogin={() => setAuthView('login')}
-          onBackToLanding={() => setAuthView('landing')}
+          onBackToLanding={() => setAuthView('login')}
         />
       </div>
     );
@@ -52,15 +52,6 @@ export default function Landing() {
   if (authView === 'login') {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <Button
-          variant="ghost"
-          className="absolute top-6 left-6 flex items-center gap-2"
-          onClick={() => setAuthView('landing')}
-          data-testid="button-back-to-landing"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Home
-        </Button>
         <LoginForm
           onSuccess={handleAuthSuccess}
           onSwitchToSignup={() => setAuthView('signup')}
