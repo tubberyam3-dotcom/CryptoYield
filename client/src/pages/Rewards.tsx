@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Gift, TrendingUp, Calendar, CheckCircle2, Clock, Ticket, Zap, ArrowRightLeft } from "lucide-react";
+import { Gift, TrendingUp, Calendar, CheckCircle2, Clock, Zap, ArrowRightLeft } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -25,7 +25,6 @@ interface DailyBonusHistory {
 
 export default function RewardsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
   const [xpToConvert, setXpToConvert] = useState("");
   const { toast } = useToast();
 
@@ -58,37 +57,8 @@ export default function RewardsPage() {
     },
   });
 
-  const couponMutation = useMutation({
-    mutationFn: async (code: string) => {
-      return await apiRequest('POST', '/api/rewards/redeem-coupon', { code });
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
-      toast({
-        title: "🎉 Coupon Redeemed!",
-        description: `${data.message} +$${parseFloat(data.rewardAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} added to your balance!`,
-      });
-      setCouponCode("");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Invalid Coupon",
-        description: error.message || "Failed to redeem coupon",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleRedeem = () => {
     redeemMutation.mutate();
-  };
-
-  const handleCouponRedeem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (couponCode.trim()) {
-      couponMutation.mutate(couponCode.trim());
-    }
   };
 
   const claimXpMutation = useMutation({
@@ -338,49 +308,6 @@ export default function RewardsPage() {
                   </Button>
                 </form>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-4 md:mb-8">
-            <CardHeader className="p-3 md:p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Ticket className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base md:text-lg">Have a Coupon Code?</CardTitle>
-              </div>
-              <CardDescription className="text-xs md:text-sm">
-                Enter your promotional code to receive instant rewards
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-3 md:p-6 pt-0">
-              <form onSubmit={handleCouponRedeem} className="flex flex-col md:flex-row gap-3">
-                <Input
-                  type="text"
-                  placeholder="Enter coupon code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  className="flex-1 uppercase"
-                  data-testid="input-coupon-code"
-                  disabled={couponMutation.isPending}
-                />
-                <Button
-                  type="submit"
-                  disabled={!couponCode.trim() || couponMutation.isPending}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 w-full md:w-auto"
-                  data-testid="button-redeem-coupon"
-                >
-                  {couponMutation.isPending ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Redeeming...
-                    </>
-                  ) : (
-                    <>
-                      <Ticket className="h-4 w-4 mr-2" />
-                      Redeem Coupon
-                    </>
-                  )}
-                </Button>
-              </form>
             </CardContent>
           </Card>
 
