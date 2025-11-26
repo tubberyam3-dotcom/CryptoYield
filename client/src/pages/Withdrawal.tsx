@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import { SiBitcoin, SiEthereum, SiTether, SiBinance, SiSolana, SiRipple, SiCardano, SiDogecoin, SiPolygon, SiLitecoin } from "react-icons/si";
+import { SiBitcoin, SiEthereum, SiTether, SiBinance, SiSolana, SiRipple, SiCardano, SiDogecoin, SiPolygon, SiLitecoin, SiWise } from "react-icons/si";
 import { Copy, Check, Building2, Store, Wallet, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -60,13 +60,15 @@ export default function Withdrawal() {
     { id: "LTC", name: "Litecoin", icon: SiLitecoin, color: "text-gray-500", networks: ["Litecoin"] },
   ];
 
+  const SkrillIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.5 14.5c-1.5 0-2.7-.8-3.3-2l1.4-.8c.4.7 1 1.2 1.9 1.2.9 0 1.5-.5 1.5-1.2 0-.8-.7-1.1-1.8-1.5-1.5-.5-2.7-1.1-2.7-2.7 0-1.5 1.3-2.5 2.9-2.5 1.3 0 2.3.6 2.9 1.6l-1.4.8c-.3-.5-.8-.9-1.5-.9-.7 0-1.2.4-1.2 1 0 .7.6 1 1.7 1.4 1.6.5 2.8 1.2 2.8 2.8 0 1.6-1.3 2.8-3.2 2.8z"/>
+    </svg>
+  );
+
   const merchantPlatforms = [
-    { id: "paypal", name: "PayPal", icon: "fab fa-paypal", color: "text-blue-600" },
-    { id: "venmo", name: "Venmo", icon: "fas fa-money-check-alt", color: "text-blue-400" },
-    { id: "cashapp", name: "Cash App", icon: "fas fa-dollar-sign", color: "text-green-500" },
-    { id: "zelle", name: "Zelle", icon: "fas fa-bolt", color: "text-purple-500" },
-    { id: "wise", name: "Wise", icon: "fas fa-globe", color: "text-green-600" },
-    { id: "skrill", name: "Skrill", icon: "fas fa-wallet", color: "text-purple-600" },
+    { id: "wise", name: "Wise", icon: SiWise, color: "text-green-500" },
+    { id: "skrill", name: "Skrill", icon: SkrillIcon, color: "text-purple-600" },
   ];
 
   const withdrawalMethods = [
@@ -91,7 +93,7 @@ export default function Withdrawal() {
       name: "Merchant Pay",
       icon: "fas fa-store",
       iconBg: "bg-green-500",
-      description: "Send to PayPal, Venmo, Cash App, etc.",
+      description: "Send to Wise or Skrill",
       processingTime: "1-24 hours",
     },
   ];
@@ -796,26 +798,29 @@ export default function Withdrawal() {
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {merchantPlatforms.map((platform) => (
-                          <Card
-                            key={platform.id}
-                            className={`p-4 cursor-pointer transition-all hover:scale-105 ${
-                              merchantPlatform === platform.id ? "border-2 border-primary" : ""
-                            }`}
-                            onClick={() => {
-                              setMerchantPlatform(platform.id);
-                              setMerchantStep(2);
-                            }}
-                            data-testid={`card-platform-${platform.id}`}
-                          >
-                            <div className="flex flex-col items-center space-y-2">
-                              <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-muted`}>
-                                <i className={`${platform.icon} ${platform.color} text-2xl`}></i>
+                        {merchantPlatforms.map((platform) => {
+                          const PlatformIcon = platform.icon;
+                          return (
+                            <Card
+                              key={platform.id}
+                              className={`p-4 cursor-pointer transition-all hover:scale-105 ${
+                                merchantPlatform === platform.id ? "border-2 border-primary" : ""
+                              }`}
+                              onClick={() => {
+                                setMerchantPlatform(platform.id);
+                                setMerchantStep(2);
+                              }}
+                              data-testid={`card-platform-${platform.id}`}
+                            >
+                              <div className="flex flex-col items-center space-y-2">
+                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-muted`}>
+                                  <PlatformIcon className={`${platform.color} text-3xl w-8 h-8`} />
+                                </div>
+                                <span className="font-semibold text-sm text-center">{platform.name}</span>
                               </div>
-                              <span className="font-semibold text-sm text-center">{platform.name}</span>
-                            </div>
-                          </Card>
-                        ))}
+                            </Card>
+                          );
+                        })}
                       </div>
                     </>
                   )}
@@ -828,7 +833,7 @@ export default function Withdrawal() {
                           <ArrowLeft className="w-4 h-4" />
                         </Button>
                         <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                          <i className={`${selectedMerchant?.icon} ${selectedMerchant?.color} text-2xl`}></i>
+                          {selectedMerchant && <selectedMerchant.icon className={`${selectedMerchant.color} w-7 h-7`} />}
                         </div>
                         <div>
                           <h2 className="text-lg md:text-2xl font-bold">Enter Amount</h2>
@@ -892,7 +897,7 @@ export default function Withdrawal() {
                           <ArrowLeft className="w-4 h-4" />
                         </Button>
                         <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                          <i className={`${selectedMerchant?.icon} ${selectedMerchant?.color} text-2xl`}></i>
+                          {selectedMerchant && <selectedMerchant.icon className={`${selectedMerchant.color} w-7 h-7`} />}
                         </div>
                         <div>
                           <h2 className="text-lg md:text-2xl font-bold">Account Details</h2>
