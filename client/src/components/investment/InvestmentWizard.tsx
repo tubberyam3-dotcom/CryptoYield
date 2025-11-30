@@ -168,37 +168,33 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                   className="space-y-6"
                 >
                   <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-xl">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                        <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-xl w-fit">
                           <PieChart className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold mb-2">{portfolio.name}</h3>
-                          <p className="text-muted-foreground mb-4">{portfolio.description}</p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg sm:text-xl font-semibold mb-2">{portfolio.name}</h3>
+                          <p className="text-sm text-muted-foreground mb-4">{portfolio.description}</p>
                           
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Min. Investment</span>
-                                <span className="font-medium">${parseFloat(portfolio.minInvestment).toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Current Return</span>
-                                <span className="text-green-600 font-medium">+{portfolio.currentReturn || 0}%</span>
-                              </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="flex justify-between items-center py-2 border-b border-border sm:border-0">
+                              <span className="text-sm text-muted-foreground">Min. Investment</span>
+                              <span className="font-medium">${parseFloat(portfolio.minInvestment).toLocaleString()}</span>
                             </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Risk Level</span>
-                                <Badge className={getRiskColor(portfolio.riskLevel)}>
-                                  {portfolio.riskLevel}
-                                </Badge>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Strategy</span>
-                                <span className="font-medium">{portfolio.strategyTag}</span>
-                              </div>
+                            <div className="flex justify-between items-center py-2 border-b border-border sm:border-0">
+                              <span className="text-sm text-muted-foreground">Current Return</span>
+                              <span className="text-green-600 font-medium">+{portfolio.currentReturn || 0}%</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-border sm:border-0">
+                              <span className="text-sm text-muted-foreground">Risk Level</span>
+                              <Badge className={getRiskColor(portfolio.riskLevel)}>
+                                {portfolio.riskLevel}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between items-center py-2">
+                              <span className="text-sm text-muted-foreground">Strategy</span>
+                              <span className="font-medium text-sm">{portfolio.strategyTag}</span>
                             </div>
                           </div>
                         </div>
