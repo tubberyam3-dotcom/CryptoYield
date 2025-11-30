@@ -7,6 +7,7 @@ import { SignupForm } from "@/components/auth/SignupForm";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { InvestmentCalculator } from "@/components/InvestmentCalculator";
 import { ArrowLeft, TrendingUp, Briefcase, BarChart3, Trophy, LineChart } from "lucide-react";
+import windmillBg from "@assets/stock_images/beautiful_windmill_l_fbf8ed03.jpg";
 
 type AuthView = 'landing' | 'signup' | 'login';
 
@@ -40,7 +41,12 @@ export default function Landing() {
   // If showing auth forms, render them instead of the landing page
   if (authView === 'signup') {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden">
+      <div className="min-h-screen relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${windmillBg})` }}
+        />
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -50,7 +56,7 @@ export default function Landing() {
             stiffness: 200,
             duration: 0.5
           }}
-          className="w-full max-w-md pb-8 md:pb-0"
+          className="relative z-10 w-full max-w-md pb-8 md:pb-0"
         >
           <SignupForm
             onSuccess={handleAuthSuccess}
@@ -64,7 +70,12 @@ export default function Landing() {
 
   if (authView === 'login') {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden">
+      <div className="min-h-screen relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${windmillBg})` }}
+        />
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -74,7 +85,7 @@ export default function Landing() {
             stiffness: 200,
             duration: 0.5
           }}
-          className="w-full max-w-md pb-8 md:pb-0"
+          className="relative z-10 w-full max-w-md pb-8 md:pb-0"
         >
           <LoginForm
             onSuccess={handleAuthSuccess}
