@@ -395,6 +395,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if email exists and return user name for multi-step login
+  app.post('/api/auth/check-email', async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "No account found with this email", exists: false });
+      }
+      
+      // Return user's first name for personalized greeting
+      res.json({ 
+        exists: true, 
+        firstName: user.firstName || 'User',
+        lastName: user.lastName || ''
+      });
+    } catch (error: any) {
+      console.error("Email check error:", error);
+      res.status(500).json({ message: "Failed to check email" });
+    }
+  });
+
   app.post('/api/auth/login', async (req: any, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
