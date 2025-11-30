@@ -2,6 +2,7 @@ import { useTheme } from "@/providers/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { User } from "lucide-react";
 import refluxLogoDark from "@assets/Reflux(1)_1763816395638.png";
 import refluxLogoLight from "@assets/Reflux(2)_1763816395638.png";
 
@@ -15,12 +16,6 @@ export function TopBar({ title, onMenuClick, sidebarOpen = false }: TopBarProps)
   const { theme, toggleTheme } = useTheme();
   const { user, isDemoMode } = useAuth();
   const [, setLocation] = useLocation();
-
-  const getInitials = (firstName?: string | null, lastName?: string | null) => {
-    const first = firstName?.charAt(0) || '';
-    const last = lastName?.charAt(0) || '';
-    return (first + last).toUpperCase() || 'U';
-  };
 
   return (
     <header className="bg-card border-b border-border px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-40">
@@ -86,10 +81,8 @@ export function TopBar({ title, onMenuClick, sidebarOpen = false }: TopBarProps)
               {user?.kycStatus === 'approved' ? 'Verified User' : 'Pending Verification'}
             </div>
           </div>
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white font-medium">
-            <span data-testid="text-user-initials" className="text-xs sm:text-sm">
-              {getInitials(user?.firstName, user?.lastName)}
-            </span>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground">
+            <User className="w-4 h-4 sm:w-5 sm:h-5" data-testid="icon-user-avatar" />
           </div>
         </button>
       </div>
