@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,24 +40,48 @@ export default function Landing() {
   // If showing auth forms, render them instead of the landing page
   if (authView === 'signup') {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <SignupForm
-          onSuccess={handleAuthSuccess}
-          onSwitchToLogin={() => setAuthView('login')}
-          onBackToLanding={() => setAuthView('login')}
-        />
+      <div className="min-h-screen bg-background flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden">
+        <motion.div
+          initial={{ y: "100%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ 
+            type: "spring",
+            damping: 25,
+            stiffness: 200,
+            duration: 0.5
+          }}
+          className="w-full max-w-md pb-8 md:pb-0"
+        >
+          <SignupForm
+            onSuccess={handleAuthSuccess}
+            onSwitchToLogin={() => setAuthView('login')}
+            onBackToLanding={() => setAuthView('login')}
+          />
+        </motion.div>
       </div>
     );
   }
 
   if (authView === 'login') {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <LoginForm
-          onSuccess={handleAuthSuccess}
-          onSwitchToSignup={() => setAuthView('signup')}
-          onSwitchToOAuth={handleOAuthLogin}
-        />
+      <div className="min-h-screen bg-background flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden">
+        <motion.div
+          initial={{ y: "100%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ 
+            type: "spring",
+            damping: 25,
+            stiffness: 200,
+            duration: 0.5
+          }}
+          className="w-full max-w-md pb-8 md:pb-0"
+        >
+          <LoginForm
+            onSuccess={handleAuthSuccess}
+            onSwitchToSignup={() => setAuthView('signup')}
+            onSwitchToOAuth={handleOAuthLogin}
+          />
+        </motion.div>
       </div>
     );
   }
