@@ -1,5 +1,6 @@
 import { useTheme } from "@/providers/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import refluxLogoDark from "@assets/Reflux(1)_1763816395638.png";
 import refluxLogoLight from "@assets/Reflux(2)_1763816395638.png";
@@ -13,6 +14,7 @@ interface TopBarProps {
 export function TopBar({ title, onMenuClick, sidebarOpen = false }: TopBarProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, isDemoMode } = useAuth();
+  const [, setLocation] = useLocation();
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
     const first = firstName?.charAt(0) || '';
@@ -67,8 +69,12 @@ export function TopBar({ title, onMenuClick, sidebarOpen = false }: TopBarProps)
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-destructive rounded-full"></span>
         </button>
         
-        {/* User Profile */}
-        <div className="flex items-center space-x-2 sm:space-x-3" data-testid="user-profile">
+        {/* User Profile - Clickable to open Settings */}
+        <button 
+          onClick={() => setLocation('/settings')}
+          className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity cursor-pointer" 
+          data-testid="user-profile"
+        >
           <div className="text-right hidden sm:block">
             <div className="text-sm font-medium" data-testid="text-user-name">
               {user?.firstName && user?.lastName 
@@ -85,7 +91,7 @@ export function TopBar({ title, onMenuClick, sidebarOpen = false }: TopBarProps)
               {getInitials(user?.firstName, user?.lastName)}
             </span>
           </div>
-        </div>
+        </button>
       </div>
     </header>
   );
