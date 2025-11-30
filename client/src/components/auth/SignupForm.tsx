@@ -621,64 +621,33 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
           Select the account type that best fits your investment needs
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
-        <div role="radiogroup" aria-label="Account type selection" data-testid="radiogroup-account-type" className="space-y-3 sm:space-y-4">
+      <CardContent className="space-y-4 px-4 sm:px-6">
+        <div role="radiogroup" aria-label="Account type selection" data-testid="radiogroup-account-type" className="space-y-3">
           {/* Personal Account Card */}
           <button 
             type="button"
             role="radio"
             aria-checked={tempSelectedType === "personal"}
-            aria-labelledby="personal-account-title"
-            tabIndex={tempSelectedType === "personal" ? 0 : -1}
-            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-4 sm:p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
+            className={`w-full rounded-xl border transition-all duration-200 p-4 text-left ${
               tempSelectedType === "personal" 
-                ? "border-primary/30 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" 
-                : "border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950"
+                ? "border-primary ring-2 ring-primary bg-primary/5" 
+                : "border-border hover:border-primary/50"
             }`}
             onClick={() => handleAccountTypeSelect("personal")}
             onKeyDown={(e) => handleKeyDown(e, "personal")}
             data-testid="card-personal-account"
           >
-            {tempSelectedType === "personal" && (
-              <div className="absolute top-4 right-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 grid place-items-center">
+                <UserIcon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">Personal</h3>
+                <p className="text-xs text-muted-foreground">Individual investing</p>
+              </div>
+              {tempSelectedType === "personal" && (
                 <CheckCircle2 className="h-5 w-5 text-primary" />
-              </div>
-            )}
-            <div className="flex items-start space-x-3 sm:space-x-4">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
-                <UserIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between mb-2 sm:mb-3">
-                  <h3 id="personal-account-title" className="text-base sm:text-lg font-semibold text-foreground">Personal Account</h3>
-                  <Badge variant="secondary" className="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 text-xs sm:text-sm ml-2">
-                    Most Popular
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mb-2 sm:mb-3">
-                  Perfect for individual crypto investments
-                </p>
-                <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
-                  <Badge variant="outline" className="text-xs">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Quick Setup
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    Auto Rebalancing
-                  </Badge>
-                </div>
-                <ul className="space-y-1">
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
-                    Personalized investment goals
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
-                    Risk tolerance matching
-                  </li>
-                </ul>
-              </div>
+              )}
             </div>
           </button>
 
@@ -687,52 +656,26 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
             type="button"
             role="radio"
             aria-checked={tempSelectedType === "business"}
-            aria-labelledby="business-account-title"
-            tabIndex={tempSelectedType === "business" ? 0 : -1}
-            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-4 sm:p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
+            className={`w-full rounded-xl border transition-all duration-200 p-4 text-left ${
               tempSelectedType === "business" 
-                ? "border-primary/30 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" 
-                : "border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950"
+                ? "border-primary ring-2 ring-primary bg-primary/5" 
+                : "border-border hover:border-primary/50"
             }`}
             onClick={() => handleAccountTypeSelect("business")}
             onKeyDown={(e) => handleKeyDown(e, "business")}
             data-testid="card-business-account"
           >
-            {tempSelectedType === "business" && (
-              <div className="absolute top-4 right-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 grid place-items-center">
+                <Building className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">Business</h3>
+                <p className="text-xs text-muted-foreground">Corporate investing</p>
+              </div>
+              {tempSelectedType === "business" && (
                 <CheckCircle2 className="h-5 w-5 text-primary" />
-              </div>
-            )}
-            <div className="flex items-start space-x-3 sm:space-x-4">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
-                <Building className="h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 id="business-account-title" className="text-base sm:text-lg font-semibold text-foreground mb-2 sm:mb-3">Business Account</h3>
-                <p className="text-sm text-muted-foreground mb-2 sm:mb-3">
-                  Corporate treasury and institutional investing
-                </p>
-                <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
-                  <Badge variant="outline" className="text-xs">
-                    <Building className="h-3 w-3 mr-1" />
-                    Tax Benefits
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    Higher Limits
-                  </Badge>
-                </div>
-                <ul className="space-y-1">
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
-                    Multi-user access controls
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
-                    Advanced reporting tools
-                  </li>
-                </ul>
-              </div>
+              )}
             </div>
           </button>
 
@@ -741,52 +684,26 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
             type="button"
             role="radio"
             aria-checked={tempSelectedType === "joint"}
-            aria-labelledby="joint-account-title"
-            tabIndex={tempSelectedType === "joint" ? 0 : -1}
-            className={`group relative w-full rounded-xl border transition-all duration-200 ease-out p-4 sm:p-6 shadow-sm hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.995] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-left ${
+            className={`w-full rounded-xl border transition-all duration-200 p-4 text-left ${
               tempSelectedType === "joint" 
-                ? "border-primary/30 ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" 
-                : "border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950"
+                ? "border-primary ring-2 ring-primary bg-primary/5" 
+                : "border-border hover:border-primary/50"
             }`}
             onClick={() => handleAccountTypeSelect("joint")}
             onKeyDown={(e) => handleKeyDown(e, "joint")}
             data-testid="card-joint-account"
           >
-            {tempSelectedType === "joint" && (
-              <div className="absolute top-4 right-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 grid place-items-center">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">Joint</h3>
+                <p className="text-xs text-muted-foreground">Couples & families</p>
+              </div>
+              {tempSelectedType === "joint" && (
                 <CheckCircle2 className="h-5 w-5 text-primary" />
-              </div>
-            )}
-            <div className="flex items-start space-x-3 sm:space-x-4">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 grid place-items-center shadow-inner group-hover:motion-safe:-translate-y-0.5 transition-transform duration-200">
-                <Users className="h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 id="joint-account-title" className="text-base sm:text-lg font-semibold text-foreground mb-2 sm:mb-3">Joint Account</h3>
-                <p className="text-sm text-muted-foreground mb-2 sm:mb-3">
-                  Shared investing for couples and families
-                </p>
-                <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
-                  <Badge variant="outline" className="text-xs">
-                    <Users className="h-3 w-3 mr-1" />
-                    Shared Control
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    <Target className="h-3 w-3 mr-1" />
-                    Joint Goals
-                  </Badge>
-                </div>
-                <ul className="space-y-1">
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
-                    Dual account access
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
-                    Shared financial planning
-                  </li>
-                </ul>
-              </div>
+              )}
             </div>
           </button>
         </div>
