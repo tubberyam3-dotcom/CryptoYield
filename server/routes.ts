@@ -276,24 +276,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     businessName: z.string().optional(),
     businessType: z.string().optional(),
     taxId: z.string().optional(),
-  }).refine((data) => {
-    // If joint account, require spouse information
-    if (data.accountType === 'joint') {
-      return data.spouseFirstName && data.spouseLastName && data.spouseEmail && data.relationshipType;
-    }
-    return true;
-  }, {
-    message: "Partner information is required for joint accounts",
-    path: ["spouseEmail"]
-  }).refine((data) => {
-    // If business account, require business information
-    if (data.accountType === 'business') {
-      return data.businessName && data.businessType;
-    }
-    return true;
-  }, {
-    message: "Business information is required for business accounts",
-    path: ["businessName"]
   });
 
   const loginSchema = z.object({
@@ -348,8 +330,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If joint account, create the joint account
       let jointAccount = null;
       if (accountType === 'joint') {
-        const jointAccountName = `${firstName} ${lastName} & ${spouseFirstName} ${spouseLastName}`;
-        const jointAccountDescription = `Joint ${relationshipType?.replace('_', ' ')} account`;
+        const partnerName = spouseFirstName && spouseLastName ? `${spouseFirstName} ${spouseLastName}` : 'Partner';
+        const jointAccountName = `${firstName} ${lastName} & ${partnerName}`;
+        const jointAccountDescription = relationshipType 
+          ? `Joint ${relationshipType.replace('_', ' ')} account` 
+          : 'Joint account';
         
         jointAccount = await storage.createJointAccount({
           name: jointAccountName,
@@ -360,7 +345,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`Created joint account ${jointAccount.id} for user ${user.id} with join code: ${jointAccount.joinCode}`);
-        console.log(`Partner email: ${spouseEmail} - they can join using code: ${jointAccount.joinCode}`);
+        if (spouseEmail) {
+          console.log(`Partner email: ${spouseEmail} - they can join using code: ${jointAccount.joinCode}`);
+        }
       }
       
       // Create session (similar to Replit OAuth)
