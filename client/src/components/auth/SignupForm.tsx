@@ -345,8 +345,8 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
-        title: "Account Created!",
-        description: "Welcome to Reflux Capital. You're now logged in.",
+        title: "Signup Successful!",
+        description: "You'll receive an email once your account is active.",
       });
       onSuccess?.();
     },
