@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Mail, Lock, User, Phone, Globe, FileText, ArrowLeft, ArrowRight, CheckCircle2, UserIcon, Building, Users } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, Globe, FileText, ArrowLeft, ArrowRight, CheckCircle2, UserIcon, Building, Users, Upload, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,7 @@ interface SignupData {
   country: string;
   documentType: string;
   documentNumber: string;
+  documentFile: File | null;
 }
 
 const countries = [
@@ -239,12 +240,28 @@ const documentTypes = [
   { value: "other", label: "Other Valid Document" },
 ];
 
+function StepLoadingAnimation() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-primary/20 rounded-full"></div>
+        <div className="absolute top-0 left-0 w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground animate-pulse">Processing...</p>
+      </div>
+    </div>
+  );
+}
+
 export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: SignupFormProps) {
   const [step, setStep] = useState<SignupStep>("account-type");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isStepLoading, setIsStepLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof SignupData, string>>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<SignupData>({
     accountType: "personal",
@@ -258,6 +275,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
     country: "",
     documentType: "",
     documentNumber: "",
+    documentFile: null,
   });
 
   const queryClient = useQueryClient();
@@ -267,9 +285,31 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
   const currentStepIndex = steps.indexOf(step);
   const progress = ((currentStepIndex) / (steps.length - 1)) * 100;
 
-  const updateFormData = (field: keyof SignupData, value: string) => {
+  const updateFormData = (field: keyof SignupData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setErrors(prev => ({ ...prev, [field]: undefined }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please upload a file smaller than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      updateFormData("documentFile", file);
+    }
+  };
+
+  const removeFile = () => {
+    updateFormData("documentFile", null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const validateStep = (): boolean => {
@@ -318,6 +358,9 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
         if (!formData.documentNumber) {
           newErrors.documentNumber = "Document number is required";
         }
+        if (!formData.documentFile) {
+          newErrors.documentFile = "Please upload your document";
+        }
         break;
     }
 
@@ -363,12 +406,20 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
     if (!validateStep()) return;
 
     if (step === "document") {
-      signupMutation.mutate(formData);
+      setIsStepLoading(true);
+      setTimeout(() => {
+        setIsStepLoading(false);
+        signupMutation.mutate(formData);
+      }, 3000);
     } else {
-      const nextIndex = currentStepIndex + 1;
-      if (nextIndex < steps.length) {
-        setStep(steps[nextIndex]);
-      }
+      setIsStepLoading(true);
+      setTimeout(() => {
+        setIsStepLoading(false);
+        const nextIndex = currentStepIndex + 1;
+        if (nextIndex < steps.length) {
+          setStep(steps[nextIndex]);
+        }
+      }, 3000);
     }
   };
 
@@ -404,6 +455,27 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
       case "document": return "Provide a valid identification document";
     }
   };
+
+  if (isStepLoading) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="space-y-1 px-4 sm:px-6">
+          {step !== "account-type" && (
+            <Progress value={progress} className="w-full h-1.5 mb-4" />
+          )}
+          <CardTitle className="text-xl font-bold text-center">
+            {step === "document" ? "Creating Your Account" : "Verifying Information"}
+          </CardTitle>
+          <CardDescription className="text-sm text-center">
+            Please wait while we process your information
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-4 sm:px-6">
+          <StepLoadingAnimation />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -731,6 +803,52 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label>Upload Document</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                onChange={handleFileChange}
+                className="hidden"
+                data-testid="input-document-file"
+              />
+              
+              {formData.documentFile ? (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                    <span className="text-sm truncate">{formData.documentFile.name}</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={removeFile}
+                    className="h-8 w-8 flex-shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-primary/50 transition-colors"
+                  data-testid="button-upload-document"
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Click to upload your document</span>
+                    <span className="text-xs text-muted-foreground">PDF, JPG, PNG (max 5MB)</span>
+                  </div>
+                </button>
+              )}
+              {errors.documentFile && (
+                <p className="text-sm text-destructive">{errors.documentFile}</p>
+              )}
+            </div>
+
             <div className="p-3 bg-muted/50 rounded-lg">
               <p className="text-xs text-muted-foreground">
                 Your document information is encrypted and securely stored. We use this for identity verification only.
@@ -741,7 +859,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
 
         <Button
           onClick={handleNext}
-          disabled={signupMutation.isPending}
+          disabled={signupMutation.isPending || isStepLoading}
           className="w-full"
           data-testid="button-continue"
         >
