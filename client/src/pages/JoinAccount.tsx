@@ -129,12 +129,12 @@ export default function JoinAccount() {
 
   if (error || !jointAccountInfo?.valid) {
     return (
-      <div className="min-h-[100dvh] relative flex items-center justify-center p-4 bg-background">
+      <div className="min-h-[100dvh] h-[100dvh] relative flex items-center justify-center p-4 bg-background">
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
         <Card className="relative z-10 w-full max-w-md">
           <CardHeader className="text-center">
             <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
@@ -172,12 +172,12 @@ export default function JoinAccount() {
 
   if (authView === "signup") {
     return (
-      <div className="min-h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
+      <div className="min-h-[100dvh] h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -202,12 +202,12 @@ export default function JoinAccount() {
 
   if (authView === "login") {
     return (
-      <div className="min-h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
+      <div className="min-h-[100dvh] h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -229,12 +229,12 @@ export default function JoinAccount() {
   }
 
   return (
-    <div className="min-h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
+    <div className="min-h-[100dvh] h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${windmillBg})` }}
       />
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
       <motion.div
         initial={{ y: "100%", opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

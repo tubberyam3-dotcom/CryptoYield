@@ -41,12 +41,12 @@ export default function Landing() {
   // If showing auth forms, render them instead of the landing page
   if (authView === 'signup') {
     return (
-      <div className="min-h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
+      <div className="min-h-[100dvh] h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -70,12 +70,12 @@ export default function Landing() {
 
   if (authView === 'login') {
     return (
-      <div className="min-h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
+      <div className="min-h-[100dvh] h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
