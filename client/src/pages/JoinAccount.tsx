@@ -74,7 +74,7 @@ export default function JoinAccount() {
 
   if (joinMutation.isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
@@ -118,7 +118,7 @@ export default function JoinAccount() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Verifying invite link...</p>
@@ -129,7 +129,7 @@ export default function JoinAccount() {
 
   if (error || !jointAccountInfo?.valid) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] relative flex items-center justify-center p-4 bg-background">
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
@@ -161,7 +161,7 @@ export default function JoinAccount() {
 
   if (isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Joining joint account...</p>
@@ -172,7 +172,7 @@ export default function JoinAccount() {
 
   if (authView === "signup") {
     return (
-      <div className="min-h-screen relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden">
+      <div className="min-h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
@@ -202,7 +202,7 @@ export default function JoinAccount() {
 
   if (authView === "login") {
     return (
-      <div className="min-h-screen relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden">
+      <div className="min-h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
@@ -229,7 +229,7 @@ export default function JoinAccount() {
   }
 
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden">
+    <div className="min-h-[100dvh] relative flex flex-col items-center justify-end md:justify-center p-4 overflow-hidden bg-background">
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${windmillBg})` }}
