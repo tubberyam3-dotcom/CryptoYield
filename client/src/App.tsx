@@ -24,6 +24,7 @@ import Rewards from "@/pages/Rewards";
 import Admin from "@/pages/Admin";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
+import JoinAccount from "@/pages/JoinAccount";
 import { AdminAuthProvider, useAdminAuth } from "@/hooks/useAdminAuth";
 
 function ScrollToTop() {
@@ -86,6 +87,9 @@ function Router() {
             <AdminRouter />
           </AdminAuthProvider>
         </Route>
+        
+        {/* Joint account invite route - available to all users */}
+        <Route path="/join/:joinCode" component={JoinAccount} />
         
         {/* Regular user routes */}
         {!isAuthenticated ? (

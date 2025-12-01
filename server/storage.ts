@@ -351,7 +351,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJointAccountByJoinCode(joinCode: string): Promise<JointAccount | undefined> {
-    const [jointAccount] = await db.select().from(jointAccounts).where(eq(jointAccounts.joinCode, joinCode));
+    // Normalize join code to uppercase (codes are stored as uppercase)
+    const normalizedCode = joinCode.toUpperCase();
+    const [jointAccount] = await db.select().from(jointAccounts).where(eq(jointAccounts.joinCode, normalizedCode));
     return jointAccount;
   }
 
@@ -366,11 +368,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async joinJointAccountByCode(userId: string, joinCode: string): Promise<UserJointAccount> {
+    // Normalize join code to uppercase (codes are stored as uppercase)
+    const normalizedCode = joinCode.toUpperCase();
+    
     // Find the joint account by join code
     const [jointAccount] = await db
       .select()
       .from(jointAccounts)
-      .where(eq(jointAccounts.joinCode, joinCode));
+      .where(eq(jointAccounts.joinCode, normalizedCode));
 
     if (!jointAccount) {
       throw new Error('Joint account not found');

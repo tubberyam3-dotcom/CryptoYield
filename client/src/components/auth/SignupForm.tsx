@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Mail, Lock, User, Phone, Globe, FileText, ArrowLeft, ArrowRight, CheckCircle2, UserIcon, Building, Users, Upload, X } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, Globe, FileText, ArrowLeft, ArrowRight, CheckCircle2, UserIcon, Building, Users, Upload, X, Copy, Check, Heart, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +15,16 @@ interface SignupFormProps {
   onSuccess?: () => void;
   onSwitchToLogin?: () => void;
   onBackToLanding?: () => void;
+  joinCode?: string;
 }
 
-type SignupStep = "account-type" | "email" | "password" | "name" | "phone" | "document";
+type SignupStep = "account-type" | "email" | "password" | "name" | "phone" | "document" | "success";
+
+interface JointAccountResponse {
+  id: string;
+  joinCode: string;
+  name: string;
+}
 
 interface SignupData {
   accountType: AccountType;
@@ -251,12 +258,14 @@ function StepLoadingAnimation() {
   );
 }
 
-export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: SignupFormProps) {
+export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCode }: SignupFormProps) {
   const [step, setStep] = useState<SignupStep>("account-type");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isStepLoading, setIsStepLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof SignupData, string>>>({});
+  const [jointAccountData, setJointAccountData] = useState<JointAccountResponse | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<SignupData>({
@@ -364,6 +373,24 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
     return Object.keys(newErrors).length === 0;
   };
 
+  const getShareableLink = (code: string) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/join/${code}`;
+  };
+
+  const copyShareableLink = () => {
+    if (jointAccountData?.joinCode) {
+      const link = getShareableLink(jointAccountData.joinCode);
+      navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      toast({
+        title: "Link Copied!",
+        description: "Share this link with your partner to join your account.",
+      });
+      setTimeout(() => setLinkCopied(false), 3000);
+    }
+  };
+
   const signupMutation = useMutation({
     mutationFn: async (data: SignupData) => {
       const signupPayload = {
@@ -377,17 +404,34 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
         documentType: data.documentType,
         documentNumber: data.documentNumber,
         referralCode: data.referralCode || undefined,
+        joinCode: joinCode || undefined,
       };
       const response = await apiRequest("POST", "/api/auth/register", signupPayload);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "Signup Successful!",
-        description: "You'll receive an email once your account is active.",
-      });
-      onSuccess?.();
+      
+      if (data.jointAccount && data.joinedExisting) {
+        toast({
+          title: "Welcome!",
+          description: "You've successfully joined the joint account.",
+        });
+        onSuccess?.();
+      } else if (data.jointAccount && formData.accountType === 'joint') {
+        setJointAccountData(data.jointAccount);
+        setStep("success");
+        toast({
+          title: "Account Created!",
+          description: "Share the invite link with your partner.",
+        });
+      } else {
+        toast({
+          title: "Signup Successful!",
+          description: "You'll receive an email once your account is active.",
+        });
+        onSuccess?.();
+      }
     },
     onError: (error: any) => {
       toast({
@@ -438,6 +482,8 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
       case "name": return "Your Name";
       case "phone": return "Contact Details";
       case "document": return "Verify Identity";
+      case "success": return "Account Created";
+      default: return "";
     }
   };
 
@@ -449,14 +495,97 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
       case "name": return "Let us know who you are";
       case "phone": return "Your phone number and country of residence";
       case "document": return "Provide a valid identification document";
+      case "success": return "Share your invite link with your partner";
+      default: return "";
     }
   };
+
+  if (step === "success" && jointAccountData) {
+    const shareableLink = getShareableLink(jointAccountData.joinCode);
+    
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="space-y-1 px-4 sm:px-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-[#e4fe7b]/20 flex items-center justify-center mx-auto mb-4">
+            <Heart className="w-10 h-10 text-[#e4fe7b]" />
+          </div>
+          <CardTitle className="text-2xl font-bold">Joint Account Created!</CardTitle>
+          <CardDescription className="text-base">
+            Share the link below with your partner to invite them to your joint account
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6 px-4 sm:px-6">
+          <div className="space-y-3">
+            <Label className="text-sm text-muted-foreground">Partner Invite Link</Label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 p-3 bg-muted/50 rounded-lg border text-sm break-all font-mono">
+                {shareableLink}
+              </div>
+              <Button
+                onClick={copyShareableLink}
+                variant="outline"
+                size="icon"
+                className="flex-shrink-0 h-10 w-10"
+                data-testid="button-copy-link"
+              >
+                {linkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          <div className="bg-muted/30 rounded-lg p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Link2 className="h-4 w-4 text-primary" />
+              <span className="font-medium">Join Code: {jointAccountData.joinCode}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Your partner can also enter this code manually if they already have an account
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={copyShareableLink}
+              className="w-full bg-[#e4fe7b] text-black hover:bg-[#d4ee6b]"
+              data-testid="button-share-link"
+            >
+              {linkCopied ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Link Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Invite Link
+                </>
+              )}
+            </Button>
+            
+            <Button
+              onClick={() => onSuccess?.()}
+              variant="outline"
+              className="w-full"
+              data-testid="button-continue-to-dashboard"
+            >
+              Continue to Dashboard
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground text-center">
+            You'll receive an email once your account is verified and active
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isStepLoading) {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="space-y-1 px-4 sm:px-6">
-          {step !== "account-type" && (
+          {step !== "account-type" && step !== "success" && (
             <Progress value={progress} className="w-full h-1.5 mb-4" />
           )}
           <CardTitle className="text-xl font-bold text-center">
@@ -476,7 +605,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1 px-4 sm:px-6">
-        {step !== "account-type" && (
+        {step !== "account-type" && step !== "success" && (
           <Progress value={progress} className="w-full h-1.5 mb-4" />
         )}
         <div className="flex items-center gap-2">
@@ -496,9 +625,9 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding }: Sign
             <CardDescription className="text-sm">{getStepDescription()}</CardDescription>
           </div>
         </div>
-        {step !== "account-type" && (
+        {step !== "account-type" && step !== "success" && (
           <p className="text-xs text-muted-foreground">
-            Step {currentStepIndex} of {steps.length - 1}
+            Step {currentStepIndex} of {steps.length - 2}
           </p>
         )}
       </CardHeader>

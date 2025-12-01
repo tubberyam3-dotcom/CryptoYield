@@ -276,6 +276,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     businessName: z.string().optional(),
     businessType: z.string().optional(),
     taxId: z.string().optional(),
+    // Join code for joining an existing joint account
+    joinCode: z.string().optional(),
   });
 
   const loginSchema = z.object({
@@ -298,7 +300,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         relationshipType,
         businessName,
         businessType,
-        taxId
+        taxId,
+        joinCode
       } = validatedData;
       
       // Check if user already exists
@@ -307,13 +310,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already exists with this email" });
       }
       
-      // For joint accounts, note: we allow existing emails since partners can join using the join code
+      // If joining via join code, verify the code exists
+      let existingJointAccount = null;
+      if (joinCode) {
+        existingJointAccount = await storage.getJointAccountByJoinCode(joinCode.toUpperCase());
+        if (!existingJointAccount) {
+          return res.status(400).json({ message: "Invalid join code" });
+        }
+      }
       
       // Hash password
       const saltRounds = 12;
       const passwordHash = await bcrypt.hash(password, saltRounds);
       
-      // Create user with accountType
+      // Create user with accountType (if joining via code, treat as personal account type)
       const user = await storage.createUser({
         email,
         firstName,
@@ -321,15 +331,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         passwordHash,
         authType: 'password',
         profileImageUrl: null,
-        accountType: accountType || 'personal',
+        accountType: joinCode ? 'personal' : (accountType || 'personal'),
         businessName: accountType === 'business' ? businessName : null,
         businessType: accountType === 'business' ? businessType : null,
         taxId: accountType === 'business' ? taxId : null,
       });
       
-      // If joint account, create the joint account
+      // If user registered with a join code, add them to the existing joint account
       let jointAccount = null;
-      if (accountType === 'joint') {
+      if (existingJointAccount) {
+        await storage.joinJointAccountByCode(user.id, joinCode!.toUpperCase());
+        jointAccount = existingJointAccount;
+        console.log(`User ${user.id} joined joint account ${jointAccount.id} via join code`);
+      }
+      // If creating a new joint account
+      else if (accountType === 'joint') {
         const partnerName = spouseFirstName && spouseLastName ? `${spouseFirstName} ${spouseLastName}` : 'Partner';
         const jointAccountName = `${firstName} ${lastName} & ${partnerName}`;
         const jointAccountDescription = relationshipType 
@@ -366,7 +382,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (jointAccount) {
         response.jointAccount = jointAccount;
-        response.message = `Joint account created! Share this join code with your partner: ${jointAccount.joinCode}`;
+        if (existingJointAccount) {
+          response.message = `Successfully joined the joint account!`;
+          response.joinedExisting = true;
+        } else {
+          response.message = `Joint account created! Share this join code with your partner: ${jointAccount.joinCode}`;
+        }
       }
       
       res.json(response);
@@ -907,6 +928,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating joint account:", error);
       res.status(400).json({ message: "Failed to create joint account" });
+    }
+  });
+
+  // Public endpoint to verify join code (no auth required) - used for shareable links
+  app.get('/api/joint-accounts/verify/:joinCode', async (req: any, res) => {
+    try {
+      const { joinCode } = req.params;
+      
+      if (!joinCode || typeof joinCode !== 'string') {
+        return res.status(400).json({ message: "Join code is required", valid: false });
+      }
+      
+      const jointAccount = await storage.getJointAccountByJoinCode(joinCode.toUpperCase());
+      
+      if (!jointAccount) {
+        return res.status(404).json({ message: "Invalid join code", valid: false });
+      }
+      
+      // Return basic info about the joint account (not sensitive data)
+      res.json({
+        valid: true,
+        jointAccountName: jointAccount.name,
+        relationshipType: jointAccount.relationshipType,
+        joinCode: jointAccount.joinCode,
+      });
+    } catch (error: any) {
+      console.error("Error verifying join code:", error);
+      res.status(500).json({ message: "Failed to verify join code", valid: false });
     }
   });
 
