@@ -51,7 +51,20 @@ const enhancedAuth = async (req: any, res: any, next: any) => {
 
 // Admin-only authentication middleware  
 const adminAuth = async (req: any, res: any, next: any) => {
-  // Check for password-based session first
+  // Check for admin session first (from admin login)
+  if (req.session.adminUser) {
+    const adminUser = req.session.adminUser;
+    req.user = {
+      claims: {
+        sub: adminUser.id,
+        email: adminUser.email,
+        authType: 'admin'
+      }
+    };
+    return next();
+  }
+  
+  // Check for password-based user session with admin role
   if (req.session.user) {
     const userId = req.session.user.id;
     const user = await storage.getUser(userId);
