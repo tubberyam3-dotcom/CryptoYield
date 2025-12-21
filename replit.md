@@ -76,6 +76,13 @@ Preferred communication style: Simple, everyday language.
 - **TanStack Query**: Data fetching and caching for React applications
 - **Wouter**: Lightweight routing library for React
 
+## Email Notifications
+- **Service**: Nodemailer for SMTP-based email delivery
+- **Configuration**: Admin-configurable SMTP settings stored in systemSettings table
+- **Templates**: Welcome emails, deposit confirmations, stock purchase updates, and reward notifications
+- **Security**: SMTP passwords are write-only (never returned in API responses), stored server-side only
+- **Note**: Email service is configured through the admin panel (Email section in sidebar). User dismissed SendGrid integration - using custom SMTP configuration instead.
+
 ## Hosting & Deployment
 - **Replit**: Development and hosting platform with integrated services
 - **Environment Variables**: Secure configuration management for database URLs and secrets

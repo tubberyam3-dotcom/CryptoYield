@@ -21,6 +21,7 @@ interface EmailConfig {
   email_deposit_enabled?: string;
   email_stock_enabled?: string;
   email_rewards_enabled?: string;
+  has_smtp_password?: boolean;
 }
 
 export function EmailSettings() {
@@ -28,6 +29,7 @@ export function EmailSettings() {
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
   const [testEmail, setTestEmail] = useState("");
+  const [passwordChanged, setPasswordChanged] = useState(false);
   
   const [formData, setFormData] = useState<EmailConfig>({
     email_smtp_host: "",
@@ -52,7 +54,9 @@ export function EmailSettings() {
       setFormData((prev) => ({
         ...prev,
         ...config,
+        email_smtp_pass: "",
       }));
+      setPasswordChanged(false);
     }
   }, [config]);
 
@@ -119,7 +123,12 @@ export function EmailSettings() {
   });
 
   const handleSave = () => {
-    saveConfigMutation.mutate(formData);
+    const dataToSave = { ...formData };
+    if (!passwordChanged || !formData.email_smtp_pass) {
+      delete dataToSave.email_smtp_pass;
+    }
+    delete (dataToSave as any).has_smtp_password;
+    saveConfigMutation.mutate(dataToSave);
   };
 
   const handleTestConnection = () => {
@@ -194,14 +203,22 @@ export function EmailSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="smtp-pass">SMTP Password</Label>
+              <Label htmlFor="smtp-pass">
+                SMTP Password
+                {config?.has_smtp_password && !passwordChanged && (
+                  <span className="ml-2 text-xs text-green-600">(configured)</span>
+                )}
+              </Label>
               <div className="relative">
                 <Input
                   id="smtp-pass"
                   type={showPassword ? "text" : "password"}
-                  placeholder="App password or SMTP password"
+                  placeholder={config?.has_smtp_password && !passwordChanged ? "••••••••••••" : "Enter SMTP password"}
                   value={formData.email_smtp_pass || ""}
-                  onChange={(e) => setFormData({ ...formData, email_smtp_pass: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email_smtp_pass: e.target.value });
+                    setPasswordChanged(true);
+                  }}
                   data-testid="input-smtp-pass"
                 />
                 <Button

@@ -2485,10 +2485,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email Settings and Notifications
+  const emailConfigSchema = z.object({
+    email_smtp_host: z.string().optional(),
+    email_smtp_port: z.string().optional(),
+    email_smtp_secure: z.enum(['true', 'false']).optional(),
+    email_smtp_user: z.string().optional(),
+    email_smtp_pass: z.string().optional(),
+    email_from_address: z.string().email().optional().or(z.literal('')),
+    email_from_name: z.string().optional(),
+    email_welcome_enabled: z.enum(['true', 'false']).optional(),
+    email_deposit_enabled: z.enum(['true', 'false']).optional(),
+    email_stock_enabled: z.enum(['true', 'false']).optional(),
+    email_rewards_enabled: z.enum(['true', 'false']).optional(),
+  });
+
   app.get("/api/admin/email/config", adminAuth, async (req, res) => {
     try {
       const settings = await storage.getAllSettings();
-      const emailSettings: Record<string, string> = {};
+      const emailSettings: Record<string, string | boolean> = {};
       
       const emailKeys = [
         'email_smtp_host', 'email_smtp_port', 'email_smtp_secure',
@@ -2503,6 +2517,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      const hasPassword = settings.some(s => s.settingKey === 'email_smtp_pass' && s.settingValue);
+      emailSettings.has_smtp_password = hasPassword;
+      
       res.json(emailSettings);
     } catch (error: any) {
       console.error("Error fetching email config:", error);
@@ -2515,12 +2532,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { settings } = req.body;
       const userId = req.user?.claims?.sub || 'admin';
       
-      for (const [key, value] of Object.entries(settings)) {
-        await storage.setSetting({
-          key,
-          value: value as string,
-          updatedBy: userId,
+      const validationResult = emailConfigSchema.safeParse(settings);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid email configuration", 
+          errors: validationResult.error.errors 
         });
+      }
+
+      const validatedSettings = validationResult.data;
+      
+      for (const [key, value] of Object.entries(validatedSettings)) {
+        if (key === 'email_smtp_pass' && (!value || value === '')) {
+          continue;
+        }
+        
+        if (value !== undefined) {
+          await storage.setSetting({
+            key,
+            value: value as string,
+            updatedBy: userId,
+          });
+        }
       }
       
       res.json({ success: true, message: "Email settings saved successfully" });

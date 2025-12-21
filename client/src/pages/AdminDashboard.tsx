@@ -20,6 +20,7 @@ import { SystemSettings } from "@/components/admin/SystemSettings";
 import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApprovals";
 import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { RewardsManagement } from "@/components/admin/RewardsManagement";
+import { EmailSettings } from "@/components/admin/EmailSettings";
 import type { Portfolio, CommunityChallenge, User } from "@shared/schema";
 import { 
   CheckCircle, 
@@ -35,7 +36,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  LogOut
+  LogOut,
+  Mail
 } from "lucide-react";
 
 interface AdminStats {
@@ -74,6 +76,7 @@ const navItems = [
   { id: "portfolios", label: "Portfolios", icon: PieChart },
   { id: "challenges", label: "Challenges", icon: Trophy },
   { id: "coupons", label: "Coupons", icon: Ticket },
+  { id: "email", label: "Email", icon: Mail },
   { id: "system", label: "System", icon: Server },
   { id: "settings", label: "Settings", icon: Settings },
 ];
@@ -675,6 +678,17 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             )}
+          </div>
+        );
+
+      case "email":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Email Notifications</h2>
+              <p className="text-muted-foreground">Configure SMTP settings and email notifications</p>
+            </div>
+            <EmailSettings />
           </div>
         );
 
