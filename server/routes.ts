@@ -1145,15 +1145,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin stock purchase approvals
-  app.get('/api/admin/stock-purchases/pending', enhancedAuth, async (req: any, res) => {
+  app.get('/api/admin/stock-purchases/pending', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
-      
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
       const pendingPurchases = await storage.getPendingStockPurchases();
       res.json(pendingPurchases);
     } catch (error) {
@@ -1162,15 +1155,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/stock-purchases/:id/approve', enhancedAuth, async (req: any, res) => {
+  app.patch('/api/admin/stock-purchases/:id/approve', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
-      
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
       const purchaseId = req.params.id;
       const updatedPurchase = await storage.updateStockPurchaseStatus(purchaseId, 'approved');
       res.json(updatedPurchase);
@@ -1180,15 +1166,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/stock-purchases/:id/reject', enhancedAuth, async (req: any, res) => {
+  app.patch('/api/admin/stock-purchases/:id/reject', adminAuth, async (req: any, res) => {
     try {
-      const user = req.user.claims;
-      
-      const userRecord = await storage.getUser(user.sub);
-      if (userRecord?.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
       const purchaseId = req.params.id;
       
       // Get the purchase details to refund the user
@@ -2356,6 +2335,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting coupon:", error);
       res.status(500).json({ message: "Failed to delete coupon" });
+    }
+  });
+
+  // Admin Rewards Management
+  app.get("/api/admin/rewards/stats", adminAuth, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      
+      let totalDailyBonusesClaimed = 0;
+      let totalDailyBonusAmount = 0;
+      let totalXpClaimed = 0;
+      let activeDailyClaimers = 0;
+      
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
+      for (const user of allUsers) {
+        totalDailyBonusAmount += parseFloat(user.accumulatedDailyBonus || '0');
+        totalXpClaimed += parseFloat(user.xpBalance || '0');
+        
+        if (user.lastDailyRewardClaim) {
+          const lastClaim = new Date(user.lastDailyRewardClaim);
+          if (lastClaim >= oneDayAgo) {
+            activeDailyClaimers++;
+          }
+        }
+      }
+      
+      res.json({
+        totalDailyBonusesClaimed: allUsers.filter(u => parseFloat(u.accumulatedDailyBonus || '0') > 0).length,
+        totalDailyBonusAmount: totalDailyBonusAmount.toString(),
+        totalXpClaimed,
+        totalXpConverted: 0,
+        activeDailyClaimers,
+      });
+    } catch (error: any) {
+      console.error("Error fetching reward stats:", error);
+      res.status(500).json({ message: "Failed to fetch reward stats" });
+    }
+  });
+
+  app.get("/api/admin/rewards/top-users", adminAuth, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      
+      const topUsers = allUsers
+        .filter(u => parseFloat(u.xpBalance || '0') > 0 || parseFloat(u.dailyBonusBalance || '0') > 0)
+        .sort((a, b) => parseFloat(b.xpBalance || '0') - parseFloat(a.xpBalance || '0'))
+        .slice(0, 10)
+        .map(u => ({
+          id: u.id,
+          email: u.email,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          xpBalance: u.xpBalance,
+          dailyBonusBalance: u.dailyBonusBalance,
+          accumulatedDailyBonus: u.accumulatedDailyBonus,
+          lastDailyRewardClaim: u.lastDailyRewardClaim,
+        }));
+      
+      res.json(topUsers);
+    } catch (error: any) {
+      console.error("Error fetching top reward users:", error);
+      res.status(500).json({ message: "Failed to fetch top users" });
+    }
+  });
+
+  app.patch("/api/admin/rewards/settings", adminAuth, async (req, res) => {
+    try {
+      const { dailyBonusAmount, xpPerClaim } = req.body;
+      
+      if (dailyBonusAmount) {
+        await storage.setSetting({
+          key: 'daily_bonus_amount',
+          value: dailyBonusAmount,
+          updatedBy: 'admin',
+        });
+      }
+      
+      if (xpPerClaim) {
+        await storage.setSetting({
+          key: 'xp_per_claim',
+          value: xpPerClaim,
+          updatedBy: 'admin',
+        });
+      }
+      
+      res.json({ success: true, message: "Reward settings updated" });
+    } catch (error: any) {
+      console.error("Error updating reward settings:", error);
+      res.status(500).json({ message: "Failed to update reward settings" });
     }
   });
 

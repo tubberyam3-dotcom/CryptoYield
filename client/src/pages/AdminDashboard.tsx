@@ -17,7 +17,10 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { ChallengeManagement } from "@/components/admin/ChallengeManagement";
 import { CouponManagement } from "@/components/admin/CouponManagement";
 import { SystemSettings } from "@/components/admin/SystemSettings";
-import type { Portfolio, StakingPlan, CommunityChallenge, User } from "@shared/schema";
+import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApprovals";
+import { DepositApprovals } from "@/components/admin/DepositApprovals";
+import { RewardsManagement } from "@/components/admin/RewardsManagement";
+import type { Portfolio, CommunityChallenge, User } from "@shared/schema";
 
 interface AdminStats {
   totalUsers: number;
@@ -74,7 +77,7 @@ export default function AdminDashboard() {
     queryKey: ["/api/portfolios"],
   });
 
-  const { data: stakingPlans } = useQuery<StakingPlan[]>({
+  const { data: stakingPlans } = useQuery<any[]>({
     queryKey: ["/api/staking/plans"],
   });
 
@@ -360,54 +363,90 @@ export default function AdminDashboard() {
         )}
 
         {/* Admin Management Tabs */}
-        <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid grid-cols-3 lg:grid-cols-9 w-full h-auto">
-            <TabsTrigger value="analytics" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+        <Tabs defaultValue="approvals" className="space-y-6">
+          <TabsList className="flex flex-wrap gap-1 h-auto p-1">
+            <TabsTrigger value="approvals" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <i className="fas fa-check-circle mr-1 sm:mr-2"></i>
+              <span className="hidden sm:inline">Approvals</span>
+              <span className="sm:hidden">✅</span>
+            </TabsTrigger>
+            <TabsTrigger value="rewards" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <i className="fas fa-gift mr-1 sm:mr-2"></i>
+              <span className="hidden sm:inline">Rewards</span>
+              <span className="sm:hidden">🎁</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
               <i className="fas fa-chart-bar mr-1 sm:mr-2"></i>
               <span className="hidden sm:inline">Analytics</span>
               <span className="sm:hidden">📊</span>
             </TabsTrigger>
-            <TabsTrigger value="system" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-              <i className="fas fa-server mr-1 sm:mr-2"></i>
-              <span className="hidden sm:inline">System</span>
-              <span className="sm:hidden">🖥️</span>
-            </TabsTrigger>
-            <TabsTrigger value="logs" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-              <i className="fas fa-history mr-1 sm:mr-2"></i>
-              <span className="hidden sm:inline">Logs</span>
-              <span className="sm:hidden">📋</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <TabsTrigger value="users" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
               <i className="fas fa-users mr-1 sm:mr-2"></i>
               <span className="hidden sm:inline">Users</span>
               <span className="sm:hidden">👥</span>
             </TabsTrigger>
-            <TabsTrigger value="portfolios" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <TabsTrigger value="portfolios" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
               <i className="fas fa-chart-pie mr-1 sm:mr-2"></i>
               <span className="hidden sm:inline">Portfolios</span>
               <span className="sm:hidden">💼</span>
             </TabsTrigger>
-            <TabsTrigger value="staking" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-              <i className="fas fa-lock mr-1 sm:mr-2"></i>
-              <span className="hidden sm:inline">Staking</span>
-              <span className="sm:hidden">🔒</span>
-            </TabsTrigger>
-            <TabsTrigger value="challenges" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <TabsTrigger value="challenges" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
               <i className="fas fa-trophy mr-1 sm:mr-2"></i>
               <span className="hidden sm:inline">Challenges</span>
               <span className="sm:hidden">🏆</span>
             </TabsTrigger>
-            <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
               <i className="fas fa-ticket mr-1 sm:mr-2"></i>
               <span className="hidden sm:inline">Coupons</span>
               <span className="sm:hidden">🎟️</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <TabsTrigger value="system" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <i className="fas fa-server mr-1 sm:mr-2"></i>
+              <span className="hidden sm:inline">System</span>
+              <span className="sm:hidden">🖥️</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
               <i className="fas fa-cog mr-1 sm:mr-2"></i>
               <span className="hidden sm:inline">Settings</span>
               <span className="sm:hidden">⚙️</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Approvals Tab - Stock Purchases & Deposits */}
+          <TabsContent value="approvals" className="space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <i className="fas fa-chart-line text-blue-600"></i>
+                    Stock Purchase Approvals
+                  </CardTitle>
+                  <CardDescription>Review and approve pending stock purchases</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StockPurchaseApprovals />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <i className="fas fa-wallet text-green-600"></i>
+                    Deposit Approvals
+                  </CardTitle>
+                  <CardDescription>Review and approve pending deposit requests</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DepositApprovals />
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Rewards Tab */}
+          <TabsContent value="rewards" className="space-y-6">
+            <RewardsManagement />
+          </TabsContent>
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
