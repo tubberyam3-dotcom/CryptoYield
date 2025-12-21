@@ -2484,6 +2484,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email Settings and Notifications
+  app.get("/api/admin/email/config", adminAuth, async (req, res) => {
+    try {
+      const settings = await storage.getAllSettings();
+      const emailSettings: Record<string, string> = {};
+      
+      const emailKeys = [
+        'email_smtp_host', 'email_smtp_port', 'email_smtp_secure',
+        'email_smtp_user', 'email_from_address', 'email_from_name',
+        'email_welcome_enabled', 'email_deposit_enabled', 
+        'email_stock_enabled', 'email_rewards_enabled'
+      ];
+      
+      for (const setting of settings) {
+        if (emailKeys.includes(setting.settingKey)) {
+          emailSettings[setting.settingKey] = setting.settingValue;
+        }
+      }
+      
+      res.json(emailSettings);
+    } catch (error: any) {
+      console.error("Error fetching email config:", error);
+      res.status(500).json({ message: "Failed to fetch email configuration" });
+    }
+  });
+
+  app.post("/api/admin/email/config", adminAuth, async (req: any, res) => {
+    try {
+      const { settings } = req.body;
+      const userId = req.user?.claims?.sub || 'admin';
+      
+      for (const [key, value] of Object.entries(settings)) {
+        await storage.setSetting({
+          key,
+          value: value as string,
+          updatedBy: userId,
+        });
+      }
+      
+      res.json({ success: true, message: "Email settings saved successfully" });
+    } catch (error: any) {
+      console.error("Error saving email config:", error);
+      res.status(500).json({ message: "Failed to save email configuration" });
+    }
+  });
+
+  app.post("/api/admin/email/test", adminAuth, async (req: any, res) => {
+    try {
+      const { emailService } = await import('./email');
+      const result = await emailService.testConnection();
+      
+      if (result.success) {
+        res.json({ success: true, message: "SMTP connection successful" });
+      } else {
+        res.status(400).json({ success: false, message: result.error });
+      }
+    } catch (error: any) {
+      console.error("Error testing email:", error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/admin/email/send-test", adminAuth, async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email address required" });
+      }
+
+      const { emailService } = await import('./email');
+      const result = await emailService.sendEmail({
+        to: email,
+        subject: 'Test Email from Reflux Capital',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #1a1a1a;">Test Email</h1>
+            <p style="color: #333; font-size: 16px;">
+              This is a test email from Reflux Capital. If you received this, your email configuration is working correctly!
+            </p>
+            <p style="color: #666; font-size: 14px; margin-top: 20px;">
+              Sent at: ${new Date().toLocaleString()}
+            </p>
+          </div>
+        `,
+      });
+      
+      if (result.success) {
+        res.json({ success: true, message: "Test email sent successfully" });
+      } else {
+        res.status(400).json({ success: false, message: result.error });
+      }
+    } catch (error: any) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
