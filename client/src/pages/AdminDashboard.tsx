@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/hooks/useAuth";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -65,7 +65,7 @@ export default function AdminDashboard() {
     minAmount: "",
   });
 
-  const { user, isLoading } = useAuth();
+  const { adminUser, isLoading, logoutMutation } = useAdminAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -215,7 +215,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (user?.role !== 'admin') {
+  if (!adminUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md mx-4">
@@ -227,10 +227,10 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="text-center">
             <Button 
-              onClick={() => window.location.href = '/'}
+              onClick={() => window.location.href = '/admin'}
               className="w-full"
             >
-              Return to Main Dashboard
+              Go to Admin Login
             </Button>
           </CardContent>
         </Card>
@@ -257,7 +257,7 @@ export default function AdminDashboard() {
                 Admin Access
               </Badge>
               <Badge variant="outline">
-                {user.firstName} {user.lastName}
+                {adminUser.firstName} {adminUser.lastName}
               </Badge>
             </div>
           </div>

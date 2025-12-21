@@ -17,7 +17,7 @@ export default function AdminLogin() {
   // Redirect if already logged in as admin
   useEffect(() => {
     if (adminUser) {
-      setLocation("/admin-panel");
+      setLocation("/admin");
     }
   }, [adminUser, setLocation]);
 
