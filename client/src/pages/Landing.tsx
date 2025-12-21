@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,12 +7,35 @@ import { SignupForm } from "@/components/auth/SignupForm";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { InvestmentCalculator } from "@/components/InvestmentCalculator";
 import { ArrowLeft, TrendingUp, Briefcase, BarChart3, Trophy, LineChart } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import windmillBg from "@assets/stock_images/beautiful_windmill_l_fbf8ed03.jpg";
 
 type AuthView = 'landing' | 'signup' | 'login';
 
 export default function Landing() {
   const [authView, setAuthView] = useState<AuthView>('login');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const kycStatus = params.get('kyc');
+    
+    if (kycStatus === 'pending') {
+      toast({
+        title: "Account Pending Approval",
+        description: "Your account is awaiting KYC verification. Please wait for an administrator to review your application.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (kycStatus === 'rejected') {
+      toast({
+        title: "KYC Application Rejected",
+        description: "Your verification has been rejected. Please contact support for assistance.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [toast]);
 
   const handleOAuthLogin = () => {
     window.location.href = "/api/login";

@@ -142,7 +142,23 @@ export async function setupAuth(app: Express) {
     
     passport.authenticate(`replitauth:${req.hostname}`, {
       failureRedirect: "/api/login",
-    })((req: any, res: any, next: any) => {
+    })(async (req: any, res: any, next: any) => {
+      // After OAuth, check KYC status before allowing login
+      const claims = req.user?.claims;
+      if (claims?.sub) {
+        const dbUser = await storage.getUser(claims.sub);
+        if (dbUser && dbUser.role !== 'admin' && dbUser.kycStatus !== 'approved') {
+          // Log them out and redirect to pending page
+          req.logout(() => {
+            if (dbUser.kycStatus === 'rejected') {
+              return res.redirect("/?kyc=rejected");
+            }
+            return res.redirect("/?kyc=pending");
+          });
+          return;
+        }
+      }
+      
       // Clear logout flag on successful OAuth login
       if (req.session) {
         delete req.session.loggedOut;

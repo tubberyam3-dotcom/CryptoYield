@@ -463,6 +463,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
+      // Check if KYC is approved (skip for admin users)
+      if (user.role !== 'admin' && user.kycStatus !== 'approved') {
+        if (user.kycStatus === 'pending') {
+          return res.status(403).json({ 
+            message: "Your account is pending KYC approval. Please wait for an administrator to review your application.",
+            kycStatus: 'pending'
+          });
+        } else if (user.kycStatus === 'rejected') {
+          return res.status(403).json({ 
+            message: "Your KYC application has been rejected. Please contact support for more information.",
+            kycStatus: 'rejected'
+          });
+        }
+      }
+      
       // Create session
       req.session.user = {
         id: user.id,

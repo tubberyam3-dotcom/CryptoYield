@@ -1,20 +1,32 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+class ApiError extends Error {
+  kycStatus?: string;
+  
+  constructor(message: string, kycStatus?: string) {
+    super(message);
+    this.kycStatus = kycStatus;
+    this.name = 'ApiError';
+  }
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     
     // Try to parse JSON error message
     let message = text;
+    let kycStatus: string | undefined;
     try {
       const errorData = JSON.parse(text);
       message = errorData.message || errorData.error || text;
+      kycStatus = errorData.kycStatus;
     } catch {
       // If not JSON, use the text as is
       message = text;
     }
     
-    throw new Error(message);
+    throw new ApiError(message, kycStatus);
   }
 }
 

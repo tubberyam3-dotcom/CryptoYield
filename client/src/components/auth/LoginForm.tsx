@@ -85,11 +85,27 @@ export function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToOAuth }: Logi
     },
     onError: (error: any) => {
       console.error('Login error:', error);
-      toast({
-        title: "Login Failed",
-        description: error.message || "Invalid password. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Handle KYC status errors with specific messages
+      if (error.kycStatus === 'pending') {
+        toast({
+          title: "Account Pending Approval",
+          description: "Your account is awaiting KYC verification. Please wait for an administrator to review your application.",
+          variant: "destructive",
+        });
+      } else if (error.kycStatus === 'rejected') {
+        toast({
+          title: "KYC Application Rejected",
+          description: "Your verification has been rejected. Please contact support for assistance.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login Failed",
+          description: error.message || "Invalid password. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
