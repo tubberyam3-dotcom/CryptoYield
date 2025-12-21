@@ -52,15 +52,11 @@ function AdminRouter() {
     );
   }
 
-  return (
-    <Switch>
-      {!adminUser ? (
-        <Route path="/admin/*" component={AdminLogin} />
-      ) : (
-        <Route path="/admin/*" component={AdminDashboard} />
-      )}
-    </Switch>
-  );
+  if (!adminUser) {
+    return <AdminLogin />;
+  }
+  
+  return <AdminDashboard />;
 }
 
 function Router() {
@@ -82,7 +78,12 @@ function Router() {
       <ScrollToTop />
       <Switch>
         {/* Admin routes - separate authentication system */}
-        <Route path="/admin/*">
+        <Route path="/admin">
+          <AdminAuthProvider>
+            <AdminRouter />
+          </AdminAuthProvider>
+        </Route>
+        <Route path="/admin/:rest*">
           <AdminAuthProvider>
             <AdminRouter />
           </AdminAuthProvider>
