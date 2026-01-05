@@ -1204,6 +1204,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/bonds/products/:id', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const product = await storage.updateBondProduct(req.params.id, req.body);
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating bond product:", error);
+      res.status(500).json({ message: "Failed to update bond product" });
+    }
+  });
+
+  app.delete('/api/bonds/products/:id', enhancedAuth, async (req: any, res) => {
+    try {
+      const user = req.user.claims;
+      
+      const userRecord = await storage.getUser(user.sub);
+      if (userRecord?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      await storage.deleteBondProduct(req.params.id);
+      res.json({ message: "Bond product deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting bond product:", error);
+      res.status(500).json({ message: "Failed to delete bond product" });
+    }
+  });
+
   app.get('/api/user/bonds', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
