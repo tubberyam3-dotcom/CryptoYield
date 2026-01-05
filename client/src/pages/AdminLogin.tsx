@@ -85,17 +85,6 @@ export default function AdminLogin() {
               )}
             </Button>
           </form>
-          
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground text-center">
-              <strong>Demo Credentials:</strong>
-            </p>
-            <p className="text-sm text-center mt-1">
-              Username: <code className="bg-background px-1 rounded">admin</code>
-              <br />
-              Password: <code className="bg-background px-1 rounded">admin123</code>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
