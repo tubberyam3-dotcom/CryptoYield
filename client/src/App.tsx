@@ -99,7 +99,10 @@ function Router() {
         {!isAuthenticated ? (
           <Route path="/" component={Landing} />
         ) : !isKycApproved ? (
-          <Route path="/" component={PendingApproval} />
+          <>
+            <Route path="/" component={PendingApproval} />
+            <Route path="/:rest*" component={PendingApproval} />
+          </>
         ) : (
           <>
             <Route path="/" component={Dashboard} />
