@@ -19,6 +19,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, Building2, Tag, Calendar, BarChart
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
+import { StockIcon } from "@/components/StockIcon";
 
 const purchaseFormSchema = z.object({
   stockProductId: z.string().min(1, "Stock ID is required"),
@@ -234,6 +235,7 @@ export default function StockDetail() {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
+                    <StockIcon symbol={symbol || ""} size="lg" />
                     <h1 className="text-4xl font-bold" data-testid="text-stock-symbol">{symbol}</h1>
                     <Badge className={quote.changePercent >= 0 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}>
                       {quote.changePercent >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
