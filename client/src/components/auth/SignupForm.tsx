@@ -18,7 +18,7 @@ interface SignupFormProps {
   joinCode?: string;
 }
 
-type SignupStep = "account-type" | "email" | "password" | "name" | "phone" | "document" | "success";
+type SignupStep = "account-type" | "email" | "password" | "name" | "phone" | "document" | "success" | "pending-approval";
 
 interface JointAccountResponse {
   id: string;
@@ -415,9 +415,9 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
       if (data.jointAccount && data.joinedExisting) {
         toast({
           title: "Welcome!",
-          description: "You've successfully joined the joint account.",
+          description: "You've successfully joined the joint account. Awaiting approval.",
         });
-        onSuccess?.();
+        setStep("pending-approval");
       } else if (data.jointAccount && formData.accountType === 'joint') {
         setJointAccountData(data.jointAccount);
         setStep("success");
@@ -427,10 +427,10 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
         });
       } else {
         toast({
-          title: "Signup Successful!",
-          description: "You'll receive an email once your account is active.",
+          title: "Account Created!",
+          description: "Your account is awaiting approval.",
         });
-        onSuccess?.();
+        setStep("pending-approval");
       }
     },
     onError: (error: any) => {
@@ -500,6 +500,63 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
     }
   };
 
+  if (step === "pending-approval") {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="space-y-1 px-4 sm:px-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-10 h-10 text-amber-500" />
+          </div>
+          <CardTitle className="text-2xl font-bold">Account Created Successfully!</CardTitle>
+          <CardDescription className="text-base">
+            Your account is awaiting approval
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6 px-4 sm:px-6">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+                <span className="text-lg">⏳</span>
+              </div>
+              <div>
+                <h4 className="font-medium text-amber-800 dark:text-amber-200">What happens next?</h4>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                  Our team will review your application and verify your information. This usually takes 1-2 business days.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                We've sent a confirmation email to <strong className="text-foreground">{formData.email}</strong>
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground pl-6">
+              You'll receive another email once your account has been approved.
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <Button
+              onClick={() => onSwitchToLogin?.()}
+              className="w-full bg-[#e4fe7b] text-black hover:bg-[#d4ee6b]"
+              data-testid="button-back-to-login"
+            >
+              Back to Login
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground text-center">
+            If you have any questions, please contact our support team.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (step === "success" && jointAccountData) {
     const shareableLink = getShareableLink(jointAccountData.joinCode);
     
@@ -543,6 +600,12 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
             </p>
           </div>
 
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mt-4">
+            <p className="text-xs text-amber-700 dark:text-amber-300 text-center">
+              <strong>Note:</strong> Your account is pending approval. You'll receive an email once verified.
+            </p>
+          </div>
+
           <div className="space-y-3">
             <Button
               onClick={copyShareableLink}
@@ -563,19 +626,14 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
             </Button>
             
             <Button
-              onClick={() => onSuccess?.()}
+              onClick={() => onSwitchToLogin?.()}
               variant="outline"
               className="w-full"
-              data-testid="button-continue-to-dashboard"
+              data-testid="button-back-to-login"
             >
-              Continue to Dashboard
-              <ArrowRight className="h-4 w-4 ml-2" />
+              Back to Login
             </Button>
           </div>
-
-          <p className="text-xs text-muted-foreground text-center">
-            You'll receive an email once your account is verified and active
-          </p>
         </CardContent>
       </Card>
     );

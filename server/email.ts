@@ -271,6 +271,107 @@ class EmailService {
     });
   }
 
+  async sendAccountPendingEmail(email: string, firstName: string): Promise<{ success: boolean; error?: string }> {
+    const enabled = await storage.getSetting('email_welcome_enabled');
+    if (enabled?.settingValue !== 'true') {
+      return { success: true };
+    }
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="width: 80px; height: 80px; background-color: #fef3c7; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">⏳</span>
+          </div>
+          <h1 style="color: #1a1a1a; margin: 0;">Account Created Successfully</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Hi ${firstName || 'there'},
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Thank you for registering with Reflux Capital! Your account has been created and is now <strong>awaiting approval</strong>.
+        </p>
+        <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <p style="color: #92400e; font-size: 14px; margin: 0;">
+            <strong>What happens next?</strong><br>
+            Our team will review your application and verify your information. This usually takes 1-2 business days.
+          </p>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          You'll receive an email notification once your account has been approved and you can start investing.
+        </p>
+        <p style="color: #666; font-size: 14px; line-height: 1.6;">
+          If you have any questions in the meantime, feel free to reach out to our support team.
+        </p>
+        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Account Created - Awaiting Approval | Reflux Capital',
+      html,
+    });
+  }
+
+  async sendAccountApprovedEmail(email: string, firstName: string): Promise<{ success: boolean; error?: string }> {
+    const enabled = await storage.getSetting('email_welcome_enabled');
+    if (enabled?.settingValue !== 'true') {
+      return { success: true };
+    }
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="width: 80px; height: 80px; background-color: #dcfce7; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">✓</span>
+          </div>
+          <h1 style="color: #1a1a1a; margin: 0;">Your Account Has Been Approved!</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Hi ${firstName || 'there'},
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Great news! Your Reflux Capital account has been <strong style="color: #22c55e;">approved</strong> and is now fully active.
+        </p>
+        <div style="background-color: #dcfce7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e;">
+          <p style="color: #166534; font-size: 14px; margin: 0;">
+            <strong>You can now:</strong><br>
+            • Invest in curated portfolios<br>
+            • Purchase bonds with competitive yields<br>
+            • Buy and sell stocks<br>
+            • Participate in community challenges<br>
+            • Earn daily rewards and XP bonuses
+          </p>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/dashboard" 
+             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            Go to Dashboard
+          </a>
+        </div>
+        <p style="color: #666; font-size: 14px; line-height: 1.6;">
+          If you have any questions, our support team is here to help.
+        </p>
+        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Account Approved - Welcome to Reflux Capital!',
+      html,
+    });
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     if (!process.env.RESEND_API_KEY) {
       return { success: false, error: 'Resend API key not configured' };

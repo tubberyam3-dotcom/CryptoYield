@@ -427,6 +427,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Send account pending approval email
+      try {
+        const { emailService } = await import('./email');
+        await emailService.sendAccountPendingEmail(email, firstName);
+      } catch (emailError) {
+        console.error('Failed to send pending approval email:', emailError);
+      }
+      
+      // Add kycStatus to response so frontend knows to show pending screen
+      response.kycStatus = user.kycStatus;
+      
       res.json(response);
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -1820,7 +1831,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid KYC status" });
       }
 
+      // Get user before update to have email info
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
       const updatedUser = await storage.updateUserKycStatus(id, kycStatus);
+      
+      // Send approval email if status changed to approved
+      if (kycStatus === 'approved' && user.email) {
+        try {
+          const { emailService } = await import('./email');
+          await emailService.sendAccountApprovedEmail(user.email, user.firstName || 'User');
+        } catch (emailError) {
+          console.error('Failed to send account approval email:', emailError);
+        }
+      }
+      
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating user KYC status:", error);
