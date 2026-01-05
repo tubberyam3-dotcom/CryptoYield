@@ -226,38 +226,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin login route (demo mode)
+  // Admin login route
   app.post('/api/admin/auth/login', async (req: any, res) => {
     try {
+      const { username, password } = req.body;
+      
+      // Demo mode fallback for development
       const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
       
-      if (demoMode) {
-        const { username, password } = req.body;
+      if (demoMode && username === 'admin' && password === 'admin123') {
+        const demoAdmin = {
+          id: 'demo-admin',
+          email: 'admin@refluxcapital.com',
+          firstName: 'Admin',
+          lastName: 'User',
+          profileImageUrl: null,
+          role: 'admin',
+          kycStatus: 'approved',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
         
-        // Simple demo admin credentials
-        if (username === 'admin' && password === 'admin123') {
-          const demoAdmin = {
-            id: 'demo-admin',
-            email: 'admin@refluxcapital.com',
-            firstName: 'Admin',
-            lastName: 'User',
-            profileImageUrl: null,
-            role: 'admin',
-            kycStatus: 'approved',
-            createdAt: new Date(),
-            updatedAt: new Date()
-          };
-          
-          // Set session for demo admin
-          req.session.adminUser = demoAdmin;
-          return res.json(demoAdmin);
-        } else {
-          return res.status(401).json({ message: "Invalid admin credentials" });
-        }
+        req.session.adminUser = demoAdmin;
+        return res.json(demoAdmin);
       }
       
-      // In production, implement proper admin authentication
-      res.status(501).json({ message: "Admin authentication not implemented for production" });
+      // Check for admin user in database by email
+      const adminUser = await storage.getUserByEmail(username);
+      
+      if (!adminUser) {
+        return res.status(401).json({ message: "Invalid admin credentials" });
+      }
+      
+      // Verify user has admin role
+      if (adminUser.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin privileges required." });
+      }
+      
+      // Verify password
+      if (!adminUser.password) {
+        return res.status(401).json({ message: "Invalid admin credentials" });
+      }
+      
+      const isValidPassword = await bcrypt.compare(password, adminUser.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid admin credentials" });
+      }
+      
+      // Set admin session
+      const { password: _, xpCode: __, ...safeAdmin } = adminUser;
+      req.session.adminUser = safeAdmin;
+      
+      return res.json(safeAdmin);
     } catch (error) {
       console.error("Error in admin login:", error);
       res.status(500).json({ message: "Admin login failed" });
