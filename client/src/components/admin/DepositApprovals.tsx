@@ -124,7 +124,7 @@ export function DepositApprovals() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  {getMethodIcon(deposit.method)}
+                  {getMethodIcon(deposit.method || '')}
                   <CardTitle className="text-lg">
                     ${parseFloat(deposit.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </CardTitle>
@@ -143,7 +143,7 @@ export function DepositApprovals() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Method</span>
-                  <span className="font-medium capitalize">{deposit.method.replace('_', ' ')}</span>
+                  <span className="font-medium capitalize">{(deposit.method || 'Unknown').replace('_', ' ')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Date</span>
