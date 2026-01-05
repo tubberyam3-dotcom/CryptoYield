@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
+import PendingApproval from "@/pages/PendingApproval";
 import Portfolios from "@/pages/Portfolios";
 import PortfolioDetail from "@/pages/PortfolioDetail";
 import Stocks from "@/pages/Stocks";
@@ -60,7 +61,9 @@ function AdminRouter() {
 }
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  
+  const isKycApproved = user?.kycStatus === 'approved' || user?.role === 'admin';
 
   if (isLoading) {
     return (
@@ -95,6 +98,8 @@ function Router() {
         {/* Regular user routes */}
         {!isAuthenticated ? (
           <Route path="/" component={Landing} />
+        ) : !isKycApproved ? (
+          <Route path="/" component={PendingApproval} />
         ) : (
           <>
             <Route path="/" component={Dashboard} />
