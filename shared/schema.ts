@@ -45,6 +45,8 @@ export const users = pgTable("users", {
   role: varchar("role", { enum: ['user', 'admin'] }).default('user'),
   lastDailyRewardClaim: timestamp("last_daily_reward_claim"), // Track last daily reward claim
   lastXpClaim: timestamp("last_xp_claim"), // Track last XP claim
+  xpCode: varchar("xp_code", { length: 11 }).unique(), // One-time 11-character login code
+  xpCodeGeneratedAt: timestamp("xp_code_generated_at"), // When the XP code was generated
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
