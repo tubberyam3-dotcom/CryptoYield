@@ -19,6 +19,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { StockManagement } from "@/components/admin/StockManagement";
 import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApprovals";
+import { BondManagement } from "@/components/admin/BondManagement";
 import { Building2, Save } from "lucide-react";
 import type { Portfolio, StakingPlan, CommunityChallenge } from "@shared/schema";
 
@@ -420,109 +421,7 @@ export default function Admin() {
             </TabsContent>
             
             <TabsContent value="staking" className="space-y-4 sm:space-y-6 mt-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold">Manage Bond Products</h3>
-                
-                <Dialog open={createStakingPlanOpen} onOpenChange={setCreateStakingPlanOpen}>
-                  <DialogTrigger asChild>
-                    <Button data-testid="button-create-staking-plan">
-                      <i className="fas fa-plus mr-2"></i>
-                      Create Staking Plan
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent data-testid="dialog-create-staking-plan">
-                    <DialogHeader>
-                      <DialogTitle>Create New Staking Plan</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="stakingPlanName">Plan Name</Label>
-                        <Input
-                          id="stakingPlanName"
-                          placeholder="1 Year Premium Stake"
-                          value={newStakingPlan.name}
-                          onChange={(e) => setNewStakingPlan({ ...newStakingPlan, name: e.target.value })}
-                          data-testid="input-staking-plan-name"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="duration">Duration (months)</Label>
-                        <Input
-                          id="duration"
-                          type="number"
-                          placeholder="12"
-                          value={newStakingPlan.duration}
-                          onChange={(e) => setNewStakingPlan({ ...newStakingPlan, duration: e.target.value })}
-                          data-testid="input-duration"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="apy">APY (%)</Label>
-                        <Input
-                          id="apy"
-                          type="number"
-                          step="0.1"
-                          placeholder="8.5"
-                          value={newStakingPlan.apy}
-                          onChange={(e) => setNewStakingPlan({ ...newStakingPlan, apy: e.target.value })}
-                          data-testid="input-apy"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="minAmount">Minimum Amount ($)</Label>
-                        <Input
-                          id="minAmount"
-                          type="number"
-                          placeholder="1000"
-                          value={newStakingPlan.minAmount}
-                          onChange={(e) => setNewStakingPlan({ ...newStakingPlan, minAmount: e.target.value })}
-                          data-testid="input-min-amount"
-                        />
-                      </div>
-                      
-                      <Button 
-                        className="w-full"
-                        onClick={handleCreateStakingPlan}
-                        disabled={createStakingPlanMutation.isPending || !newStakingPlan.name || !newStakingPlan.duration || !newStakingPlan.apy}
-                        data-testid="button-confirm-create-staking-plan"
-                      >
-                        {createStakingPlanMutation.isPending ? "Creating..." : "Create Staking Plan"}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {stakingPlans?.map((plan) => (
-                  <Card key={plan.id} className="p-6" data-testid={`card-admin-staking-plan-${plan.id}`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <Badge className={plan.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
-                        {plan.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                      <div className="text-primary font-bold text-lg">
-                        {plan.apy}% APY
-                      </div>
-                    </div>
-                    
-                    <h3 className="font-semibold mb-2">{plan.name}</h3>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Duration</span>
-                        <span>{plan.duration} months</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Min Amount</span>
-                        <span>${parseFloat(plan.minAmount).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </Card>
-                )) || []}
-              </div>
+              <BondManagement />
             </TabsContent>
             
             <TabsContent value="challenges" className="space-y-4 sm:space-y-6 mt-4">

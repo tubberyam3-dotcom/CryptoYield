@@ -1213,7 +1213,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const product = await storage.updateBondProduct(req.params.id, req.body);
+      const partialSchema = insertBondProductSchema.partial();
+      const validatedData = partialSchema.parse(req.body);
+      const product = await storage.updateBondProduct(req.params.id, validatedData);
       res.json(product);
     } catch (error) {
       console.error("Error updating bond product:", error);
