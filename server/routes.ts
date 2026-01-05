@@ -130,10 +130,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
         
-        // Return user without password hash
-        const { passwordHash, ...userWithoutPassword } = user;
+        // Return user without password hash and xpCode (security: xpCode must never be exposed)
+        const { passwordHash, xpCode, ...userWithoutSensitiveData } = user;
         return res.json({
-          ...userWithoutPassword,
+          ...userWithoutSensitiveData,
+          hasXpCode: !!xpCode,
           accountContext: {
             isJointAccount: accountContext.isJointAccount,
             accountId: accountContext.accountId,
@@ -167,8 +168,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
       
+      // Return user without xpCode (security: xpCode must never be exposed)
+      const { xpCode, ...userWithoutXpCode } = user || {};
       res.json({
-        ...user,
+        ...userWithoutXpCode,
+        hasXpCode: !!xpCode,
         accountContext: {
           isJointAccount: accountContext.isJointAccount,
           accountId: accountContext.accountId,
@@ -488,9 +492,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear logout flag
       delete req.session.loggedOut;
       
-      // Return user without password hash
-      const { passwordHash: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Return user without password hash and xpCode (security)
+      const { passwordHash: _, xpCode: __, ...userWithoutSensitiveData } = user;
+      res.json({ ...userWithoutSensitiveData, hasXpCode: !!user.xpCode });
     } catch (error: any) {
       console.error("Login error:", error);
       if (error.name === 'ZodError') {
@@ -614,9 +618,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear logout flag
       delete req.session.loggedOut;
 
-      // Return user without password hash
-      const { passwordHash: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Return user without password hash and xpCode (security)
+      const { passwordHash: _, xpCode: __, ...userWithoutSensitiveData } = user;
+      res.json({ ...userWithoutSensitiveData, hasXpCode: true });
     } catch (error) {
       console.error("XP Code login error:", error);
       res.status(500).json({ message: "Login failed" });

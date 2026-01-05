@@ -16,6 +16,9 @@ import { useTheme } from "@/providers/ThemeProvider";
 import { JointAccountManager } from "@/components/account/JointAccountManager";
 import { cn } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { KeyRound, Copy, Check } from "lucide-react";
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'preferences';
 type KycStep = 'intro' | 'personal' | 'address' | 'documents' | 'review';
@@ -57,6 +60,43 @@ export default function Settings() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
+  const queryClient = useQueryClient();
+  const [generatedXpCode, setGeneratedXpCode] = useState<string | null>(null);
+  const [xpCodeCopied, setXpCodeCopied] = useState(false);
+
+  const generateXpCodeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/generate-xp-code");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setGeneratedXpCode(data.xpCode);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "XP Code Generated",
+        description: "Your one-time XP Code has been created. Save it securely - you cannot generate another one.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Could not generate XP Code.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const copyXpCode = () => {
+    if (generatedXpCode) {
+      navigator.clipboard.writeText(generatedXpCode);
+      setXpCodeCopied(true);
+      setTimeout(() => setXpCodeCopied(false), 2000);
+      toast({
+        title: "Copied",
+        description: "XP Code copied to clipboard.",
+      });
+    }
+  };
 
   const handleSaveProfile = () => {
     toast({
@@ -1117,6 +1157,69 @@ export default function Settings() {
                   </div>
                 </div>
                 
+                <div className="border-t border-border pt-6 mt-6">
+                  <h4 className="font-medium mb-4 flex items-center gap-2">
+                    <KeyRound className="w-4 h-4" />
+                    XP Code Login
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Generate a one-time XP Code for secure login without password. This code can only be generated once.
+                  </p>
+                  
+                  {(user as any)?.hasXpCode ? (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-500" />
+                        <span className="text-muted-foreground">XP Code already generated</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Your XP Code was created previously. For security reasons, you cannot generate a new one.
+                      </p>
+                    </div>
+                  ) : generatedXpCode ? (
+                    <div className="space-y-3">
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                        <p className="text-xs text-muted-foreground mb-2">Your XP Code (save this securely):</p>
+                        <div className="flex items-center justify-between gap-3">
+                          <code className="text-lg font-mono font-bold tracking-widest text-primary">
+                            {generatedXpCode}
+                          </code>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={copyXpCode}
+                            data-testid="button-copy-xp-code"
+                          >
+                            {xpCodeCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Save this code now. You will not be able to see it again after leaving this page.
+                      </p>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => generateXpCodeMutation.mutate()}
+                      disabled={generateXpCodeMutation.isPending}
+                      variant="outline"
+                      data-testid="button-generate-xp-code"
+                    >
+                      {generateXpCodeMutation.isPending ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <KeyRound className="w-4 h-4 mr-2" />
+                          Generate XP Code
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
                 <div className="border-t border-border pt-6 mt-6">
                   <h4 className="font-medium mb-4">Connected Sessions</h4>
                   <div className="bg-muted rounded-lg p-3">
