@@ -229,24 +229,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
       
-      // Demo mode fallback for development
-      const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
+      // Master admin credentials from environment
+      const MASTER_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@refluxcapital.com';
+      const MASTER_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
       
-      if (demoMode && username === 'admin' && password === 'admin123') {
-        const demoAdmin = {
-          id: 'demo-admin',
-          email: 'admin@refluxcapital.com',
-          firstName: 'Admin',
-          lastName: 'User',
-          profileImageUrl: null,
+      if (MASTER_ADMIN_PASSWORD && username === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASSWORD) {
+        // Check if admin exists in database, if not create it
+        let adminUser = await storage.getUserByEmail(MASTER_ADMIN_EMAIL);
+        
+        if (!adminUser) {
+          // Create admin user if it doesn't exist
+          const hashedPassword = await bcrypt.hash(MASTER_ADMIN_PASSWORD!, 10);
+          adminUser = await storage.createUser({
+            email: MASTER_ADMIN_EMAIL,
+            firstName: 'Admin',
+            lastName: 'User',
+            passwordHash: hashedPassword,
+            role: 'admin',
+            kycStatus: 'approved',
+          });
+        }
+        
+        const safeAdmin = {
+          id: adminUser?.id || 'master-admin',
+          email: MASTER_ADMIN_EMAIL,
+          firstName: adminUser?.firstName || 'Admin',
+          lastName: adminUser?.lastName || 'User',
+          profileImageUrl: adminUser?.profileImageUrl || null,
           role: 'admin',
           kycStatus: 'approved',
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: adminUser?.createdAt || new Date(),
+          updatedAt: adminUser?.updatedAt || new Date()
         };
         
-        req.session.adminUser = demoAdmin;
-        return res.json(demoAdmin);
+        req.session.adminUser = safeAdmin;
+        return res.json(safeAdmin);
       }
       
       // Check for admin user in database by email
