@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, ArrowRight, KeyRound } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { XpCodeInput } from "./XpCodeInput";
 
 const emailSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -29,11 +30,12 @@ interface LoginFormProps {
   onSwitchToOAuth?: () => void;
 }
 
-export function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToOAuth }: LoginFormProps) {
-  const [step, setStep] = useState<'email' | 'password'>('email');
+export function LoginForm({ onSuccess, onSwitchToSignup }: LoginFormProps) {
+  const [step, setStep] = useState<'email' | 'password' | 'xpcode'>('email');
   const [email, setEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [xpCode, setXpCode] = useState('');
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -86,7 +88,6 @@ export function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToOAuth }: Logi
     onError: (error: any) => {
       console.error('Login error:', error);
       
-      // Handle KYC status errors with specific messages
       if (error.kycStatus === 'pending') {
         toast({
           title: "Account Pending Approval",
@@ -109,6 +110,44 @@ export function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToOAuth }: Logi
     },
   });
 
+  const xpCodeLoginMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const response = await apiRequest("POST", "/api/auth/xp-code-login", { xpCode: code });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Welcome Back!",
+        description: "You've successfully signed in with your XP Code.",
+      });
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      console.error('XP Code login error:', error);
+      
+      if (error.kycStatus === 'pending') {
+        toast({
+          title: "Account Pending Approval",
+          description: "Your account is awaiting KYC verification. Please wait for an administrator to review your application.",
+          variant: "destructive",
+        });
+      } else if (error.kycStatus === 'rejected') {
+        toast({
+          title: "KYC Application Rejected",
+          description: "Your verification has been rejected. Please contact support for assistance.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Invalid XP Code",
+          description: error.message || "The XP Code you entered is incorrect.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
   const onEmailSubmit = (data: EmailFormData) => {
     checkEmailMutation.mutate(data);
   };
@@ -117,9 +156,26 @@ export function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToOAuth }: Logi
     loginMutation.mutate({ email, password: data.password });
   };
 
+  const onXpCodeSubmit = () => {
+    if (xpCode.length !== 11) {
+      toast({
+        title: "Invalid Code",
+        description: "Please enter all 11 characters of your XP Code.",
+        variant: "destructive",
+      });
+      return;
+    }
+    xpCodeLoginMutation.mutate(xpCode);
+  };
+
   const goBack = () => {
-    setStep('email');
-    passwordForm.reset();
+    if (step === 'xpcode') {
+      setStep('email');
+      setXpCode('');
+    } else {
+      setStep('email');
+      passwordForm.reset();
+    }
   };
 
   return (
@@ -192,14 +248,10 @@ export function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToOAuth }: Logi
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={onSwitchToOAuth}
-                  data-testid="button-oauth-login"
+                  onClick={() => setStep('xpcode')}
+                  data-testid="button-xp-code-login"
                 >
-                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
+                  <KeyRound className="mr-2 h-4 w-4" />
                   Sign in with XP Code
                 </Button>
 
@@ -217,6 +269,64 @@ export function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToOAuth }: Logi
                   </p>
                 </div>
               </form>
+            </CardContent>
+          </motion.div>
+        ) : step === 'xpcode' ? (
+          <motion.div
+            key="xpcode-step"
+            initial={{ x: 300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 300, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <CardHeader className="space-y-1">
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+                data-testid="button-back-xpcode"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back
+              </button>
+              <CardTitle className="text-2xl font-bold text-center">
+                Enter Your XP Code
+              </CardTitle>
+              <CardDescription className="text-center">
+                Enter your 11-character XP Code to sign in
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="py-4">
+                <XpCodeInput
+                  value={xpCode}
+                  onChange={setXpCode}
+                  disabled={xpCodeLoginMutation.isPending}
+                />
+              </div>
+
+              <Button
+                type="button"
+                className="w-full"
+                onClick={onXpCodeSubmit}
+                disabled={xpCode.length !== 11 || xpCodeLoginMutation.isPending}
+                data-testid="button-xpcode-submit"
+              >
+                {xpCodeLoginMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </Button>
+
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  XP Codes are one-time codes generated from your account settings.
+                </p>
+              </div>
             </CardContent>
           </motion.div>
         ) : (

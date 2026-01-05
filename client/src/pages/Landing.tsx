@@ -37,10 +37,6 @@ export default function Landing() {
     }
   }, [toast]);
 
-  const handleOAuthLogin = () => {
-    window.location.href = "/api/login";
-  };
-
   const handleDemo = () => {
     // Create demo user and show login form with demo credentials
     fetch('/api/seed-demo-user', { 
@@ -113,7 +109,6 @@ export default function Landing() {
           <LoginForm
             onSuccess={handleAuthSuccess}
             onSwitchToSignup={() => setAuthView('signup')}
-            onSwitchToOAuth={handleOAuthLogin}
           />
         </motion.div>
       </div>
