@@ -23,16 +23,7 @@ interface UserStats {
   adminUsers: number;
 }
 
-interface UserDetails extends User {
-  phoneNumber?: string | null;
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-  zipCode?: string | null;
-  country?: string | null;
-  verificationDocumentUrl?: string | null;
-  verificationDocumentType?: string | null;
-}
+type UserDetails = User;
 
 export function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,7 +103,7 @@ export function UserManagement() {
   });
 
   const { data: userDetails, isLoading: isLoadingDetails } = useQuery<UserDetails>({
-    queryKey: ["/api/admin/users", viewingUserId],
+    queryKey: [`/api/admin/users/${viewingUserId}`],
     enabled: !!viewingUserId,
   });
 
