@@ -516,9 +516,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate XP Code for authenticated user (one-time only)
-  app.post('/api/auth/generate-xp-code', requireAuth, async (req: any, res) => {
+  app.post('/api/auth/generate-xp-code', enhancedAuth, async (req: any, res) => {
     try {
-      const userId = req.session.user?.id;
+      const userId = req.user?.claims?.sub || req.session.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
