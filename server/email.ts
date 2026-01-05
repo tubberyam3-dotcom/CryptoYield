@@ -1,17 +1,5 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { storage } from './storage';
-
-interface EmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
-  };
-  fromEmail: string;
-  fromName: string;
-}
 
 interface SendEmailOptions {
   to: string | string[];
@@ -21,90 +9,67 @@ interface SendEmailOptions {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter | null = null;
-  private config: EmailConfig | null = null;
-
-  async getConfig(): Promise<EmailConfig | null> {
-    try {
-      const hostSetting = await storage.getSetting('email_smtp_host');
-      const portSetting = await storage.getSetting('email_smtp_port');
-      const secureSetting = await storage.getSetting('email_smtp_secure');
-      const userSetting = await storage.getSetting('email_smtp_user');
-      const passSetting = await storage.getSetting('email_smtp_pass');
-      const fromEmailSetting = await storage.getSetting('email_from_address');
-      const fromNameSetting = await storage.getSetting('email_from_name');
-
-      if (!hostSetting || !userSetting || !passSetting || !fromEmailSetting) {
-        return null;
-      }
-
-      return {
-        host: hostSetting.settingValue,
-        port: parseInt(portSetting?.settingValue || '587'),
-        secure: secureSetting?.settingValue === 'true',
-        auth: {
-          user: userSetting.settingValue,
-          pass: passSetting.settingValue,
-        },
-        fromEmail: fromEmailSetting.settingValue,
-        fromName: fromNameSetting?.settingValue || 'Reflux Capital',
-      };
-    } catch (error) {
-      console.error('Error getting email config:', error);
-      return null;
-    }
-  }
+  private resend: Resend | null = null;
+  private fromEmail: string = 'onboarding@resend.dev';
+  private fromName: string = 'Reflux Capital';
 
   async initialize(): Promise<boolean> {
-    const config = await this.getConfig();
-    if (!config) {
-      console.log('Email service not configured - missing SMTP settings');
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.log('Email service not configured - missing RESEND_API_KEY');
       return false;
     }
 
     try {
-      this.transporter = nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        auth: config.auth,
-      });
-
-      await this.transporter.verify();
-      this.config = config;
-      console.log('Email service initialized successfully');
+      this.resend = new Resend(apiKey);
+      
+      const fromEmailSetting = await storage.getSetting('email_from_address');
+      const fromNameSetting = await storage.getSetting('email_from_name');
+      
+      if (fromEmailSetting?.settingValue) {
+        this.fromEmail = fromEmailSetting.settingValue;
+      }
+      if (fromNameSetting?.settingValue) {
+        this.fromName = fromNameSetting.settingValue;
+      }
+      
+      console.log('Email service initialized successfully with Resend');
       return true;
     } catch (error) {
       console.error('Failed to initialize email service:', error);
-      this.transporter = null;
-      this.config = null;
+      this.resend = null;
       return false;
     }
   }
 
   async sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    const config = await this.getConfig();
-    if (!config) {
-      return { success: false, error: 'Email service not configured' };
+    if (!process.env.RESEND_API_KEY) {
+      return { success: false, error: 'Email service not configured - missing API key' };
     }
 
     try {
-      const transporter = nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        auth: config.auth,
-      });
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      
+      const fromEmailSetting = await storage.getSetting('email_from_address');
+      const fromNameSetting = await storage.getSetting('email_from_name');
+      
+      const fromEmail = fromEmailSetting?.settingValue || 'onboarding@resend.dev';
+      const fromName = fromNameSetting?.settingValue || 'Reflux Capital';
 
-      const info = await transporter.sendMail({
-        from: `"${config.fromName}" <${config.fromEmail}>`,
-        to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
+      const { data, error } = await resend.emails.send({
+        from: `${fromName} <${fromEmail}>`,
+        to: Array.isArray(options.to) ? options.to : [options.to],
         subject: options.subject,
         html: options.html,
         text: options.text || options.html.replace(/<[^>]*>/g, ''),
       });
 
-      return { success: true, messageId: info.messageId };
+      if (error) {
+        console.error('Error sending email:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, messageId: data?.id };
     } catch (error: any) {
       console.error('Error sending email:', error);
       return { success: false, error: error.message };
@@ -307,20 +272,27 @@ class EmailService {
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string }> {
-    const config = await this.getConfig();
-    if (!config) {
-      return { success: false, error: 'Email settings not configured' };
+    if (!process.env.RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
     }
 
     try {
-      const transporter = nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        auth: config.auth,
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      
+      const fromEmailSetting = await storage.getSetting('email_from_address');
+      const fromEmail = fromEmailSetting?.settingValue || 'onboarding@resend.dev';
+      
+      const { error } = await resend.emails.send({
+        from: `Reflux Capital <${fromEmail}>`,
+        to: ['test@resend.dev'],
+        subject: 'Test Connection',
+        html: '<p>This is a test email to verify the connection.</p>',
       });
 
-      await transporter.verify();
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
