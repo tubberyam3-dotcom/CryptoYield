@@ -108,6 +108,8 @@ export interface IStorage {
   getBondProducts(): Promise<BondProduct[]>;
   getBondProduct(id: string): Promise<BondProduct | undefined>;
   createBondProduct(product: InsertBondProduct): Promise<BondProduct>;
+  updateBondProduct(id: string, updates: Partial<InsertBondProduct>): Promise<BondProduct>;
+  deleteBondProduct(id: string): Promise<void>;
   getUserBonds(userId: string): Promise<(UserBond & { bondProduct: BondProduct })[]>;
   createUserBond(userBond: InsertUserBond): Promise<UserBond>;
   
@@ -709,6 +711,19 @@ export class DatabaseStorage implements IStorage {
   async createBondProduct(product: InsertBondProduct): Promise<BondProduct> {
     const [newProduct] = await db.insert(bondProducts).values(product).returning();
     return newProduct;
+  }
+
+  async updateBondProduct(id: string, updates: Partial<InsertBondProduct>): Promise<BondProduct> {
+    const [updatedProduct] = await db
+      .update(bondProducts)
+      .set(updates)
+      .where(eq(bondProducts.id, id))
+      .returning();
+    return updatedProduct;
+  }
+
+  async deleteBondProduct(id: string): Promise<void> {
+    await db.update(bondProducts).set({ isActive: false }).where(eq(bondProducts.id, id));
   }
 
   async getUserBonds(userId: string): Promise<(UserBond & { bondProduct: BondProduct })[]> {
