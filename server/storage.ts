@@ -59,6 +59,8 @@ export interface IStorage {
   // User operations (supports both OAuth and password auth)
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByXpCode(xpCode: string): Promise<User | undefined>;
+  setUserXpCode(userId: string, xpCode: string): Promise<void>;
   createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
@@ -274,6 +276,21 @@ export class DatabaseStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
+  }
+
+  async getUserByXpCode(xpCode: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.xpCode, xpCode));
+    return user;
+  }
+
+  async setUserXpCode(userId: string, xpCode: string): Promise<void> {
+    await db.update(users)
+      .set({ 
+        xpCode,
+        xpCodeGeneratedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
   }
 
   async createUser(userData: UpsertUser): Promise<User> {

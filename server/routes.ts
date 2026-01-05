@@ -515,6 +515,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate XP Code for authenticated user (one-time only)
+  app.post('/api/auth/generate-xp-code', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if user already has an XP code
+      if (user.xpCode) {
+        return res.status(400).json({ 
+          message: "XP Code has already been generated. Each user can only generate one XP Code.",
+          hasCode: true
+        });
+      }
+
+      // Generate a unique 11-character alphanumeric code
+      const generateCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 11; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      };
+
+      let xpCode = generateCode();
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      // Ensure uniqueness
+      while (attempts < maxAttempts) {
+        const existingUser = await storage.getUserByXpCode(xpCode);
+        if (!existingUser) break;
+        xpCode = generateCode();
+        attempts++;
+      }
+
+      if (attempts >= maxAttempts) {
+        return res.status(500).json({ message: "Failed to generate unique XP Code. Please try again." });
+      }
+
+      // Save the XP code
+      await storage.setUserXpCode(userId, xpCode);
+
+      res.json({ 
+        xpCode,
+        message: "XP Code generated successfully. Save this code - it can only be generated once!"
+      });
+    } catch (error) {
+      console.error("Error generating XP code:", error);
+      res.status(500).json({ message: "Failed to generate XP Code" });
+    }
+  });
+
+  // Login with XP Code
+  app.post('/api/auth/xp-code-login', async (req: any, res) => {
+    try {
+      const { xpCode } = req.body;
+
+      if (!xpCode || typeof xpCode !== 'string' || xpCode.length !== 11) {
+        return res.status(400).json({ message: "Invalid XP Code format. Code must be 11 characters." });
+      }
+
+      const user = await storage.getUserByXpCode(xpCode.toUpperCase());
+      if (!user) {
+        return res.status(401).json({ message: "Invalid XP Code" });
+      }
+
+      // Check KYC status (skip for admin users)
+      if (user.role !== 'admin' && user.kycStatus !== 'approved') {
+        if (user.kycStatus === 'pending') {
+          return res.status(403).json({ 
+            message: "Your account is pending KYC approval. Please wait for an administrator to review your application.",
+            kycStatus: 'pending'
+          });
+        } else if (user.kycStatus === 'rejected') {
+          return res.status(403).json({ 
+            message: "Your KYC application has been rejected. Please contact support for more information.",
+            kycStatus: 'rejected'
+          });
+        }
+      }
+
+      // Create session
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        authType: 'xp-code',
+      };
+
+      // Clear logout flag
+      delete req.session.loggedOut;
+
+      // Return user without password hash
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("XP Code login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   // Seed demo user for testing (development only)
   app.post('/api/seed-demo-user', async (req: any, res) => {
     try {
