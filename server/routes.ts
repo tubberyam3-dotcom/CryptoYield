@@ -264,17 +264,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify password
-      if (!adminUser.password) {
+      if (!adminUser.passwordHash) {
         return res.status(401).json({ message: "Invalid admin credentials" });
       }
       
-      const isValidPassword = await bcrypt.compare(password, adminUser.password);
+      const isValidPassword = await bcrypt.compare(password, adminUser.passwordHash);
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid admin credentials" });
       }
       
       // Set admin session
-      const { password: _, xpCode: __, ...safeAdmin } = adminUser;
+      const { passwordHash: _, xpCode: __, ...safeAdmin } = adminUser;
       req.session.adminUser = safeAdmin;
       
       return res.json(safeAdmin);
