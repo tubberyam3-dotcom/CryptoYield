@@ -8,10 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { User } from "@shared/schema";
+import { User as UserIcon, Mail, Phone, MapPin, FileText, Calendar, Shield, Eye } from "lucide-react";
 
 interface UserStats {
   totalUsers: number;
@@ -21,9 +23,21 @@ interface UserStats {
   adminUsers: number;
 }
 
+interface UserDetails extends User {
+  phoneNumber?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  country?: string | null;
+  verificationDocumentUrl?: string | null;
+  verificationDocumentType?: string | null;
+}
+
 export function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterKyc, setFilterKyc] = useState<string>("all");
   const { toast } = useToast();
@@ -95,6 +109,11 @@ export function UserManagement() {
         variant: "destructive",
       });
     },
+  });
+
+  const { data: userDetails, isLoading: isLoadingDetails } = useQuery<UserDetails>({
+    queryKey: ["/api/admin/users", viewingUserId],
+    enabled: !!viewingUserId,
   });
 
   const filteredUsers = users?.filter((user) => {
@@ -274,6 +293,201 @@ export function UserManagement() {
                   </div>
 
                   <div className="flex gap-2">
+                    <Dialog open={viewingUserId === user.id} onOpenChange={(open) => setViewingUserId(open ? user.id : null)}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          data-testid={`button-view-user-${user.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-view-user">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <UserIcon className="w-5 h-5" />
+                            User Details
+                          </DialogTitle>
+                          <DialogDescription>
+                            Complete profile information for this user
+                          </DialogDescription>
+                        </DialogHeader>
+                        {isLoadingDetails ? (
+                          <div className="p-8 text-center">
+                            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                            <p className="text-muted-foreground">Loading user details...</p>
+                          </div>
+                        ) : userDetails ? (
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-4">
+                              <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-2xl font-medium">
+                                {userDetails.firstName?.charAt(0) || userDetails.email?.charAt(0) || 'U'}
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-semibold">
+                                  {userDetails.firstName && userDetails.lastName 
+                                    ? `${userDetails.firstName} ${userDetails.lastName}`
+                                    : 'Unknown User'
+                                  }
+                                </h3>
+                                <div className="flex gap-2 mt-1">
+                                  <Badge className={getRoleColor(userDetails.role || 'user')}>
+                                    {userDetails.role || 'user'}
+                                  </Badge>
+                                  <Badge className={getKycStatusColor(userDetails.kycStatus || 'pending')}>
+                                    KYC: {userDetails.kycStatus || 'pending'}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+
+                            <Separator />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-4">
+                                <h4 className="font-semibold flex items-center gap-2">
+                                  <Mail className="w-4 h-4" />
+                                  Contact Information
+                                </h4>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Email</span>
+                                    <span className="font-medium">{userDetails.email || 'Not provided'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Phone</span>
+                                    <span className="font-medium">{userDetails.phoneNumber || 'Not provided'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                <h4 className="font-semibold flex items-center gap-2">
+                                  <MapPin className="w-4 h-4" />
+                                  Address
+                                </h4>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Street</span>
+                                    <span className="font-medium">{userDetails.address || 'Not provided'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">City</span>
+                                    <span className="font-medium">{userDetails.city || 'Not provided'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">State</span>
+                                    <span className="font-medium">{userDetails.state || 'Not provided'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">ZIP Code</span>
+                                    <span className="font-medium">{userDetails.zipCode || 'Not provided'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Country</span>
+                                    <span className="font-medium">{userDetails.country || 'Not provided'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <Separator />
+
+                            <div className="space-y-4">
+                              <h4 className="font-semibold flex items-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Verification Document
+                              </h4>
+                              {userDetails.verificationDocumentUrl ? (
+                                <div className="space-y-3">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Document Type</span>
+                                    <span className="font-medium capitalize">
+                                      {userDetails.verificationDocumentType?.replace(/_/g, ' ') || 'Unknown'}
+                                    </span>
+                                  </div>
+                                  <div className="border rounded-lg p-4 bg-muted/50">
+                                    <img 
+                                      src={userDetails.verificationDocumentUrl} 
+                                      alt="Verification Document"
+                                      className="max-w-full h-auto rounded-lg"
+                                    />
+                                  </div>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => window.open(userDetails.verificationDocumentUrl!, '_blank')}
+                                  >
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    View Full Document
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
+                                  No verification document uploaded
+                                </div>
+                              )}
+                            </div>
+
+                            <Separator />
+
+                            <div className="space-y-4">
+                              <h4 className="font-semibold flex items-center gap-2">
+                                <Shield className="w-4 h-4" />
+                                Account Information
+                              </h4>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Account Type</span>
+                                  <span className="font-medium capitalize">{userDetails.accountType || 'personal'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Balance</span>
+                                  <span className="font-medium">${parseFloat(userDetails.balance || '0').toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">XP Balance</span>
+                                  <span className="font-medium">{userDetails.xpBalance || 0} XP</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Created</span>
+                                  <span className="font-medium">
+                                    {userDetails.createdAt ? new Date(userDetails.createdAt).toLocaleDateString() : 'Unknown'}
+                                  </span>
+                                </div>
+                              </div>
+                              {userDetails.accountType === 'business' && (
+                                <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Business Name</span>
+                                    <span className="font-medium">{userDetails.businessName || 'Not provided'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Business Type</span>
+                                    <span className="font-medium">{userDetails.businessType || 'Not provided'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Tax ID</span>
+                                    <span className="font-medium">{userDetails.taxId || 'Not provided'}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="text-xs text-muted-foreground">
+                              User ID: {userDetails.id}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center text-muted-foreground">
+                            Unable to load user details
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button 

@@ -1886,6 +1886,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get detailed user info for admin
+  app.get('/api/admin/users/:userId', adminAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove sensitive fields but include contact/address info
+      const { passwordHash, xpCode, ...userDetails } = user;
+      
+      res.json(userDetails);
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+      res.status(500).json({ message: "Failed to fetch user details" });
+    }
+  });
+
   // Admin analytics endpoint
   app.get('/api/admin/analytics', adminAuth, async (req: any, res) => {
     try {

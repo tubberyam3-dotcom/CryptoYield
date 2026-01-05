@@ -47,6 +47,16 @@ export const users = pgTable("users", {
   lastXpClaim: timestamp("last_xp_claim"), // Track last XP claim
   xpCode: varchar("xp_code", { length: 11 }).unique(), // One-time 11-character login code
   xpCodeGeneratedAt: timestamp("xp_code_generated_at"), // When the XP code was generated
+  // Contact & Address fields
+  phoneNumber: varchar("phone_number"),
+  address: varchar("address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  zipCode: varchar("zip_code"),
+  country: varchar("country"),
+  // Verification document
+  verificationDocumentUrl: varchar("verification_document_url"),
+  verificationDocumentType: varchar("verification_document_type", { enum: ['passport', 'drivers_license', 'national_id', 'other'] }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
