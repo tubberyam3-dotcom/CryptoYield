@@ -53,8 +53,12 @@ class EmailService {
       const fromEmailSetting = await storage.getSetting('email_from_address');
       const fromNameSetting = await storage.getSetting('email_from_name');
       
-      const fromEmail = fromEmailSetting?.settingValue || 'onboarding@resend.dev';
+      const customFromEmail = fromEmailSetting?.settingValue;
       const fromName = fromNameSetting?.settingValue || 'Reflux Capital';
+      
+      const fromEmail = customFromEmail || 'onboarding@resend.dev';
+
+      console.log(`Attempting to send email from: ${fromName} <${fromEmail}> to: ${options.to}`);
 
       const { data, error } = await resend.emails.send({
         from: `${fromName} <${fromEmail}>`,
@@ -65,10 +69,31 @@ class EmailService {
       });
 
       if (error) {
-        console.error('Error sending email:', error);
+        console.error('Error sending email with custom domain:', error);
+        
+        if (customFromEmail && customFromEmail !== 'onboarding@resend.dev') {
+          console.log('Retrying with Resend test domain (onboarding@resend.dev)...');
+          const { data: retryData, error: retryError } = await resend.emails.send({
+            from: `${fromName} <onboarding@resend.dev>`,
+            to: Array.isArray(options.to) ? options.to : [options.to],
+            subject: options.subject,
+            html: options.html,
+            text: options.text || options.html.replace(/<[^>]*>/g, ''),
+          });
+          
+          if (retryError) {
+            console.error('Error sending email with test domain:', retryError);
+            return { success: false, error: `Custom domain failed: ${error.message}. Test domain also failed: ${retryError.message}. Note: With Resend free tier, you can only send to your registered email address.` };
+          }
+          
+          console.log('Email sent successfully using Resend test domain');
+          return { success: true, messageId: retryData?.id };
+        }
+        
         return { success: false, error: error.message };
       }
 
+      console.log('Email sent successfully:', data?.id);
       return { success: true, messageId: data?.id };
     } catch (error: any) {
       console.error('Error sending email:', error);
