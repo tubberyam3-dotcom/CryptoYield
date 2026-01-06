@@ -3168,18 +3168,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment settings endpoints
+  const paymentKeys = [
+    // Deposit/Withdrawal toggles
+    'deposit_crypto_enabled', 'deposit_bank_enabled', 'deposit_card_enabled',
+    'withdrawal_crypto_enabled', 'withdrawal_wire_enabled', 'withdrawal_merchant_enabled',
+    // Limits
+    'deposit_min_amount', 'deposit_max_amount', 'deposit_fee_percent',
+    'withdrawal_min_amount', 'withdrawal_max_amount', 'withdrawal_fee_percent',
+    'withdrawal_processing_time', 'withdrawal_daily_limit',
+    // Crypto addresses
+    'crypto_btc_address', 'crypto_eth_address', 'crypto_usdt_address', 'crypto_usdt_network',
+    'crypto_ltc_address', 'crypto_xrp_address', 'crypto_sol_address',
+    // Bank deposit details
+    'bank_name', 'bank_account_name', 'bank_account_number', 'bank_routing_number',
+    'bank_swift_code', 'bank_iban', 'bank_address', 'bank_instructions',
+    // Wire transfer details
+    'wire_bank_name', 'wire_account_name', 'wire_account_number', 'wire_routing_number',
+    'wire_swift_code', 'wire_iban', 'wire_address', 'wire_instructions',
+    // Currency settings
+    'supported_currencies', 'default_currency'
+  ];
+
   app.get("/api/admin/payment/config", adminAuth, async (req, res) => {
     try {
       const settings = await storage.getAllSettings();
       const paymentSettings: Record<string, string> = {};
-      
-      const paymentKeys = [
-        'deposit_crypto_enabled', 'deposit_bank_enabled', 'deposit_card_enabled',
-        'deposit_min_amount', 'deposit_max_amount', 'deposit_fee_percent',
-        'withdrawal_crypto_enabled', 'withdrawal_wire_enabled', 'withdrawal_merchant_enabled',
-        'withdrawal_min_amount', 'withdrawal_max_amount', 'withdrawal_fee_percent',
-        'withdrawal_processing_time', 'withdrawal_daily_limit'
-      ];
       
       for (const setting of settings) {
         if (paymentKeys.includes(setting.settingKey)) {
@@ -3198,14 +3211,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { settings } = req.body;
       const userId = req.user?.claims?.sub || 'admin';
-      
-      const paymentKeys = [
-        'deposit_crypto_enabled', 'deposit_bank_enabled', 'deposit_card_enabled',
-        'deposit_min_amount', 'deposit_max_amount', 'deposit_fee_percent',
-        'withdrawal_crypto_enabled', 'withdrawal_wire_enabled', 'withdrawal_merchant_enabled',
-        'withdrawal_min_amount', 'withdrawal_max_amount', 'withdrawal_fee_percent',
-        'withdrawal_processing_time', 'withdrawal_daily_limit'
-      ];
       
       for (const [key, value] of Object.entries(settings)) {
         if (paymentKeys.includes(key) && value !== undefined) {
