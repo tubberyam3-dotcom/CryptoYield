@@ -751,6 +751,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User Profile update route
+  app.patch('/api/user/profile', enhancedAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { phoneNumber, address, city, state, zipCode, country, firstName, lastName, verificationDocumentUrl, verificationDocumentType } = req.body;
+      
+      const updatedUser = await storage.updateUserProfile(userId, {
+        phoneNumber,
+        address,
+        city,
+        state,
+        zipCode,
+        country,
+        firstName,
+        lastName,
+        verificationDocumentUrl,
+        verificationDocumentType,
+      });
+      
+      // Remove sensitive fields
+      const { passwordHash, xpCode, ...safeUser } = updatedUser;
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   // User Portfolio routes
   app.get('/api/user/portfolios', enhancedAuth, async (req: any, res) => {
     try {

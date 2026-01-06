@@ -186,13 +186,50 @@ export default function Settings() {
     resetKycData();
   };
 
+  const updateProfileMutation = useMutation({
+    mutationFn: async (profileData: {
+      firstName: string;
+      lastName: string;
+      phoneNumber?: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+      verificationDocumentType?: string;
+    }) => {
+      const response = await apiRequest("PATCH", "/api/user/profile", profileData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "KYC Submitted",
+        description: "Your verification documents have been submitted for review. This usually takes 1-3 business days.",
+      });
+      setShowKycFlow(false);
+      resetKycData();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Could not submit your verification.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleKycSubmit = () => {
-    toast({
-      title: "KYC Submitted",
-      description: "Your verification documents have been submitted for review. This usually takes 1-3 business days.",
+    updateProfileMutation.mutate({
+      firstName: kycData.firstName,
+      lastName: kycData.lastName,
+      address: kycData.address,
+      city: kycData.city,
+      state: kycData.state,
+      zipCode: kycData.postalCode,
+      country: kycData.country,
+      verificationDocumentType: kycData.idType as any,
     });
-    setShowKycFlow(false);
-    resetKycData();
   };
 
   const tabs: { key: SettingsTab; label: string; icon: string }[] = [

@@ -80,6 +80,20 @@ export interface IStorage {
     jointAccount?: JointAccount;
   }>;
   
+  // User Profile operations
+  updateUserProfile(userId: string, profileData: {
+    phoneNumber?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+    firstName?: string;
+    lastName?: string;
+    verificationDocumentUrl?: string;
+    verificationDocumentType?: 'passport' | 'drivers_license' | 'national_id' | 'other';
+  }): Promise<User>;
+
   // Admin User Management operations
   getAllUsers(): Promise<User[]>;
   updateUserRole(userId: string, role: 'user' | 'admin'): Promise<User>;
@@ -261,13 +275,23 @@ export class DatabaseStorage implements IStorage {
         businessName: null,
         businessType: null,
         taxId: null,
-        balance: '10000',
+        balance: '0',
         accumulatedDailyBonus: '0',
         xpBalance: 0,
         role: 'admin',
         kycStatus: 'approved',
         lastDailyRewardClaim: null,
         lastXpClaim: null,
+        xpCode: null,
+        xpCodeGeneratedAt: null,
+        phoneNumber: null,
+        address: null,
+        city: null,
+        state: null,
+        zipCode: null,
+        country: null,
+        verificationDocumentUrl: null,
+        verificationDocumentType: null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -469,94 +493,71 @@ export class DatabaseStorage implements IStorage {
     // Handle demo mode
     const demoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'development';
     if (demoMode) {
+      const baseUserFields = {
+        profileImageUrl: null,
+        passwordHash: null,
+        authType: 'oauth' as const,
+        accountType: 'personal' as const,
+        businessName: null,
+        businessType: null,
+        taxId: null,
+        balance: '0',
+        accumulatedDailyBonus: '0',
+        xpBalance: 0,
+        lastDailyRewardClaim: null,
+        lastXpClaim: null,
+        xpCode: null,
+        xpCodeGeneratedAt: null,
+        phoneNumber: null,
+        address: null,
+        city: null,
+        state: null,
+        zipCode: null,
+        country: null,
+        verificationDocumentUrl: null,
+        verificationDocumentType: null,
+        updatedAt: new Date()
+      };
       return [
         {
+          ...baseUserFields,
           id: 'demo-user',
           email: 'demo@refluxcapital.com',
           firstName: 'Demo',
           lastName: 'Admin',
-          profileImageUrl: null,
-          passwordHash: null,
-          authType: 'oauth' as const,
-          accountType: 'personal',
-          businessName: null,
-          businessType: null,
-          taxId: null,
-          balance: '10000',
-          accumulatedDailyBonus: '0',
-          xpBalance: 0,
-          role: 'admin',
-          kycStatus: 'approved',
-          lastDailyRewardClaim: null,
-          lastXpClaim: null,
+          role: 'admin' as const,
+          kycStatus: 'approved' as const,
           createdAt: new Date('2024-01-15'),
-          updatedAt: new Date()
         },
         {
+          ...baseUserFields,
           id: 'user-1',
           email: 'john.doe@example.com',
           firstName: 'John',
           lastName: 'Doe',
-          profileImageUrl: null,
-          passwordHash: null,
-          authType: 'oauth' as const,
-          accountType: 'personal',
-          businessName: null,
-          businessType: null,
-          taxId: null,
-          balance: '10000',
-          accumulatedDailyBonus: '0',
-          xpBalance: 0,
-          role: 'user',
-          kycStatus: 'approved',
-          lastDailyRewardClaim: null,
-          lastXpClaim: null,
+          role: 'user' as const,
+          kycStatus: 'approved' as const,
           createdAt: new Date('2024-02-20'),
-          updatedAt: new Date()
         },
         {
+          ...baseUserFields,
           id: 'user-2',
           email: 'jane.smith@example.com',
           firstName: 'Jane',
           lastName: 'Smith',
-          profileImageUrl: null,
-          passwordHash: null,
-          authType: 'oauth' as const,
-          accountType: 'personal',
-          businessName: null,
-          businessType: null,
-          taxId: null,
-          balance: '10000',
-          accumulatedDailyBonus: '0',
-          xpBalance: 0,
-          role: 'user',
-          kycStatus: 'pending',
-          lastDailyRewardClaim: null,
-          lastXpClaim: null,
+          role: 'user' as const,
+          kycStatus: 'pending' as const,
           createdAt: new Date('2024-03-10'),
-          updatedAt: new Date()
         },
         {
+          ...baseUserFields,
           id: 'user-3',
           email: 'bob.wilson@example.com',
           firstName: 'Bob',
           lastName: 'Wilson',
-          profileImageUrl: null,
-          passwordHash: null,
-          authType: 'oauth' as const,
-          accountType: 'personal',
-          businessName: null,
-          businessType: null,
-          taxId: null,
-          balance: '10000',
-          accumulatedDailyBonus: '0',
-          xpBalance: 0,
-          role: 'user',
-          kycStatus: 'rejected',
-          lastDailyRewardClaim: null,
-          lastXpClaim: null,
+          role: 'user' as const,
+          kycStatus: 'rejected' as const,
           createdAt: new Date('2024-03-25'),
-          updatedAt: new Date()
         }
       ];
     }
@@ -586,6 +587,39 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ balance: newBalance, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updateUserProfile(userId: string, profileData: {
+    phoneNumber?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+    firstName?: string;
+    lastName?: string;
+    verificationDocumentUrl?: string;
+    verificationDocumentType?: 'passport' | 'drivers_license' | 'national_id' | 'other';
+  }): Promise<User> {
+    const updateData: any = { updatedAt: new Date() };
+    
+    if (profileData.phoneNumber !== undefined) updateData.phoneNumber = profileData.phoneNumber;
+    if (profileData.address !== undefined) updateData.address = profileData.address;
+    if (profileData.city !== undefined) updateData.city = profileData.city;
+    if (profileData.state !== undefined) updateData.state = profileData.state;
+    if (profileData.zipCode !== undefined) updateData.zipCode = profileData.zipCode;
+    if (profileData.country !== undefined) updateData.country = profileData.country;
+    if (profileData.firstName !== undefined) updateData.firstName = profileData.firstName;
+    if (profileData.lastName !== undefined) updateData.lastName = profileData.lastName;
+    if (profileData.verificationDocumentUrl !== undefined) updateData.verificationDocumentUrl = profileData.verificationDocumentUrl;
+    if (profileData.verificationDocumentType !== undefined) updateData.verificationDocumentType = profileData.verificationDocumentType;
+    
+    const [user] = await db
+      .update(users)
+      .set(updateData)
       .where(eq(users.id, userId))
       .returning();
     return user;
@@ -1786,7 +1820,7 @@ export class DatabaseStorage implements IStorage {
       throw new Error('User not found');
     }
 
-    const userBalance = parseFloat(user.balance);
+    const userBalance = parseFloat(user.balance || '0');
     if (userBalance < numericAmount) {
       throw new Error('Insufficient balance');
     }
