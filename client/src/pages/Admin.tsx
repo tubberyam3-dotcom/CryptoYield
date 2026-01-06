@@ -20,6 +20,7 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { StockManagement } from "@/components/admin/StockManagement";
 import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApprovals";
 import { BondManagement } from "@/components/admin/BondManagement";
+import { PaymentSettings } from "@/components/admin/PaymentSettings";
 import { Building2, Save } from "lucide-react";
 import type { Portfolio, StakingPlan, CommunityChallenge } from "@shared/schema";
 
@@ -468,7 +469,11 @@ export default function Admin() {
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-4 sm:space-y-6 mt-4">
-              <h3 className="text-xl font-semibold">Platform Settings</h3>
+              {/* Payment Settings */}
+              <PaymentSettings />
+
+              <h3 className="text-xl font-semibold mt-8">Bank Account Details</h3>
+              <p className="text-sm text-muted-foreground mb-4">Configure the bank account details shown to users for deposits</p>
               
               {/* Bank Transfer Settings */}
               <Card className="p-6">

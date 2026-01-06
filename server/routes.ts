@@ -3167,6 +3167,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment settings endpoints
+  app.get("/api/admin/payment/config", adminAuth, async (req, res) => {
+    try {
+      const settings = await storage.getAllSettings();
+      const paymentSettings: Record<string, string> = {};
+      
+      const paymentKeys = [
+        'deposit_crypto_enabled', 'deposit_bank_enabled', 'deposit_card_enabled',
+        'deposit_min_amount', 'deposit_max_amount', 'deposit_fee_percent',
+        'withdrawal_crypto_enabled', 'withdrawal_wire_enabled', 'withdrawal_merchant_enabled',
+        'withdrawal_min_amount', 'withdrawal_max_amount', 'withdrawal_fee_percent',
+        'withdrawal_processing_time', 'withdrawal_daily_limit'
+      ];
+      
+      for (const setting of settings) {
+        if (paymentKeys.includes(setting.settingKey)) {
+          paymentSettings[setting.settingKey] = setting.settingValue;
+        }
+      }
+      
+      res.json(paymentSettings);
+    } catch (error: any) {
+      console.error("Error fetching payment config:", error);
+      res.status(500).json({ message: "Failed to fetch payment configuration" });
+    }
+  });
+
+  app.post("/api/admin/payment/config", adminAuth, async (req: any, res) => {
+    try {
+      const { settings } = req.body;
+      const userId = req.user?.claims?.sub || 'admin';
+      
+      const paymentKeys = [
+        'deposit_crypto_enabled', 'deposit_bank_enabled', 'deposit_card_enabled',
+        'deposit_min_amount', 'deposit_max_amount', 'deposit_fee_percent',
+        'withdrawal_crypto_enabled', 'withdrawal_wire_enabled', 'withdrawal_merchant_enabled',
+        'withdrawal_min_amount', 'withdrawal_max_amount', 'withdrawal_fee_percent',
+        'withdrawal_processing_time', 'withdrawal_daily_limit'
+      ];
+      
+      for (const [key, value] of Object.entries(settings)) {
+        if (paymentKeys.includes(key) && value !== undefined) {
+          await storage.setSetting({
+            key,
+            value: value as string,
+            updatedBy: userId,
+          });
+        }
+      }
+      
+      res.json({ success: true, message: "Payment settings saved successfully" });
+    } catch (error: any) {
+      console.error("Error saving payment config:", error);
+      res.status(500).json({ message: "Failed to save payment configuration" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
