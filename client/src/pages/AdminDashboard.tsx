@@ -17,6 +17,7 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { ChallengeManagement } from "@/components/admin/ChallengeManagement";
 import { CouponManagement } from "@/components/admin/CouponManagement";
 import { SystemSettings } from "@/components/admin/SystemSettings";
+import { PaymentSettings } from "@/components/admin/PaymentSettings";
 import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApprovals";
 import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { RewardsManagement } from "@/components/admin/RewardsManagement";
@@ -699,6 +700,7 @@ export default function AdminDashboard() {
               <h2 className="text-2xl font-bold mb-2">System Settings</h2>
               <p className="text-muted-foreground">Configure platform settings and preferences</p>
             </div>
+            <PaymentSettings />
             <SystemSettings />
           </div>
         );
