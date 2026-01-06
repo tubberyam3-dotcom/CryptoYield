@@ -1,19 +1,40 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { User } from "@shared/schema";
-import { User as UserIcon, Mail, Phone, MapPin, FileText, Calendar, Shield, Eye } from "lucide-react";
+import { 
+  User as UserIcon, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  FileText, 
+  Shield, 
+  Eye,
+  Search,
+  Settings,
+  Filter,
+  MoreHorizontal,
+  UserPlus,
+  Download,
+  Users,
+  CreditCard,
+  Send,
+  Key,
+  UserX,
+  FolderPlus,
+  Check,
+  X
+} from "lucide-react";
 
 interface UserStats {
   totalUsers: number;
@@ -27,10 +48,10 @@ type UserDetails = User;
 
 export function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
-  const [filterRole, setFilterRole] = useState<string>("all");
-  const [filterKyc, setFilterKyc] = useState<string>("all");
+  const [bulkAction, setBulkAction] = useState<string>("");
+  const [showSearch, setShowSearch] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -40,36 +61,6 @@ export function UserManagement() {
 
   const { data: userStats } = useQuery<UserStats>({
     queryKey: ["/api/admin/users/stats"],
-  });
-
-  const updateUserRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/role`, { role });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "User Role Updated",
-        description: "User role has been updated successfully!",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users/stats"] });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "Please log in to continue",
-          variant: "destructive",
-        });
-        return;
-      }
-      toast({
-        title: "Failed to Update Role",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
   const updateUserKycMutation = useMutation({
@@ -114,10 +105,7 @@ export function UserManagement() {
       user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.id.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesRole = filterRole === "all" || user.role === filterRole;
-    const matchesKyc = filterKyc === "all" || user.kycStatus === filterKyc;
-    
-    return matchesSearch && matchesRole && matchesKyc;
+    return matchesSearch;
   });
 
   const getKycStatusColor = (status: string) => {
@@ -134,520 +122,465 @@ export function UserManagement() {
       : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
   };
 
+  const getInitials = (user: User) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+    }
+    return user.email?.substring(0, 2).toUpperCase() || 'U';
+  };
+
+  const getAvatarColor = (index: number) => {
+    const colors = [
+      'bg-blue-500',
+      'bg-green-500',
+      'bg-purple-500',
+      'bg-orange-500',
+      'bg-pink-500',
+      'bg-teal-500',
+      'bg-indigo-500',
+      'bg-cyan-500',
+    ];
+    return colors[index % colors.length];
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && filteredUsers) {
+      setSelectedUsers(filteredUsers.map(u => u.id));
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleSelectUser = (userId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedUsers([...selectedUsers, userId]);
+    } else {
+      setSelectedUsers(selectedUsers.filter(id => id !== userId));
+    }
+  };
+
+  const handleBulkApply = () => {
+    if (!bulkAction || selectedUsers.length === 0) return;
+    toast({
+      title: "Bulk Action",
+      description: `Applied "${bulkAction}" to ${selectedUsers.length} users`,
+    });
+    setBulkAction("");
+    setSelectedUsers([]);
+  };
+
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>Loading user data...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="p-4 animate-pulse">
-                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-muted rounded w-1/2 mb-4"></div>
-                <div className="space-y-2">
-                  <div className="h-3 bg-muted rounded"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-48"></div>
+          <div className="h-12 bg-muted rounded"></div>
+          <div className="h-96 bg-muted rounded"></div>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6" data-testid="user-management">
-      {/* User Statistics */}
-      {userStats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-primary">{userStats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">Total Users</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{userStats.activeUsers}</div>
-              <p className="text-xs text-muted-foreground">Active Users</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-600">{userStats.pendingKyc}</div>
-              <p className="text-xs text-muted-foreground">Pending KYC</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{userStats.approvedKyc}</div>
-              <p className="text-xs text-muted-foreground">Approved KYC</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-600">{userStats.adminUsers}</div>
-              <p className="text-xs text-muted-foreground">Admin Users</p>
-            </CardContent>
-          </Card>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Active Users</h1>
+          <p className="text-muted-foreground">
+            Total <span className="font-medium text-foreground">{userStats?.totalUsers || filteredUsers?.length || 0}</span> User account.
+          </p>
         </div>
-      )}
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="gap-2" data-testid="button-manage-groups">
+            <Users className="w-4 h-4" />
+            Manage Groups
+          </Button>
+          <Button variant="outline" className="gap-2" data-testid="button-export">
+            <Download className="w-4 h-4" />
+            Export
+          </Button>
+          <Button className="gap-2 bg-[#22c55e] hover:bg-[#16a34a] text-white" data-testid="button-add-user">
+            <UserPlus className="w-4 h-4" />
+            Add User
+          </Button>
+        </div>
+      </div>
 
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <i className="fas fa-users text-primary"></i>
-            User Management
-          </CardTitle>
-          <CardDescription>
-            Manage user accounts, roles, and KYC status
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Select value={bulkAction} onValueChange={setBulkAction}>
+            <SelectTrigger className="w-40" data-testid="select-bulk-action">
+              <SelectValue placeholder="Bulk Action" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="approve_kyc">Approve KYC</SelectItem>
+              <SelectItem value="reject_kyc">Reject KYC</SelectItem>
+              <SelectItem value="suspend">Suspend</SelectItem>
+              <SelectItem value="activate">Activate</SelectItem>
+              <SelectItem value="delete">Delete</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button 
+            variant="secondary" 
+            className="bg-[#e4fe7b] text-black hover:bg-[#d4ee6b]"
+            onClick={handleBulkApply}
+            disabled={!bulkAction || selectedUsers.length === 0}
+            data-testid="button-apply-bulk"
+          >
+            Apply
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {showSearch ? (
             <Input
-              placeholder="Search users by name, email, or ID..."
+              placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1"
+              className="w-64"
+              autoFocus
+              onBlur={() => !searchTerm && setShowSearch(false)}
               data-testid="input-search-users"
             />
-            <Select value={filterRole} onValueChange={setFilterRole}>
-              <SelectTrigger className="w-full sm:w-40" data-testid="select-filter-role">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="user">Users</SelectItem>
-                <SelectItem value="admin">Admins</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterKyc} onValueChange={setFilterKyc}>
-              <SelectTrigger className="w-full sm:w-40" data-testid="select-filter-kyc">
-                <SelectValue placeholder="Filter by KYC" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All KYC Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          ) : (
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setShowSearch(true)}
+              data-testid="button-search"
+            >
+              <Search className="w-5 h-5" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" data-testid="button-filter">
+            <Filter className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" data-testid="button-settings">
+            <Settings className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
 
-          {/* Users Table */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredUsers?.map((user) => (
-              <Card key={user.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white font-medium">
-                        {user.firstName?.charAt(0) || user.email?.charAt(0) || 'U'}
+      {/* Table */}
+      <div className="border rounded-lg overflow-hidden bg-card">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b bg-muted/30">
+              <th className="p-4 text-left w-12">
+                <Checkbox
+                  checked={selectedUsers.length === (filteredUsers?.length || 0) && (filteredUsers?.length || 0) > 0}
+                  onCheckedChange={handleSelectAll}
+                  data-testid="checkbox-select-all"
+                />
+              </th>
+              <th className="p-4 text-left text-sm font-medium text-muted-foreground">User</th>
+              <th className="p-4 text-left text-sm font-medium text-muted-foreground">Account Balance</th>
+              <th className="p-4 text-left text-sm font-medium text-muted-foreground">Verified</th>
+              <th className="p-4 text-left text-sm font-medium text-muted-foreground">Last Login</th>
+              <th className="p-4 text-left text-sm font-medium text-muted-foreground">Status</th>
+              <th className="p-4 text-left w-12"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers?.map((user, index) => (
+              <tr key={user.id} className="border-b last:border-b-0 hover:bg-muted/20 transition-colors">
+                <td className="p-4">
+                  <Checkbox
+                    checked={selectedUsers.includes(user.id)}
+                    onCheckedChange={(checked) => handleSelectUser(user.id, checked as boolean)}
+                    data-testid={`checkbox-user-${user.id}`}
+                  />
+                </td>
+                <td className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm ${getAvatarColor(index)}`}>
+                      {getInitials(user)}
+                    </div>
+                    <div>
+                      <div className="font-medium text-foreground">
+                        {user.firstName && user.lastName 
+                          ? `${user.firstName} ${user.lastName}`
+                          : 'Unknown User'
+                        }
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="font-medium truncate">
-                          {user.firstName && user.lastName 
-                            ? `${user.firstName} ${user.lastName}`
-                            : user.email || 'Unknown User'
-                          }
-                        </h3>
-                        <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                      </div>
+                      <div className="text-sm text-muted-foreground">{user.email}</div>
                     </div>
                   </div>
+                </td>
+                <td className="p-4">
+                  <span className="font-medium">
+                    {parseFloat(user.balance || '0').toFixed(2)} USD
+                  </span>
+                </td>
+                <td className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${user.email ? 'bg-green-500' : 'bg-gray-300'}`}>
+                        {user.email && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className="text-sm text-muted-foreground">Email</span>
+                    </div>
+                    {user.kycStatus === 'approved' && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-4 h-4 rounded-full flex items-center justify-center bg-green-500">
+                          <Check className="w-2.5 h-2.5 text-white" />
+                        </div>
+                        <span className="text-sm text-muted-foreground">KYC</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td className="p-4">
+                  <span className="text-sm text-muted-foreground">
+                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    }) : 'Never'}
+                  </span>
+                </td>
+                <td className="p-4">
+                  <span className={`text-sm font-medium ${user.kycStatus === 'approved' ? 'text-green-500' : user.kycStatus === 'rejected' ? 'text-red-500' : 'text-yellow-500'}`}>
+                    {user.kycStatus === 'approved' ? 'Active' : user.kycStatus === 'rejected' ? 'Suspended' : 'Pending'}
+                  </span>
+                </td>
+                <td className="p-4">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" data-testid={`button-actions-${user.id}`}>
+                        <MoreHorizontal className="w-5 h-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => setViewingUserId(user.id)} data-testid={`menu-view-details-${user.id}`}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem data-testid={`menu-transaction-${user.id}`}>
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Transaction
+                      </DropdownMenuItem>
+                      <DropdownMenuItem data-testid={`menu-send-email-${user.id}`}>
+                        <Send className="w-4 h-4 mr-2" />
+                        Send an Email
+                      </DropdownMenuItem>
+                      <DropdownMenuItem data-testid={`menu-reset-password-${user.id}`}>
+                        <Key className="w-4 h-4 mr-2" />
+                        Reset Password
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-red-600"
+                        data-testid={`menu-suspend-${user.id}`}
+                      >
+                        <UserX className="w-4 h-4 mr-2" />
+                        Suspend User
+                      </DropdownMenuItem>
+                      <DropdownMenuItem data-testid={`menu-assign-group-${user.id}`}>
+                        <FolderPlus className="w-4 h-4 mr-2" />
+                        Assign to Group
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Role</span>
-                      <Badge className={getRoleColor(user.role || 'user')}>
-                        {user.role || 'user'}
-                      </Badge>
+        {(!filteredUsers || filteredUsers.length === 0) && (
+          <div className="p-12 text-center text-muted-foreground">
+            No users found
+          </div>
+        )}
+      </div>
+
+      {/* User Details Dialog */}
+      <Dialog open={!!viewingUserId} onOpenChange={(open) => !open && setViewingUserId(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-view-user">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserIcon className="w-5 h-5" />
+              User Details
+            </DialogTitle>
+            <DialogDescription>
+              Complete profile information for this user
+            </DialogDescription>
+          </DialogHeader>
+          {isLoadingDetails ? (
+            <div className="p-8 text-center">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-muted-foreground">Loading user details...</p>
+            </div>
+          ) : userDetails ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-2xl font-medium">
+                  {userDetails.firstName?.charAt(0) || userDetails.email?.charAt(0) || 'U'}
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">
+                    {userDetails.firstName && userDetails.lastName 
+                      ? `${userDetails.firstName} ${userDetails.lastName}`
+                      : 'Unknown User'
+                    }
+                  </h3>
+                  <div className="flex gap-2 mt-1">
+                    <Badge className={getRoleColor(userDetails.role || 'user')}>
+                      {userDetails.role || 'user'}
+                    </Badge>
+                    <Badge className={getKycStatusColor(userDetails.kycStatus || 'pending')}>
+                      KYC: {userDetails.kycStatus || 'pending'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    Contact Information
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Email</span>
+                      <span className="font-medium">{userDetails.email || 'Not provided'}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">KYC Status</span>
-                      <Badge className={getKycStatusColor(user.kycStatus || 'pending')}>
-                        {user.kycStatus || 'pending'}
-                      </Badge>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Phone</span>
+                      <span className="font-medium">{userDetails.phoneNumber || 'Not provided'}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Joined</span>
-                      <span className="text-sm">
-                        {new Date(user.createdAt || '').toLocaleDateString()}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    Address
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Street</span>
+                      <span className="font-medium">{userDetails.address || 'Not provided'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">City</span>
+                      <span className="font-medium">{userDetails.city || 'Not provided'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">State</span>
+                      <span className="font-medium">{userDetails.state || 'Not provided'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ZIP Code</span>
+                      <span className="font-medium">{userDetails.zipCode || 'Not provided'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Country</span>
+                      <span className="font-medium">{userDetails.country || 'Not provided'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Verification Document
+                </h4>
+                {userDetails.verificationDocumentUrl ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Document Type</span>
+                      <span className="font-medium capitalize">
+                        {userDetails.verificationDocumentType?.replace(/_/g, ' ') || 'Unknown'}
                       </span>
                     </div>
+                    <div className="border rounded-lg p-4 bg-muted/50">
+                      <img 
+                        src={userDetails.verificationDocumentUrl} 
+                        alt="Verification Document"
+                        className="max-w-full h-auto rounded-lg"
+                      />
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(userDetails.verificationDocumentUrl!, '_blank')}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Full Document
+                    </Button>
                   </div>
-
-                  <div className="flex gap-2">
-                    <Dialog open={viewingUserId === user.id} onOpenChange={(open) => setViewingUserId(open ? user.id : null)}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1"
-                          data-testid={`button-view-user-${user.id}`}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-view-user">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <UserIcon className="w-5 h-5" />
-                            User Details
-                          </DialogTitle>
-                          <DialogDescription>
-                            Complete profile information for this user
-                          </DialogDescription>
-                        </DialogHeader>
-                        {isLoadingDetails ? (
-                          <div className="p-8 text-center">
-                            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                            <p className="text-muted-foreground">Loading user details...</p>
-                          </div>
-                        ) : userDetails ? (
-                          <div className="space-y-6">
-                            <div className="flex items-center gap-4">
-                              <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-2xl font-medium">
-                                {userDetails.firstName?.charAt(0) || userDetails.email?.charAt(0) || 'U'}
-                              </div>
-                              <div>
-                                <h3 className="text-xl font-semibold">
-                                  {userDetails.firstName && userDetails.lastName 
-                                    ? `${userDetails.firstName} ${userDetails.lastName}`
-                                    : 'Unknown User'
-                                  }
-                                </h3>
-                                <div className="flex gap-2 mt-1">
-                                  <Badge className={getRoleColor(userDetails.role || 'user')}>
-                                    {userDetails.role || 'user'}
-                                  </Badge>
-                                  <Badge className={getKycStatusColor(userDetails.kycStatus || 'pending')}>
-                                    KYC: {userDetails.kycStatus || 'pending'}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-
-                            <Separator />
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-4">
-                                <h4 className="font-semibold flex items-center gap-2">
-                                  <Mail className="w-4 h-4" />
-                                  Contact Information
-                                </h4>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Email</span>
-                                    <span className="font-medium">{userDetails.email || 'Not provided'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Phone</span>
-                                    <span className="font-medium">{userDetails.phoneNumber || 'Not provided'}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="space-y-4">
-                                <h4 className="font-semibold flex items-center gap-2">
-                                  <MapPin className="w-4 h-4" />
-                                  Address
-                                </h4>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Street</span>
-                                    <span className="font-medium">{userDetails.address || 'Not provided'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">City</span>
-                                    <span className="font-medium">{userDetails.city || 'Not provided'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">State</span>
-                                    <span className="font-medium">{userDetails.state || 'Not provided'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">ZIP Code</span>
-                                    <span className="font-medium">{userDetails.zipCode || 'Not provided'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Country</span>
-                                    <span className="font-medium">{userDetails.country || 'Not provided'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <Separator />
-
-                            <div className="space-y-4">
-                              <h4 className="font-semibold flex items-center gap-2">
-                                <FileText className="w-4 h-4" />
-                                Verification Document
-                              </h4>
-                              {userDetails.verificationDocumentUrl ? (
-                                <div className="space-y-3">
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Document Type</span>
-                                    <span className="font-medium capitalize">
-                                      {userDetails.verificationDocumentType?.replace(/_/g, ' ') || 'Unknown'}
-                                    </span>
-                                  </div>
-                                  <div className="border rounded-lg p-4 bg-muted/50">
-                                    <img 
-                                      src={userDetails.verificationDocumentUrl} 
-                                      alt="Verification Document"
-                                      className="max-w-full h-auto rounded-lg"
-                                    />
-                                  </div>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => window.open(userDetails.verificationDocumentUrl!, '_blank')}
-                                  >
-                                    <Eye className="w-4 h-4 mr-2" />
-                                    View Full Document
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
-                                  No verification document uploaded
-                                </div>
-                              )}
-                            </div>
-
-                            <Separator />
-
-                            <div className="space-y-4">
-                              <h4 className="font-semibold flex items-center gap-2">
-                                <Shield className="w-4 h-4" />
-                                Account Information
-                              </h4>
-                              <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Account Type</span>
-                                  <span className="font-medium capitalize">{userDetails.accountType || 'personal'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Balance</span>
-                                  <span className="font-medium">${parseFloat(userDetails.balance || '0').toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">XP Balance</span>
-                                  <span className="font-medium">{userDetails.xpBalance || 0} XP</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Created</span>
-                                  <span className="font-medium">
-                                    {userDetails.createdAt ? new Date(userDetails.createdAt).toLocaleDateString() : 'Unknown'}
-                                  </span>
-                                </div>
-                              </div>
-                              {userDetails.accountType === 'business' && (
-                                <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Business Name</span>
-                                    <span className="font-medium">{userDetails.businessName || 'Not provided'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Business Type</span>
-                                    <span className="font-medium">{userDetails.businessType || 'Not provided'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Tax ID</span>
-                                    <span className="font-medium">{userDetails.taxId || 'Not provided'}</span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="text-xs text-muted-foreground">
-                              User ID: {userDetails.id}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="p-8 text-center text-muted-foreground">
-                            Unable to load user details
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => setSelectedUser(user)}
-                          data-testid={`button-edit-user-${user.id}`}
-                        >
-                          <i className="fas fa-edit mr-1"></i>
-                          Edit
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent data-testid="dialog-edit-user">
-                        <DialogHeader>
-                          <DialogTitle>Edit User</DialogTitle>
-                          <DialogDescription>
-                            Update user role and KYC status
-                          </DialogDescription>
-                        </DialogHeader>
-                        {selectedUser && (
-                          <div className="space-y-4">
-                            <div>
-                              <label className="text-sm font-medium">User Information</label>
-                              <div className="bg-muted p-3 rounded-lg mt-1">
-                                <p className="font-medium">
-                                  {selectedUser.firstName && selectedUser.lastName 
-                                    ? `${selectedUser.firstName} ${selectedUser.lastName}`
-                                    : selectedUser.email || 'Unknown User'
-                                  }
-                                </p>
-                                <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                                <p className="text-xs text-muted-foreground">ID: {selectedUser.id}</p>
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="text-sm font-medium">Update Role</label>
-                              <div className="flex gap-2 mt-2">
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button 
-                                      variant={selectedUser.role === 'admin' ? 'default' : 'outline'}
-                                      size="sm"
-                                      disabled={updateUserRoleMutation.isPending}
-                                    >
-                                      Make Admin
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Update User Role</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to make this user an admin? This will give them full administrative privileges.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => updateUserRoleMutation.mutate({ 
-                                          userId: selectedUser.id, 
-                                          role: 'admin' 
-                                        })}
-                                      >
-                                        Confirm
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button 
-                                      variant={selectedUser.role === 'user' ? 'default' : 'outline'}
-                                      size="sm"
-                                      disabled={updateUserRoleMutation.isPending}
-                                    >
-                                      Make User
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Update User Role</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to remove admin privileges from this user?
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => updateUserRoleMutation.mutate({ 
-                                          userId: selectedUser.id, 
-                                          role: 'user' 
-                                        })}
-                                      >
-                                        Confirm
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="text-sm font-medium">Update KYC Status</label>
-                              <div className="flex gap-2 mt-2">
-                                <Button 
-                                  variant={selectedUser.kycStatus === 'approved' ? 'default' : 'outline'}
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700"
-                                  disabled={updateUserKycMutation.isPending}
-                                  onClick={() => updateUserKycMutation.mutate({ 
-                                    userId: selectedUser.id, 
-                                    kycStatus: 'approved' 
-                                  })}
-                                >
-                                  <i className="fas fa-check mr-1"></i>
-                                  Approve
-                                </Button>
-                                <Button 
-                                  variant={selectedUser.kycStatus === 'rejected' ? 'default' : 'outline'}
-                                  size="sm"
-                                  className="bg-red-600 hover:bg-red-700"
-                                  disabled={updateUserKycMutation.isPending}
-                                  onClick={() => updateUserKycMutation.mutate({ 
-                                    userId: selectedUser.id, 
-                                    kycStatus: 'rejected' 
-                                  })}
-                                >
-                                  <i className="fas fa-times mr-1"></i>
-                                  Reject
-                                </Button>
-                                <Button 
-                                  variant={selectedUser.kycStatus === 'pending' ? 'default' : 'outline'}
-                                  size="sm"
-                                  disabled={updateUserKycMutation.isPending}
-                                  onClick={() => updateUserKycMutation.mutate({ 
-                                    userId: selectedUser.id, 
-                                    kycStatus: 'pending' 
-                                  })}
-                                >
-                                  <i className="fas fa-clock mr-1"></i>
-                                  Pending
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
+                ) : (
+                  <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
+                    No verification document uploaded
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {filteredUsers?.length === 0 && (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-users text-muted-foreground text-2xl"></i>
+                )}
               </div>
-              <h4 className="font-semibold mb-2">No users found</h4>
-              <p className="text-muted-foreground">
-                Try adjusting your search or filter criteria.
-              </p>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Account Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Account Type</span>
+                    <span className="font-medium capitalize">{userDetails.accountType || 'personal'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Balance</span>
+                    <span className="font-medium">${parseFloat(userDetails.balance || '0').toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">XP Balance</span>
+                    <span className="font-medium">{userDetails.xpBalance || 0} XP</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Created</span>
+                    <span className="font-medium">
+                      {userDetails.createdAt ? new Date(userDetails.createdAt).toLocaleDateString() : 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+                {userDetails.accountType === 'business' && (
+                  <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Business Name</span>
+                      <span className="font-medium">{userDetails.businessName || 'Not provided'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Business Type</span>
+                      <span className="font-medium">{userDetails.businessType || 'Not provided'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tax ID</span>
+                      <span className="font-medium">{userDetails.taxId || 'Not provided'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                User ID: {userDetails.id}
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 text-center text-muted-foreground">
+              Unable to load user details
             </div>
           )}
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
