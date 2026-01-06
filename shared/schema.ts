@@ -38,7 +38,7 @@ export const users = pgTable("users", {
   businessName: varchar("business_name"), // For business accounts
   businessType: varchar("business_type"), // For business accounts
   taxId: varchar("tax_id"), // For business accounts
-  balance: decimal("balance", { precision: 18, scale: 8 }).default('10000'), // User's available balance for purchases
+  balance: decimal("balance", { precision: 18, scale: 8 }).default('0'), // User's available balance for purchases
   accumulatedDailyBonus: decimal("accumulated_daily_bonus", { precision: 18, scale: 8 }).default('0'), // Unredeemed daily bonuses
   xpBalance: integer("xp_balance").default(0), // User's XP balance
   kycStatus: varchar("kyc_status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),

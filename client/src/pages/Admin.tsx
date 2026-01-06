@@ -22,7 +22,7 @@ import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApproval
 import { BondManagement } from "@/components/admin/BondManagement";
 import { PaymentSettings } from "@/components/admin/PaymentSettings";
 import { Building2, Save } from "lucide-react";
-import type { Portfolio, StakingPlan, CommunityChallenge } from "@shared/schema";
+import type { Portfolio, CommunityChallenge } from "@shared/schema";
 
 export default function Admin() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -59,7 +59,7 @@ export default function Admin() {
     queryKey: ["/api/portfolios"],
   });
 
-  const { data: stakingPlans } = useQuery<StakingPlan[]>({
+  const { data: stakingPlans } = useQuery<any[]>({
     queryKey: ["/api/staking/plans"],
   });
 
