@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
@@ -33,7 +35,8 @@ import {
   UserX,
   FolderPlus,
   Check,
-  X
+  X,
+  Loader2
 } from "lucide-react";
 
 interface UserStats {
@@ -44,6 +47,14 @@ interface UserStats {
   adminUsers: number;
 }
 
+interface Transaction {
+  id: string;
+  type: string;
+  amount: string;
+  status: string;
+  createdAt: string;
+}
+
 type UserDetails = User;
 
 export function UserManagement() {
@@ -52,6 +63,17 @@ export function UserManagement() {
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [bulkAction, setBulkAction] = useState<string>("");
   const [showSearch, setShowSearch] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [showSendEmail, setShowSendEmail] = useState<string | null>(null);
+  const [showTransactions, setShowTransactions] = useState<string | null>(null);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserFirstName, setNewUserFirstName] = useState("");
+  const [newUserLastName, setNewUserLastName] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState("user");
+  const [newUserKyc, setNewUserKyc] = useState("pending");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -63,40 +85,137 @@ export function UserManagement() {
     queryKey: ["/api/admin/users/stats"],
   });
 
-  const updateUserKycMutation = useMutation({
-    mutationFn: async ({ userId, kycStatus }: { userId: string; kycStatus: string }) => {
-      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/kyc`, { kycStatus });
+  const { data: userDetails, isLoading: isLoadingDetails } = useQuery<UserDetails>({
+    queryKey: [`/api/admin/users/${viewingUserId}`],
+    enabled: !!viewingUserId,
+  });
+
+  const { data: userTransactions, isLoading: isLoadingTransactions } = useQuery<Transaction[]>({
+    queryKey: [`/api/admin/users/${showTransactions}/transactions`],
+    enabled: !!showTransactions,
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ userIds, action }: { userIds: string[]; action: string }) => {
+      const response = await apiRequest("POST", "/api/admin/users/bulk", { userIds, action });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "KYC Status Updated",
-        description: "User KYC status has been updated successfully!",
+        title: "Bulk Action Completed",
+        description: data.message,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users/stats"] });
+      setSelectedUsers([]);
+      setBulkAction("");
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "Please log in to continue",
-          variant: "destructive",
-        });
-        return;
-      }
+    onError: (error: any) => {
       toast({
-        title: "Failed to Update KYC Status",
+        title: "Failed",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const { data: userDetails, isLoading: isLoadingDetails } = useQuery<UserDetails>({
-    queryKey: [`/api/admin/users/${viewingUserId}`],
-    enabled: !!viewingUserId,
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: any) => {
+      const response = await apiRequest("POST", "/api/admin/users", userData);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User Created",
+        description: "New user has been created successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users/stats"] });
+      setShowAddUser(false);
+      resetNewUserForm();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Create User",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async ({ userId, subject, message }: { userId: string; subject: string; message: string }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/email`, { subject, message });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email Sent",
+        description: "Email has been sent successfully!",
+      });
+      setShowSendEmail(null);
+      setEmailSubject("");
+      setEmailMessage("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send Email",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const suspendUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/kyc`, { kycStatus: 'rejected' });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User Suspended",
+        description: "User has been suspended successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Suspend User",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const activateUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/kyc`, { kycStatus: 'approved' });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User Activated",
+        description: "User has been activated successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Activate User",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetNewUserForm = () => {
+    setNewUserEmail("");
+    setNewUserFirstName("");
+    setNewUserLastName("");
+    setNewUserPassword("");
+    setNewUserRole("user");
+    setNewUserKyc("pending");
+  };
 
   const filteredUsers = users?.filter((user) => {
     const matchesSearch = 
@@ -161,12 +280,42 @@ export function UserManagement() {
 
   const handleBulkApply = () => {
     if (!bulkAction || selectedUsers.length === 0) return;
-    toast({
-      title: "Bulk Action",
-      description: `Applied "${bulkAction}" to ${selectedUsers.length} users`,
+    bulkUpdateMutation.mutate({ userIds: selectedUsers, action: bulkAction });
+  };
+
+  const handleExport = () => {
+    window.open('/api/admin/users/export', '_blank');
+  };
+
+  const handleCreateUser = () => {
+    if (!newUserEmail) {
+      toast({
+        title: "Error",
+        description: "Email is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    createUserMutation.mutate({
+      email: newUserEmail,
+      firstName: newUserFirstName || undefined,
+      lastName: newUserLastName || undefined,
+      password: newUserPassword || undefined,
+      role: newUserRole,
+      kycStatus: newUserKyc,
     });
-    setBulkAction("");
-    setSelectedUsers([]);
+  };
+
+  const handleSendEmail = () => {
+    if (!showSendEmail || !emailSubject || !emailMessage) {
+      toast({
+        title: "Error",
+        description: "Subject and message are required",
+        variant: "destructive",
+      });
+      return;
+    }
+    sendEmailMutation.mutate({ userId: showSendEmail, subject: emailSubject, message: emailMessage });
   };
 
   if (isLoading) {
@@ -196,11 +345,15 @@ export function UserManagement() {
             <Users className="w-4 h-4" />
             Manage Groups
           </Button>
-          <Button variant="outline" className="gap-2" data-testid="button-export">
+          <Button variant="outline" className="gap-2" onClick={handleExport} data-testid="button-export">
             <Download className="w-4 h-4" />
             Export
           </Button>
-          <Button className="gap-2 bg-[#22c55e] hover:bg-[#16a34a] text-white" data-testid="button-add-user">
+          <Button 
+            className="gap-2 bg-[#22c55e] hover:bg-[#16a34a] text-white" 
+            onClick={() => setShowAddUser(true)}
+            data-testid="button-add-user"
+          >
             <UserPlus className="w-4 h-4" />
             Add User
           </Button>
@@ -219,18 +372,22 @@ export function UserManagement() {
               <SelectItem value="reject_kyc">Reject KYC</SelectItem>
               <SelectItem value="suspend">Suspend</SelectItem>
               <SelectItem value="activate">Activate</SelectItem>
-              <SelectItem value="delete">Delete</SelectItem>
             </SelectContent>
           </Select>
           <Button 
             variant="secondary" 
             className="bg-[#e4fe7b] text-black hover:bg-[#d4ee6b]"
             onClick={handleBulkApply}
-            disabled={!bulkAction || selectedUsers.length === 0}
+            disabled={!bulkAction || selectedUsers.length === 0 || bulkUpdateMutation.isPending}
             data-testid="button-apply-bulk"
           >
-            Apply
+            {bulkUpdateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
           </Button>
+          {selectedUsers.length > 0 && (
+            <span className="text-sm text-muted-foreground">
+              {selectedUsers.length} selected
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -358,11 +515,11 @@ export function UserManagement() {
                         <Eye className="w-4 h-4 mr-2" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem data-testid={`menu-transaction-${user.id}`}>
+                      <DropdownMenuItem onClick={() => setShowTransactions(user.id)} data-testid={`menu-transaction-${user.id}`}>
                         <CreditCard className="w-4 h-4 mr-2" />
                         Transaction
                       </DropdownMenuItem>
-                      <DropdownMenuItem data-testid={`menu-send-email-${user.id}`}>
+                      <DropdownMenuItem onClick={() => setShowSendEmail(user.id)} data-testid={`menu-send-email-${user.id}`}>
                         <Send className="w-4 h-4 mr-2" />
                         Send an Email
                       </DropdownMenuItem>
@@ -370,13 +527,25 @@ export function UserManagement() {
                         <Key className="w-4 h-4 mr-2" />
                         Reset Password
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-red-600"
-                        data-testid={`menu-suspend-${user.id}`}
-                      >
-                        <UserX className="w-4 h-4 mr-2" />
-                        Suspend User
-                      </DropdownMenuItem>
+                      {user.kycStatus === 'approved' ? (
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={() => suspendUserMutation.mutate(user.id)}
+                          data-testid={`menu-suspend-${user.id}`}
+                        >
+                          <UserX className="w-4 h-4 mr-2" />
+                          Suspend User
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem 
+                          className="text-green-600"
+                          onClick={() => activateUserMutation.mutate(user.id)}
+                          data-testid={`menu-activate-${user.id}`}
+                        >
+                          <Check className="w-4 h-4 mr-2" />
+                          Activate User
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem data-testid={`menu-assign-group-${user.id}`}>
                         <FolderPlus className="w-4 h-4 mr-2" />
                         Assign to Group
@@ -395,6 +564,199 @@ export function UserManagement() {
           </div>
         )}
       </div>
+
+      {/* Add User Dialog */}
+      <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+        <DialogContent className="max-w-md" data-testid="dialog-add-user">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              Add New User
+            </DialogTitle>
+            <DialogDescription>
+              Create a new user account
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="user@example.com"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                data-testid="input-new-user-email"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  placeholder="John"
+                  value={newUserFirstName}
+                  onChange={(e) => setNewUserFirstName(e.target.value)}
+                  data-testid="input-new-user-firstname"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  placeholder="Doe"
+                  value={newUserLastName}
+                  onChange={(e) => setNewUserLastName(e.target.value)}
+                  data-testid="input-new-user-lastname"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                data-testid="input-new-user-password"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select value={newUserRole} onValueChange={setNewUserRole}>
+                  <SelectTrigger data-testid="select-new-user-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>KYC Status</Label>
+                <Select value={newUserKyc} onValueChange={setNewUserKyc}>
+                  <SelectTrigger data-testid="select-new-user-kyc">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddUser(false)}>Cancel</Button>
+            <Button 
+              onClick={handleCreateUser}
+              disabled={createUserMutation.isPending}
+              className="bg-[#22c55e] hover:bg-[#16a34a]"
+              data-testid="button-create-user"
+            >
+              {createUserMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Create User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Email Dialog */}
+      <Dialog open={!!showSendEmail} onOpenChange={(open) => !open && setShowSendEmail(null)}>
+        <DialogContent className="max-w-md" data-testid="dialog-send-email">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5" />
+              Send Email
+            </DialogTitle>
+            <DialogDescription>
+              Send an email to this user
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject *</Label>
+              <Input
+                id="subject"
+                placeholder="Enter subject"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                data-testid="input-email-subject"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="message">Message *</Label>
+              <Textarea
+                id="message"
+                placeholder="Enter your message..."
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                rows={6}
+                data-testid="input-email-message"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSendEmail(null)}>Cancel</Button>
+            <Button 
+              onClick={handleSendEmail}
+              disabled={sendEmailMutation.isPending}
+              data-testid="button-send-email"
+            >
+              {sendEmailMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transactions Dialog */}
+      <Dialog open={!!showTransactions} onOpenChange={(open) => !open && setShowTransactions(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="dialog-transactions">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              User Transactions
+            </DialogTitle>
+            <DialogDescription>
+              View all transactions for this user
+            </DialogDescription>
+          </DialogHeader>
+          {isLoadingTransactions ? (
+            <div className="p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+              <p className="text-muted-foreground">Loading transactions...</p>
+            </div>
+          ) : userTransactions && userTransactions.length > 0 ? (
+            <div className="space-y-3">
+              {userTransactions.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium capitalize">{tx.type.replace('_', ' ')}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(tx.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium">${parseFloat(tx.amount || '0').toFixed(2)}</div>
+                    <Badge className={tx.status === 'approved' || tx.status === 'completed' ? 'bg-green-100 text-green-800' : tx.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}>
+                      {tx.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 text-center text-muted-foreground">
+              No transactions found
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* User Details Dialog */}
       <Dialog open={!!viewingUserId} onOpenChange={(open) => !open && setViewingUserId(null)}>

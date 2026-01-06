@@ -2055,6 +2055,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk update users
+  app.post('/api/admin/users/bulk', adminAuth, async (req: any, res) => {
+    try {
+      const { userIds, action } = req.body;
+      
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ message: "No users selected" });
+      }
+      
+      if (!['approve_kyc', 'reject_kyc', 'suspend', 'activate'].includes(action)) {
+        return res.status(400).json({ message: "Invalid action" });
+      }
+      
+      let updatedCount = 0;
+      for (const userId of userIds) {
+        try {
+          if (action === 'approve_kyc') {
+            await storage.updateUserKycStatus(userId, 'approved');
+          } else if (action === 'reject_kyc') {
+            await storage.updateUserKycStatus(userId, 'rejected');
+          } else if (action === 'suspend') {
+            await storage.updateUserKycStatus(userId, 'rejected');
+          } else if (action === 'activate') {
+            await storage.updateUserKycStatus(userId, 'approved');
+          }
+          updatedCount++;
+        } catch (e) {
+          console.error(`Failed to update user ${userId}:`, e);
+        }
+      }
+      
+      res.json({ message: `Updated ${updatedCount} users`, count: updatedCount });
+    } catch (error) {
+      console.error("Error bulk updating users:", error);
+      res.status(500).json({ message: "Failed to bulk update users" });
+    }
+  });
+
+  // Create user (admin)
+  app.post('/api/admin/users', adminAuth, async (req: any, res) => {
+    try {
+      const { email, firstName, lastName, password, role, kycStatus } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+      
+      const bcrypt = await import('bcryptjs');
+      const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+      
+      const { nanoid } = await import('nanoid');
+      const userId = nanoid();
+      
+      const newUser = await storage.createUser({
+        id: userId,
+        email,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        passwordHash: hashedPassword,
+        authType: 'password',
+        role: role || 'user',
+        kycStatus: kycStatus || 'pending',
+        accountType: 'personal',
+        balance: '0',
+        xpBalance: 0,
+      });
+      
+      res.json(newUser);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Send email to user
+  app.post('/api/admin/users/:id/email', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { subject, message } = req.body;
+      
+      if (!subject || !message) {
+        return res.status(400).json({ message: "Subject and message are required" });
+      }
+      
+      const user = await storage.getUser(id);
+      if (!user || !user.email) {
+        return res.status(404).json({ message: "User not found or no email" });
+      }
+      
+      const { emailService } = await import('./email');
+      const result = await emailService.sendEmail({
+        to: user.email,
+        subject,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #1a1a1a; margin: 0;">Reflux Capital</h1>
+            </div>
+            <p style="color: #333; font-size: 16px; line-height: 1.6;">
+              Hi ${user.firstName || 'there'},
+            </p>
+            <div style="color: #333; font-size: 16px; line-height: 1.6;">
+              ${message.replace(/\n/g, '<br>')}
+            </div>
+            <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
+              <p style="color: #999; font-size: 12px; margin: 0;">
+                © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
+              </p>
+            </div>
+          </div>
+        `,
+      });
+      
+      if (result.success) {
+        res.json({ message: "Email sent successfully" });
+      } else {
+        res.status(500).json({ message: result.error || "Failed to send email" });
+      }
+    } catch (error) {
+      console.error("Error sending email to user:", error);
+      res.status(500).json({ message: "Failed to send email" });
+    }
+  });
+
+  // Get user transactions/deposits
+  app.get('/api/admin/users/:id/transactions', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const deposits = await storage.getUserDeposits(id);
+      const stockPurchases = await storage.getUserStockPurchases(id);
+      
+      const transactions = [
+        ...deposits.map((d: any) => ({ ...d, type: 'deposit' })),
+        ...stockPurchases.map((s: any) => ({ ...s, type: 'stock_purchase' })),
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching user transactions:", error);
+      res.status(500).json({ message: "Failed to fetch transactions" });
+    }
+  });
+
+  // Export users as CSV
+  app.get('/api/admin/users/export', adminAuth, async (req: any, res) => {
+    try {
+      const users = await storage.getUsers();
+      
+      const csv = [
+        ['ID', 'Email', 'First Name', 'Last Name', 'Role', 'KYC Status', 'Balance', 'Account Type', 'Created At'].join(','),
+        ...users.map((u: any) => [
+          u.id,
+          u.email || '',
+          u.firstName || '',
+          u.lastName || '',
+          u.role || 'user',
+          u.kycStatus || 'pending',
+          u.balance || '0',
+          u.accountType || 'personal',
+          u.createdAt || '',
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=users.csv');
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting users:", error);
+      res.status(500).json({ message: "Failed to export users" });
+    }
+  });
+
   // Admin Challenge Management Routes
   app.post('/api/admin/challenges', adminAuth, async (req: any, res) => {
     try {
