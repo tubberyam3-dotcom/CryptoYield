@@ -249,7 +249,7 @@ export const deposits = pgTable("deposits", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
   depositMethod: varchar("deposit_method", { enum: ['crypto', 'bank_transfer', 'card_payment', 'deposit_coupon'] }).notNull(),
-  status: varchar("status", { enum: ['pending', 'completed', 'failed'] }).default('pending'),
+  status: varchar("status", { enum: ['pending', 'completed', 'failed', 'cancelled'] }).default('pending'),
   transactionId: varchar("transaction_id"), // External transaction ID (Stripe, bank, etc.)
   couponCode: varchar("coupon_code"), // For deposit coupon method
   metadata: jsonb("metadata"), // Additional data (crypto address, bank details, etc.)
@@ -263,7 +263,7 @@ export const withdrawals = pgTable("withdrawals", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
   withdrawMethod: varchar("withdraw_method", { enum: ['crypto', 'wire_transfer', 'merchant_pay'] }).notNull(),
-  status: varchar("status", { enum: ['pending', 'completed', 'rejected'] }).default('pending'),
+  status: varchar("status", { enum: ['pending', 'completed', 'rejected', 'cancelled'] }).default('pending'),
   destinationAddress: varchar("destination_address"), // Crypto address or bank account
   metadata: jsonb("metadata"), // Additional data
   createdAt: timestamp("created_at").defaultNow(),

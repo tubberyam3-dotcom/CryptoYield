@@ -22,6 +22,7 @@ import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApproval
 import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { RewardsManagement } from "@/components/admin/RewardsManagement";
 import { EmailSettings } from "@/components/admin/EmailSettings";
+import { TransactionManagement } from "@/components/admin/TransactionManagement";
 import type { Portfolio, CommunityChallenge, User } from "@shared/schema";
 import { 
   CheckCircle, 
@@ -38,7 +39,8 @@ import {
   X,
   ChevronRight,
   LogOut,
-  Mail
+  Mail,
+  ArrowLeftRight
 } from "lucide-react";
 
 interface AdminStats {
@@ -71,6 +73,7 @@ interface SystemHealth {
 
 const navItems = [
   { id: "approvals", label: "Approvals", icon: CheckCircle },
+  { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
   { id: "rewards", label: "Rewards", icon: Gift },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "users", label: "Users", icon: Users },
@@ -312,6 +315,17 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        );
+
+      case "transactions":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Transactions</h2>
+              <p className="text-muted-foreground">View and manage deposits and withdrawals</p>
+            </div>
+            <TransactionManagement />
           </div>
         );
 

@@ -188,6 +188,7 @@ export interface IStorage {
   processDepositCouponDeposit(userId: string, couponCode: string): Promise<Deposit>;
   approveDeposit(depositId: string, adminId: string): Promise<Deposit>;
   rejectDeposit(depositId: string, adminId: string): Promise<Deposit>;
+  cancelDeposit(depositId: string, adminId: string): Promise<Deposit>;
   getAllDeposits(): Promise<(Deposit & { user: { email: string; firstName: string; lastName: string } })[]>;
   
   // Withdrawal operations
@@ -196,6 +197,7 @@ export interface IStorage {
   processWithdrawal(userId: string, amount: string, withdrawMethod: 'crypto' | 'wire_transfer' | 'merchant_pay', destinationAddress: string, metadata?: any): Promise<Withdrawal>;
   approveWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
   rejectWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
+  cancelWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
   getAllWithdrawals(): Promise<(Withdrawal & { user: { email: string; firstName: string; lastName: string } })[]>;
   
   // Analytics
@@ -1858,6 +1860,57 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db.update(withdrawals)
       .set({
         status: 'rejected',
+        processedAt: new Date(),
+      })
+      .where(eq(withdrawals.id, withdrawalId))
+      .returning();
+
+    return updated;
+  }
+
+  async cancelDeposit(depositId: string, adminId: string): Promise<Deposit> {
+    const [deposit] = await db.select().from(deposits).where(eq(deposits.id, depositId));
+    
+    if (!deposit) {
+      throw new Error('Deposit not found');
+    }
+
+    if (deposit.status !== 'pending') {
+      throw new Error('Only pending deposits can be cancelled');
+    }
+
+    const [updated] = await db.update(deposits)
+      .set({
+        status: 'cancelled',
+        completedAt: new Date(),
+      })
+      .where(eq(deposits.id, depositId))
+      .returning();
+
+    return updated;
+  }
+
+  async cancelWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal> {
+    const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.id, withdrawalId));
+    
+    if (!withdrawal) {
+      throw new Error('Withdrawal not found');
+    }
+
+    if (withdrawal.status !== 'pending') {
+      throw new Error('Only pending withdrawals can be cancelled');
+    }
+
+    await db.update(users)
+      .set({ 
+        balance: sql`${users.balance} + ${withdrawal.amount}`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, withdrawal.userId));
+
+    const [updated] = await db.update(withdrawals)
+      .set({
+        status: 'cancelled',
         processedAt: new Date(),
       })
       .where(eq(withdrawals.id, withdrawalId))

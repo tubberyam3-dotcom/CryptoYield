@@ -2806,6 +2806,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/deposits/:id/cancel", adminAuth, async (req, res) => {
+    try {
+      const adminId = req.user?.claims?.sub || '';
+      const deposit = await storage.cancelDeposit(req.params.id, adminId);
+      res.json({ success: true, deposit, message: "Deposit cancelled successfully" });
+    } catch (error: any) {
+      console.error("Error cancelling deposit:", error);
+      res.status(400).json({ message: error.message || "Failed to cancel deposit" });
+    }
+  });
+
+  // Admin Withdrawal Management
+  app.get("/api/admin/withdrawals", adminAuth, async (req, res) => {
+    try {
+      const withdrawals = await storage.getAllWithdrawals();
+      res.json(withdrawals);
+    } catch (error: any) {
+      console.error("Error fetching all withdrawals:", error);
+      res.status(500).json({ message: "Failed to fetch withdrawals" });
+    }
+  });
+
+  app.post("/api/admin/withdrawals/:id/approve", adminAuth, async (req, res) => {
+    try {
+      const adminId = req.user?.claims?.sub || '';
+      const withdrawal = await storage.approveWithdrawal(req.params.id, adminId);
+      res.json({ success: true, withdrawal, message: "Withdrawal approved successfully" });
+    } catch (error: any) {
+      console.error("Error approving withdrawal:", error);
+      res.status(400).json({ message: error.message || "Failed to approve withdrawal" });
+    }
+  });
+
+  app.post("/api/admin/withdrawals/:id/reject", adminAuth, async (req, res) => {
+    try {
+      const adminId = req.user?.claims?.sub || '';
+      const withdrawal = await storage.rejectWithdrawal(req.params.id, adminId);
+      res.json({ success: true, withdrawal, message: "Withdrawal rejected successfully" });
+    } catch (error: any) {
+      console.error("Error rejecting withdrawal:", error);
+      res.status(400).json({ message: error.message || "Failed to reject withdrawal" });
+    }
+  });
+
+  app.post("/api/admin/withdrawals/:id/cancel", adminAuth, async (req, res) => {
+    try {
+      const adminId = req.user?.claims?.sub || '';
+      const withdrawal = await storage.cancelWithdrawal(req.params.id, adminId);
+      res.json({ success: true, withdrawal, message: "Withdrawal cancelled successfully" });
+    } catch (error: any) {
+      console.error("Error cancelling withdrawal:", error);
+      res.status(400).json({ message: error.message || "Failed to cancel withdrawal" });
+    }
+  });
+
   // Withdrawal Endpoints
   app.post("/api/withdrawals", express.json(), enhancedAuth, async (req, res) => {
     try {
