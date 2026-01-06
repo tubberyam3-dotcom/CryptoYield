@@ -871,14 +871,33 @@ export function UserManagement() {
                         className="max-w-full h-auto rounded-lg"
                       />
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open(userDetails.verificationDocumentUrl!, '_blank')}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Full Document
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => window.open(userDetails.verificationDocumentUrl!, '_blank')}
+                        data-testid="button-view-document"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = userDetails.verificationDocumentUrl!;
+                          link.download = `verification-${userDetails.firstName || 'user'}-${userDetails.lastName || userDetails.id}.${userDetails.verificationDocumentUrl!.split('.').pop() || 'pdf'}`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        data-testid="button-download-document"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
