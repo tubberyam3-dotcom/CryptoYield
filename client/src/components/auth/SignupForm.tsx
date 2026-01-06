@@ -685,7 +685,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
         </div>
         {step !== "account-type" && step !== "success" && (
           <p className="text-xs text-muted-foreground">
-            Step {currentStepIndex} of {steps.length - 2}
+            Step {currentStepIndex} of {steps.length - 1}
           </p>
         )}
       </CardHeader>
