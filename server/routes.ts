@@ -3092,13 +3092,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email Settings and Notifications
+  // Email Settings and Notifications (Resend API)
   const emailConfigSchema = z.object({
-    email_smtp_host: z.string().optional(),
-    email_smtp_port: z.string().optional(),
-    email_smtp_secure: z.enum(['true', 'false']).optional(),
-    email_smtp_user: z.string().optional(),
-    email_smtp_pass: z.string().optional(),
     email_from_address: z.string().email().optional().or(z.literal('')),
     email_from_name: z.string().optional(),
     email_welcome_enabled: z.enum(['true', 'false']).optional(),
@@ -3110,11 +3105,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/email/config", adminAuth, async (req, res) => {
     try {
       const settings = await storage.getAllSettings();
-      const emailSettings: Record<string, string | boolean> = {};
+      const emailSettings: Record<string, string> = {};
       
       const emailKeys = [
-        'email_smtp_host', 'email_smtp_port', 'email_smtp_secure',
-        'email_smtp_user', 'email_from_address', 'email_from_name',
+        'email_from_address', 'email_from_name',
         'email_welcome_enabled', 'email_deposit_enabled', 
         'email_stock_enabled', 'email_rewards_enabled'
       ];
@@ -3124,9 +3118,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           emailSettings[setting.settingKey] = setting.settingValue;
         }
       }
-      
-      const hasPassword = settings.some(s => s.settingKey === 'email_smtp_pass' && s.settingValue);
-      emailSettings.has_smtp_password = hasPassword;
       
       res.json(emailSettings);
     } catch (error: any) {
@@ -3151,10 +3142,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedSettings = validationResult.data;
       
       for (const [key, value] of Object.entries(validatedSettings)) {
-        if (key === 'email_smtp_pass' && (!value || value === '')) {
-          continue;
-        }
-        
         if (value !== undefined) {
           await storage.setSetting({
             key,
@@ -3168,22 +3155,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error saving email config:", error);
       res.status(500).json({ message: "Failed to save email configuration" });
-    }
-  });
-
-  app.post("/api/admin/email/test", adminAuth, async (req: any, res) => {
-    try {
-      const { emailService } = await import('./email');
-      const result = await emailService.testConnection();
-      
-      if (result.success) {
-        res.json({ success: true, message: "SMTP connection successful" });
-      } else {
-        res.status(400).json({ success: false, message: result.error });
-      }
-    } catch (error: any) {
-      console.error("Error testing email:", error);
-      res.status(500).json({ success: false, message: error.message });
     }
   });
 

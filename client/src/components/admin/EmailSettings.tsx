@@ -4,45 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Mail, Server, Send, CheckCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Mail, Send, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface EmailConfig {
-  email_smtp_host?: string;
-  email_smtp_port?: string;
-  email_smtp_secure?: string;
-  email_smtp_user?: string;
-  email_smtp_pass?: string;
   email_from_address?: string;
   email_from_name?: string;
   email_welcome_enabled?: string;
   email_deposit_enabled?: string;
   email_stock_enabled?: string;
   email_rewards_enabled?: string;
-  has_smtp_password?: boolean;
 }
 
 export function EmailSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showPassword, setShowPassword] = useState(false);
   const [testEmail, setTestEmail] = useState("");
-  const [passwordChanged, setPasswordChanged] = useState(false);
   
   const [formData, setFormData] = useState<EmailConfig>({
-    email_smtp_host: "",
-    email_smtp_port: "587",
-    email_smtp_secure: "false",
-    email_smtp_user: "",
-    email_smtp_pass: "",
-    email_from_address: "",
+    email_from_address: "info@refluxcapital.com",
     email_from_name: "Reflux Capital",
     email_welcome_enabled: "true",
     email_deposit_enabled: "true",
     email_stock_enabled: "true",
-    email_rewards_enabled: "false",
+    email_rewards_enabled: "true",
   });
 
   const { data: config, isLoading } = useQuery<EmailConfig>({
@@ -54,9 +42,7 @@ export function EmailSettings() {
       setFormData((prev) => ({
         ...prev,
         ...config,
-        email_smtp_pass: "",
       }));
-      setPasswordChanged(false);
     }
   }, [config]);
 
@@ -76,26 +62,6 @@ export function EmailSettings() {
       toast({
         title: "Failed to Save",
         description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const testConnectionMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/admin/email/test", {});
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Connection Successful",
-        description: "SMTP connection verified successfully.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Connection Failed",
-        description: error.message || "Unable to connect to SMTP server",
         variant: "destructive",
       });
     },
@@ -123,16 +89,7 @@ export function EmailSettings() {
   });
 
   const handleSave = () => {
-    const dataToSave = { ...formData };
-    if (!passwordChanged || !formData.email_smtp_pass) {
-      delete dataToSave.email_smtp_pass;
-    }
-    delete (dataToSave as any).has_smtp_password;
-    saveConfigMutation.mutate(dataToSave);
-  };
-
-  const handleTestConnection = () => {
-    testConnectionMutation.mutate();
+    saveConfigMutation.mutate(formData);
   };
 
   const handleSendTestEmail = () => {
@@ -150,7 +107,7 @@ export function EmailSettings() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -159,115 +116,36 @@ export function EmailSettings() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Server className="h-5 w-5" />
-            SMTP Configuration
-          </CardTitle>
-          <CardDescription>
-            Configure your email server settings for sending notifications
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Email Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure email settings for sending notifications via Resend API
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Resend API Connected
+            </Badge>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="smtp-host">SMTP Host</Label>
+              <Label htmlFor="from-address">From Email Address</Label>
               <Input
-                id="smtp-host"
-                placeholder="smtp.gmail.com"
-                value={formData.email_smtp_host || ""}
-                onChange={(e) => setFormData({ ...formData, email_smtp_host: e.target.value })}
-                data-testid="input-smtp-host"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="smtp-port">SMTP Port</Label>
-              <Input
-                id="smtp-port"
-                placeholder="587"
-                value={formData.email_smtp_port || ""}
-                onChange={(e) => setFormData({ ...formData, email_smtp_port: e.target.value })}
-                data-testid="input-smtp-port"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="smtp-user">SMTP Username</Label>
-              <Input
-                id="smtp-user"
-                placeholder="your-email@gmail.com"
-                value={formData.email_smtp_user || ""}
-                onChange={(e) => setFormData({ ...formData, email_smtp_user: e.target.value })}
-                data-testid="input-smtp-user"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="smtp-pass">
-                SMTP Password
-                {config?.has_smtp_password && !passwordChanged && (
-                  <span className="ml-2 text-xs text-green-600">(configured)</span>
-                )}
-              </Label>
-              <div className="relative">
-                <Input
-                  id="smtp-pass"
-                  type={showPassword ? "text" : "password"}
-                  placeholder={config?.has_smtp_password && !passwordChanged ? "••••••••••••" : "Enter SMTP password"}
-                  value={formData.email_smtp_pass || ""}
-                  onChange={(e) => {
-                    setFormData({ ...formData, email_smtp_pass: e.target.value });
-                    setPasswordChanged(true);
-                  }}
-                  data-testid="input-smtp-pass"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="smtp-secure"
-              checked={formData.email_smtp_secure === "true"}
-              onCheckedChange={(checked) => 
-                setFormData({ ...formData, email_smtp_secure: checked ? "true" : "false" })
-              }
-            />
-            <Label htmlFor="smtp-secure">Use SSL/TLS (secure connection)</Label>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Sender Information
-          </CardTitle>
-          <CardDescription>
-            Configure how your emails appear to recipients
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="from-email">From Email Address</Label>
-              <Input
-                id="from-email"
-                placeholder="noreply@refluxcapital.com"
+                id="from-address"
+                placeholder="info@refluxcapital.com"
                 value={formData.email_from_address || ""}
                 onChange={(e) => setFormData({ ...formData, email_from_address: e.target.value })}
-                data-testid="input-from-email"
+                data-testid="input-from-address"
               />
+              <p className="text-xs text-muted-foreground">
+                Must be from a verified domain in Resend
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="from-name">From Name</Label>
@@ -280,70 +158,21 @@ export function EmailSettings() {
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" />
-            Email Notifications
-          </CardTitle>
-          <CardDescription>
-            Choose which email notifications to send to users
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div>
-              <p className="font-medium">Welcome Emails</p>
-              <p className="text-sm text-muted-foreground">Send welcome email when users register</p>
-            </div>
-            <Switch
-              checked={formData.email_welcome_enabled === "true"}
-              onCheckedChange={(checked) => 
-                setFormData({ ...formData, email_welcome_enabled: checked ? "true" : "false" })
-              }
-            />
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div>
-              <p className="font-medium">Deposit Notifications</p>
-              <p className="text-sm text-muted-foreground">Notify users when deposits are approved or rejected</p>
-            </div>
-            <Switch
-              checked={formData.email_deposit_enabled === "true"}
-              onCheckedChange={(checked) => 
-                setFormData({ ...formData, email_deposit_enabled: checked ? "true" : "false" })
-              }
-            />
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div>
-              <p className="font-medium">Stock Purchase Updates</p>
-              <p className="text-sm text-muted-foreground">Notify users when stock purchases are approved or rejected</p>
-            </div>
-            <Switch
-              checked={formData.email_stock_enabled === "true"}
-              onCheckedChange={(checked) => 
-                setFormData({ ...formData, email_stock_enabled: checked ? "true" : "false" })
-              }
-            />
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div>
-              <p className="font-medium">Daily Reward Notifications</p>
-              <p className="text-sm text-muted-foreground">Send email when users claim daily rewards</p>
-            </div>
-            <Switch
-              checked={formData.email_rewards_enabled === "true"}
-              onCheckedChange={(checked) => 
-                setFormData({ ...formData, email_rewards_enabled: checked ? "true" : "false" })
-              }
-            />
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleSave} 
+              disabled={saveConfigMutation.isPending}
+              className="bg-[#e4fe7b] text-black hover:bg-[#d4ee6b]"
+              data-testid="button-save-email-settings"
+            >
+              {saveConfigMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
+              Save Settings
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -352,16 +181,86 @@ export function EmailSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Send className="h-5 w-5" />
-            Test Email
+            Email Notifications
           </CardTitle>
           <CardDescription>
-            Test your email configuration by sending a test email
+            Enable or disable different types of email notifications
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+            <div>
+              <p className="font-medium">Welcome Emails</p>
+              <p className="text-sm text-muted-foreground">Send welcome email when new users register</p>
+            </div>
+            <Switch
+              checked={formData.email_welcome_enabled === "true"}
+              onCheckedChange={(checked) => 
+                setFormData({ ...formData, email_welcome_enabled: checked ? "true" : "false" })
+              }
+              data-testid="switch-welcome-email"
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+            <div>
+              <p className="font-medium">Deposit Notifications</p>
+              <p className="text-sm text-muted-foreground">Notify users when deposits are approved</p>
+            </div>
+            <Switch
+              checked={formData.email_deposit_enabled === "true"}
+              onCheckedChange={(checked) => 
+                setFormData({ ...formData, email_deposit_enabled: checked ? "true" : "false" })
+              }
+              data-testid="switch-deposit-email"
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+            <div>
+              <p className="font-medium">Stock Purchase Notifications</p>
+              <p className="text-sm text-muted-foreground">Notify users when stock purchases are approved</p>
+            </div>
+            <Switch
+              checked={formData.email_stock_enabled === "true"}
+              onCheckedChange={(checked) => 
+                setFormData({ ...formData, email_stock_enabled: checked ? "true" : "false" })
+              }
+              data-testid="switch-stock-email"
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+            <div>
+              <p className="font-medium">Rewards Notifications</p>
+              <p className="text-sm text-muted-foreground">Notify users about XP rewards and bonuses</p>
+            </div>
+            <Switch
+              checked={formData.email_rewards_enabled === "true"}
+              onCheckedChange={(checked) => 
+                setFormData({ ...formData, email_rewards_enabled: checked ? "true" : "false" })
+              }
+              data-testid="switch-rewards-email"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5" />
+            Test Email
+          </CardTitle>
+          <CardDescription>
+            Send a test email to verify your configuration is working
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <div className="flex gap-4">
             <Input
-              placeholder="Enter email address to test"
+              type="email"
+              placeholder="recipient@example.com"
               value={testEmail}
               onChange={(e) => setTestEmail(e.target.value)}
               className="flex-1"
@@ -370,34 +269,18 @@ export function EmailSettings() {
             <Button
               onClick={handleSendTestEmail}
               disabled={sendTestEmailMutation.isPending || !testEmail}
-              data-testid="button-send-test"
+              data-testid="button-send-test-email"
             >
-              {sendTestEmailMutation.isPending ? "Sending..." : "Send Test"}
-            </Button>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleTestConnection}
-              disabled={testConnectionMutation.isPending}
-              data-testid="button-test-connection"
-            >
-              {testConnectionMutation.isPending ? "Testing..." : "Test SMTP Connection"}
+              {sendTestEmailMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Send Test
             </Button>
           </div>
         </CardContent>
       </Card>
-
-      <div className="flex justify-end gap-4">
-        <Button
-          onClick={handleSave}
-          disabled={saveConfigMutation.isPending}
-          className="min-w-[120px]"
-          data-testid="button-save-email-config"
-        >
-          {saveConfigMutation.isPending ? "Saving..." : "Save Settings"}
-        </Button>
-      </div>
     </div>
   );
 }
