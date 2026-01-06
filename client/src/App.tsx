@@ -97,7 +97,10 @@ function Router() {
         
         {/* Regular user routes */}
         {!isAuthenticated ? (
-          <Route path="/" component={Landing} />
+          <>
+            <Route path="/" component={Landing} />
+            <Route path="/:rest*" component={Landing} />
+          </>
         ) : !isKycApproved ? (
           <>
             <Route path="/" component={PendingApproval} />
