@@ -75,7 +75,9 @@ class EmailService {
       });
 
       if (error) {
+        const apiKeyPrefix = process.env.RESEND_API_KEY?.substring(0, 12) || 'unknown';
         console.error('Error sending email with custom domain:', error);
+        console.error('API Key prefix used:', apiKeyPrefix);
         
         if (customFromEmail && customFromEmail !== 'onboarding@resend.dev') {
           console.log('Retrying with Resend test domain (onboarding@resend.dev)...');
@@ -89,14 +91,14 @@ class EmailService {
           
           if (retryError) {
             console.error('Error sending email with test domain:', retryError);
-            return { success: false, error: `Custom domain failed: ${error.message}. Test domain also failed: ${retryError.message}. Note: With Resend free tier, you can only send to your registered email address.` };
+            return { success: false, error: `Failed with API key: ${apiKeyPrefix}... Error: ${error.message}. Note: If using an old API key created before domain verification, create a new key in Resend dashboard.` };
           }
           
           console.log('Email sent successfully using Resend test domain');
           return { success: true, messageId: retryData?.id };
         }
         
-        return { success: false, error: error.message };
+        return { success: false, error: `Failed with API key: ${apiKeyPrefix}... Error: ${error.message}` };
       }
 
       console.log('Email sent successfully:', data?.id);
