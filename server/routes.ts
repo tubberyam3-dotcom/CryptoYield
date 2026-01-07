@@ -565,6 +565,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Forgot Password - Request password reset email
+  app.post('/api/auth/forgot-password', async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email.toLowerCase().trim());
+      
+      // Always return success to prevent email enumeration
+      if (!user) {
+        return res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+      }
+
+      // Only allow password reset for password-based auth users
+      if (user.authType !== 'password') {
+        return res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+      }
+
+      // Generate secure reset token
+      const crypto = await import('crypto');
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+      // Save token to database
+      await storage.setPasswordResetToken(user.id, resetToken, expiry);
+
+      // Send password reset email
+      const { emailService } = await import('./email');
+      await emailService.sendPasswordResetEmail(user.email!, user.firstName || 'User', resetToken);
+
+      res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Failed to process password reset request" });
+    }
+  });
+
+  // Reset Password - Actually reset the password with token
+  app.post('/api/auth/reset-password', async (req: any, res) => {
+    try {
+      const { token, password, confirmPassword } = req.body;
+      
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: "Reset token is required" });
+      }
+      
+      if (!password || typeof password !== 'string' || password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      
+      if (password !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+
+      // Find user by reset token (also checks expiry)
+      const user = await storage.getUserByResetToken(token);
+      
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired reset link. Please request a new password reset." });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Update password and clear reset token
+      await storage.updatePasswordHash(user.id, hashedPassword);
+      await storage.clearPasswordResetToken(user.id);
+
+      res.json({ message: "Password has been reset successfully. You can now log in with your new password." });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
   // Generate XP Code for authenticated user (one-time only)
   app.post('/api/auth/generate-xp-code', enhancedAuth, async (req: any, res) => {
     try {

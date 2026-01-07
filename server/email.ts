@@ -397,6 +397,56 @@ class EmailService {
     });
   }
 
+  async sendPasswordResetEmail(email: string, firstName: string, resetToken: string): Promise<{ success: boolean; error?: string }> {
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+      : 'http://localhost:5000';
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="width: 80px; height: 80px; background-color: #fef3c7; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">🔐</span>
+          </div>
+          <h1 style="color: #1a1a1a; margin: 0;">Password Reset Request</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Hi ${firstName || 'there'},
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          We received a request to reset your password for your Reflux Capital account. Click the button below to create a new password.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" 
+             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            Reset Password
+          </a>
+        </div>
+        <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <p style="color: #92400e; font-size: 14px; margin: 0;">
+            <strong>Important:</strong> This link will expire in 1 hour for security reasons. If you didn't request a password reset, you can safely ignore this email.
+          </p>
+        </div>
+        <p style="color: #666; font-size: 14px; line-height: 1.6;">
+          If the button doesn't work, copy and paste this link into your browser:<br>
+          <a href="${resetUrl}" style="color: #3b82f6; word-break: break-all;">${resetUrl}</a>
+        </p>
+        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Password Reset Request - Reflux Capital',
+      html,
+    });
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     if (!process.env.RESEND_API_KEY) {
       return { success: false, error: 'Resend API key not configured' };

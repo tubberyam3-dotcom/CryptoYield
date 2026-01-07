@@ -192,6 +192,12 @@ export interface IStorage {
   setSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
   getAllSettings(): Promise<SystemSetting[]>;
   
+  // Password Reset operations
+  setPasswordResetToken(userId: string, token: string, expiry: Date): Promise<void>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  clearPasswordResetToken(userId: string): Promise<void>;
+  updatePasswordHash(userId: string, passwordHash: string): Promise<void>;
+  
   // Deposit operations
   createDeposit(deposit: InsertDeposit): Promise<Deposit>;
   getUserDeposits(userId: string): Promise<Deposit[]>;
@@ -1590,6 +1596,52 @@ export class DatabaseStorage implements IStorage {
 
   async getAllSettings(): Promise<SystemSetting[]> {
     return await db.select().from(systemSettings);
+  }
+
+  // Password Reset operations
+  async setPasswordResetToken(userId: string, token: string, expiry: Date): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        passwordResetToken: token,
+        passwordResetExpiry: expiry,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.passwordResetToken, token),
+          sql`${users.passwordResetExpiry} > NOW()`
+        )
+      );
+    return user;
+  }
+
+  async clearPasswordResetToken(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        passwordResetToken: null,
+        passwordResetExpiry: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        passwordHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   // Deposit operations

@@ -26,6 +26,7 @@ import Admin from "@/pages/Admin";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
 import JoinAccount from "@/pages/JoinAccount";
+import ResetPassword from "@/pages/ResetPassword";
 import { AdminAuthProvider, useAdminAuth } from "@/hooks/useAdminAuth";
 
 function ScrollToTop() {
@@ -94,6 +95,9 @@ function Router() {
         
         {/* Joint account invite route - available to all users */}
         <Route path="/join/:joinCode" component={JoinAccount} />
+        
+        {/* Password reset route - available to unauthenticated users */}
+        <Route path="/reset-password" component={ResetPassword} />
         
         {/* Regular user routes */}
         {!isAuthenticated ? (
