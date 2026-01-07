@@ -57,6 +57,9 @@ export const users = pgTable("users", {
   // Verification document
   verificationDocumentUrl: varchar("verification_document_url"),
   verificationDocumentType: varchar("verification_document_type", { enum: ['passport', 'drivers_license', 'national_id', 'other'] }),
+  // Password reset
+  passwordResetToken: varchar("password_reset_token"),
+  passwordResetExpiry: timestamp("password_reset_expiry"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
