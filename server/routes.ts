@@ -597,7 +597,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send password reset email
       const { emailService } = await import('./email');
-      await emailService.sendPasswordResetEmail(user.email!, user.firstName || 'User', resetToken);
+      const emailResult = await emailService.sendPasswordResetEmail(user.email!, user.firstName || 'User', resetToken);
+      
+      if (!emailResult.success) {
+        console.error("Failed to send password reset email:", emailResult.error);
+        // Still return success message to prevent email enumeration
+      } else {
+        console.log("Password reset email sent successfully to:", user.email);
+      }
 
       res.json({ message: "If an account with that email exists, a password reset link has been sent." });
     } catch (error) {

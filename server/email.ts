@@ -58,7 +58,13 @@ class EmailService {
       
       const fromEmail = customFromEmail || 'onboarding@resend.dev';
 
-      console.log(`Attempting to send email from: ${fromName} <${fromEmail}> to: ${options.to}`);
+      console.log(`=== EMAIL DEBUG ===`);
+      console.log(`Attempting to send email:`);
+      console.log(`  From: ${fromName} <${fromEmail}>`);
+      console.log(`  To: ${Array.isArray(options.to) ? options.to.join(', ') : options.to}`);
+      console.log(`  Subject: ${options.subject}`);
+      console.log(`  API Key present: ${process.env.RESEND_API_KEY ? 'Yes' : 'No'}`);
+      console.log(`  API Key prefix: ${process.env.RESEND_API_KEY?.substring(0, 10)}...`);
 
       const { data, error } = await resend.emails.send({
         from: `${fromName} <${fromEmail}>`,
