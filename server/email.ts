@@ -350,8 +350,11 @@ class EmailService {
   }
 
   async sendAccountApprovedEmail(email: string, firstName: string): Promise<{ success: boolean; error?: string }> {
+    console.log(`=== sendAccountApprovedEmail called for ${email} ===`);
     const enabled = await storage.getSetting('email_welcome_enabled');
+    console.log(`  email_welcome_enabled setting: ${enabled?.settingValue}`);
     if (enabled?.settingValue !== 'true') {
+      console.log(`  Email notifications disabled, skipping send`);
       return { success: true };
     }
 
