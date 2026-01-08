@@ -1041,11 +1041,15 @@ export class DatabaseStorage implements IStorage {
         );
     }
 
+    // Get the actual user balance from the database
+    const user = await this.getUser(userId);
+    const userBalance = user?.balance || '0';
+
     return {
       totalPortfolioValue: portfolioValueResult[0]?.total || '0',
       activeBonds: activeBondsResult[0]?.total || '0',
       activeChallenges: activeChallengesResult[0]?.count || 0,
-      availableBalance: '15720.48', // Mock for now - would be calculated from external wallet APIs
+      availableBalance: userBalance,
     };
   }
 
