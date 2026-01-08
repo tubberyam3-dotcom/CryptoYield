@@ -13,10 +13,23 @@ class EmailService {
   private fromEmail: string = 'onboarding@resend.dev';
   private fromName: string = 'Reflux Capital';
 
+  private async getApiKey(): Promise<string | null> {
+    // Check database first, then fall back to environment variable
+    try {
+      const dbApiKey = await storage.getSetting('email_resend_api_key');
+      if (dbApiKey?.settingValue) {
+        return dbApiKey.settingValue;
+      }
+    } catch (error) {
+      console.log('Could not fetch API key from database, using env var');
+    }
+    return process.env.RESEND_API_KEY || null;
+  }
+
   async initialize(): Promise<boolean> {
-    const apiKey = process.env.RESEND_API_KEY;
+    const apiKey = await this.getApiKey();
     if (!apiKey) {
-      console.log('Email service not configured - missing RESEND_API_KEY');
+      console.log('Email service not configured - no API key in database or environment');
       return false;
     }
 
@@ -40,19 +53,6 @@ class EmailService {
       this.resend = null;
       return false;
     }
-  }
-
-  private async getApiKey(): Promise<string | null> {
-    // Check database first, then fall back to environment variable
-    try {
-      const dbApiKey = await storage.getSetting('email_resend_api_key');
-      if (dbApiKey?.settingValue) {
-        return dbApiKey.settingValue;
-      }
-    } catch (error) {
-      console.log('Could not fetch API key from database, using env var');
-    }
-    return process.env.RESEND_API_KEY || null;
   }
 
   async sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {

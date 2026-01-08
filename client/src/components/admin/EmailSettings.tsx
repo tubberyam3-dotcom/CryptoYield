@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Mail, Send, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, Send, CheckCircle, AlertCircle, Loader2, Key, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface EmailConfig {
@@ -19,10 +19,18 @@ interface EmailConfig {
   email_rewards_enabled?: string;
 }
 
+interface ApiKeyStatus {
+  hasApiKey: boolean;
+  source: 'database' | 'environment' | 'none';
+  apiKeyPrefix: string | null;
+}
+
 export function EmailSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [testEmail, setTestEmail] = useState("");
+  const [newApiKey, setNewApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
   
   const [formData, setFormData] = useState<EmailConfig>({
     email_from_address: "info@refluxcapital.com",
@@ -37,6 +45,10 @@ export function EmailSettings() {
     queryKey: ["/api/admin/email/config"],
   });
 
+  const { data: apiKeyStatus, isLoading: isLoadingApiKey } = useQuery<ApiKeyStatus>({
+    queryKey: ["/api/admin/email/api-key-status"],
+  });
+
   useEffect(() => {
     if (config) {
       setFormData((prev) => ({
@@ -45,6 +57,49 @@ export function EmailSettings() {
       }));
     }
   }, [config]);
+
+  const saveApiKeyMutation = useMutation({
+    mutationFn: async (apiKey: string) => {
+      const response = await apiRequest("POST", "/api/admin/email/api-key", { apiKey });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "API Key Saved",
+        description: data.message,
+      });
+      setNewApiKey("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/api-key-status"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Save API Key",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const clearApiKeyMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", "/api/admin/email/api-key");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "API Key Cleared",
+        description: data.message,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/api-key-status"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Clear API Key",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const saveConfigMutation = useMutation({
     mutationFn: async (settings: EmailConfig) => {
@@ -104,7 +159,33 @@ export function EmailSettings() {
     sendTestEmailMutation.mutate(testEmail);
   };
 
-  if (isLoading) {
+  const handleSaveApiKey = () => {
+    if (!newApiKey) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter an API key.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!newApiKey.startsWith('re_')) {
+      toast({
+        title: "Invalid Format",
+        description: "Resend API keys start with 're_'",
+        variant: "destructive",
+      });
+      return;
+    }
+    saveApiKeyMutation.mutate(newApiKey);
+  };
+
+  const handleClearApiKey = () => {
+    if (confirm("Clear the database API key and revert to environment variable?")) {
+      clearApiKeyMutation.mutate();
+    }
+  };
+
+  if (isLoading || isLoadingApiKey) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -114,6 +195,112 @@ export function EmailSettings() {
 
   return (
     <div className="space-y-6">
+      {/* API Key Configuration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                Resend API Key
+              </CardTitle>
+              <CardDescription>
+                Configure your Resend API key for sending emails
+              </CardDescription>
+            </div>
+            {apiKeyStatus?.hasApiKey ? (
+              <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                {apiKeyStatus.source === 'database' ? 'Custom Key Active' : 'Environment Key Active'}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                No API Key
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {apiKeyStatus?.hasApiKey && (
+            <div className="p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Current API Key</p>
+                  <p className="text-sm text-muted-foreground font-mono">
+                    {apiKeyStatus.apiKeyPrefix}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    {apiKeyStatus.source === 'database' ? 'Database' : 'Environment Variable'}
+                  </Badge>
+                  {apiKeyStatus.source === 'database' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearApiKey}
+                      disabled={clearApiKeyMutation.isPending}
+                      data-testid="button-clear-api-key"
+                    >
+                      {clearApiKeyMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="api-key">
+              {apiKeyStatus?.hasApiKey ? 'Replace API Key' : 'Set API Key'}
+            </Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  id="api-key"
+                  type={showApiKey ? "text" : "password"}
+                  placeholder="re_xxxxxxxx..."
+                  value={newApiKey}
+                  onChange={(e) => setNewApiKey(e.target.value)}
+                  data-testid="input-api-key"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  data-testid="button-toggle-api-key-visibility"
+                >
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <Button
+                onClick={handleSaveApiKey}
+                disabled={saveApiKeyMutation.isPending || !newApiKey}
+                className="bg-[#e4fe7b] text-black hover:bg-[#d4ee6b]"
+                data-testid="button-save-api-key"
+              >
+                {saveApiKeyMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                )}
+                Save Key
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Get your API key from <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">resend.com/api-keys</a>. Use "Full access" permission.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -126,10 +313,12 @@ export function EmailSettings() {
                 Configure email settings for sending notifications via Resend API
               </CardDescription>
             </div>
-            <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Resend API Connected
-            </Badge>
+            {apiKeyStatus?.hasApiKey && (
+              <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                Resend API Connected
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
