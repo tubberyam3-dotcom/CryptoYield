@@ -2419,9 +2419,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[Admin Balance Adjustment] User ${id}: Current balance: ${currentBalance}, Amount: ${numAmount}, Type: ${type}, New balance: ${newBalance}`);
       
-      // Update user balance
-      const updatedUserFromBalance = await storage.updateUserBalance(id, newBalance.toFixed(2));
-      console.log(`[Admin Balance Adjustment] Updated user balance result:`, updatedUserFromBalance?.balance);
+      // Update user balance - use toFixed(8) to match decimal precision
+      try {
+        const updatedUserFromBalance = await storage.updateUserBalance(id, newBalance.toFixed(8));
+        console.log(`[Admin Balance Adjustment] Updated user balance result:`, updatedUserFromBalance?.balance);
+        
+        if (!updatedUserFromBalance) {
+          console.error(`[Admin Balance Adjustment] updateUserBalance returned undefined for user ${id}`);
+        }
+      } catch (balanceError) {
+        console.error(`[Admin Balance Adjustment] Error updating balance:`, balanceError);
+        throw balanceError;
+      }
       
       // Create a deposit record for tracking
       const { nanoid } = await import('nanoid');
