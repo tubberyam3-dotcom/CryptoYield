@@ -1,6 +1,9 @@
 import { Resend } from 'resend';
 import { storage } from './storage';
 
+// Production app domain for email links
+const APP_DOMAIN = 'https://app.refluxcapital.com';
+
 interface SendEmailOptions {
   to: string | string[];
   subject: string;
@@ -154,7 +157,7 @@ class EmailService {
           Get started by logging into your dashboard and exploring our investment options.
         </p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/dashboard" 
+          <a href="${APP_DOMAIN}/dashboard" 
              style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
             Go to Dashboard
           </a>
@@ -399,7 +402,7 @@ class EmailService {
           </p>
         </div>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/dashboard" 
+          <a href="${APP_DOMAIN}/dashboard" 
              style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
             Go to Dashboard
           </a>
@@ -423,10 +426,7 @@ class EmailService {
   }
 
   async sendPasswordResetEmail(email: string, firstName: string, resetToken: string): Promise<{ success: boolean; error?: string }> {
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-      : 'http://localhost:5000';
-    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+    const resetUrl = `${APP_DOMAIN}/reset-password?token=${resetToken}`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
