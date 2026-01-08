@@ -4,6 +4,18 @@ import { storage } from './storage';
 // Production app domain for email links
 const APP_DOMAIN = 'https://app.refluxcapital.com';
 
+// Reusable email footer with copyright and confidentiality disclaimer
+const getEmailFooter = () => `
+  <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
+    <p style="color: #999; font-size: 12px; margin: 0 0 15px 0;">
+      © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
+    </p>
+    <p style="color: #999; font-size: 10px; line-height: 1.5; margin: 0; padding: 0 20px;">
+      This email and any attachments are confidential and intended solely for the addressee. If you are not the intended recipient, please notify the sender immediately and delete this email. Any unauthorized copying, disclosure, or distribution of the material in this email is strictly prohibited.
+    </p>
+  </div>
+`;
+
 interface SendEmailOptions {
   to: string | string[];
   subject: string;
@@ -165,11 +177,7 @@ class EmailService {
         <p style="color: #666; font-size: 14px; line-height: 1.6;">
           If you have any questions, feel free to reach out to our support team.
         </p>
-        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
-          </p>
-        </div>
+        ${getEmailFooter()}
       </div>
     `;
 
@@ -211,11 +219,7 @@ class EmailService {
           </div>
         </div>
         ${status === 'completed' ? '<p style="color: #333; font-size: 16px; line-height: 1.6;">The funds have been added to your wallet and are ready to use for investments.</p>' : ''}
-        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
-          </p>
-        </div>
+        ${getEmailFooter()}
       </div>
     `;
 
@@ -261,11 +265,7 @@ class EmailService {
           </div>
         </div>
         ${status === 'rejected' ? '<p style="color: #333; font-size: 16px; line-height: 1.6;">Your funds have been refunded to your wallet balance.</p>' : ''}
-        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
-          </p>
-        </div>
+        ${getEmailFooter()}
       </div>
     `;
 
@@ -306,11 +306,7 @@ class EmailService {
         <p style="color: #333; font-size: 16px; line-height: 1.6;">
           Come back tomorrow to claim more rewards!
         </p>
-        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
-          </p>
-        </div>
+        ${getEmailFooter()}
       </div>
     `;
 
@@ -353,11 +349,7 @@ class EmailService {
         <p style="color: #666; font-size: 14px; line-height: 1.6;">
           If you have any questions in the meantime, feel free to reach out to our support team.
         </p>
-        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
-          </p>
-        </div>
+        ${getEmailFooter()}
       </div>
     `;
 
@@ -410,11 +402,7 @@ class EmailService {
         <p style="color: #666; font-size: 14px; line-height: 1.6;">
           If you have any questions, our support team is here to help.
         </p>
-        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
-          </p>
-        </div>
+        ${getEmailFooter()}
       </div>
     `;
 
@@ -457,11 +445,7 @@ class EmailService {
           If the button doesn't work, copy and paste this link into your browser:<br>
           <a href="${resetUrl}" style="color: #3b82f6; word-break: break-all;">${resetUrl}</a>
         </p>
-        <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            © ${new Date().getFullYear()} Reflux Capital. All rights reserved.
-          </p>
-        </div>
+        ${getEmailFooter()}
       </div>
     `;
 
