@@ -3369,8 +3369,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Save to database
       await storage.setSetting({
-        key: 'email_resend_api_key',
-        value: apiKey,
+        settingKey: 'email_resend_api_key',
+        settingValue: apiKey,
         updatedBy: userId,
       });
       
@@ -3391,8 +3391,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Delete the setting by setting it to empty
       const userId = req.user?.claims?.sub || 'admin';
       await storage.setSetting({
-        key: 'email_resend_api_key',
-        value: '',
+        settingKey: 'email_resend_api_key',
+        settingValue: '',
         updatedBy: userId,
       });
       
