@@ -3307,6 +3307,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Resend diagnostic endpoint - check domain and API status
+  app.get("/api/admin/email/diagnostics", adminAuth, async (req, res) => {
+    try {
+      const apiKey = process.env.RESEND_API_KEY;
+      if (!apiKey) {
+        return res.json({ 
+          status: 'error',
+          message: 'RESEND_API_KEY not configured',
+          apiKeyPrefix: null,
+          domains: []
+        });
+      }
+
+      const { Resend } = await import('resend');
+      const resend = new Resend(apiKey);
+      
+      // Try to list domains to check API status and domain verification
+      try {
+        const { data: domains, error } = await resend.domains.list();
+        
+        if (error) {
+          return res.json({
+            status: 'error',
+            message: error.message,
+            apiKeyPrefix: apiKey.substring(0, 12) + '...',
+            domains: [],
+            hint: 'This API key may not have permission to list domains, or your Resend account needs production access.'
+          });
+        }
+
+        res.json({
+          status: 'success',
+          apiKeyPrefix: apiKey.substring(0, 12) + '...',
+          domains: domains || [],
+          hint: domains && domains.length > 0 
+            ? 'Check if your sending domain shows status: verified'
+            : 'No domains found. Add and verify a domain in Resend dashboard.'
+        });
+      } catch (apiError: any) {
+        res.json({
+          status: 'api_error',
+          message: apiError.message,
+          apiKeyPrefix: apiKey.substring(0, 12) + '...',
+          domains: [],
+          hint: 'Your Resend account may be in test/sandbox mode. Request production access in Resend dashboard.'
+        });
+      }
+    } catch (error: any) {
+      console.error("Error checking Resend diagnostics:", error);
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
   // Payment settings endpoints
   const paymentKeys = [
     // Deposit/Withdrawal toggles
