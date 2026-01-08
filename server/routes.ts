@@ -2417,8 +2417,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newBalance = currentBalance - numAmount;
       }
       
+      console.log(`[Admin Balance Adjustment] User ${id}: Current balance: ${currentBalance}, Amount: ${numAmount}, Type: ${type}, New balance: ${newBalance}`);
+      
       // Update user balance
-      await storage.updateUserBalance(id, newBalance.toFixed(2));
+      const updatedUserFromBalance = await storage.updateUserBalance(id, newBalance.toFixed(2));
+      console.log(`[Admin Balance Adjustment] Updated user balance result:`, updatedUserFromBalance?.balance);
       
       // Create a deposit record for tracking
       const { nanoid } = await import('nanoid');
