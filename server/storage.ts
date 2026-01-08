@@ -584,7 +584,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(dailyBonuses).where(eq(dailyBonuses.userId, userId));
     await db.delete(xpClaims).where(eq(xpClaims.userId, userId));
     await db.delete(couponRedemptions).where(eq(couponRedemptions.userId, userId));
-    await db.delete(sessions).where(eq(sessions.userId, userId));
+    // Sessions table uses a different structure (jsonb) and will expire naturally
     // Finally delete the user
     await db.delete(users).where(eq(users.id, userId));
   }
