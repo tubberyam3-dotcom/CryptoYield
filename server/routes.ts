@@ -376,6 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(password, saltRounds);
       
       // Create user with accountType (if joining via code, treat as personal account type)
+      // New accounts start with $0.00 balance - production ready
       const user = await storage.createUser({
         email,
         firstName,
@@ -387,6 +388,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         businessName: accountType === 'business' ? businessName : null,
         businessType: accountType === 'business' ? businessType : null,
         taxId: accountType === 'business' ? taxId : null,
+        balance: '0',
+        xpBalance: 0,
       });
       
       // If user registered with a join code, add them to the existing joint account

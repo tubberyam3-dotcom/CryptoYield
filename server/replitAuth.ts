@@ -57,12 +57,15 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  // New accounts start with $0.00 balance - production ready
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    balance: '0',
+    xpBalance: 0,
   });
 }
 

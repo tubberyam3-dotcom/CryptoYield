@@ -334,13 +334,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // On conflict (existing user), only update profile fields - never overwrite balance
+    const { balance, xpBalance, ...profileFields } = userData;
     const [user] = await db
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          ...userData,
+          ...profileFields,
           updatedAt: new Date(),
         },
       })
