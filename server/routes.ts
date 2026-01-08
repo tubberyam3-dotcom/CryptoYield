@@ -2348,6 +2348,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete user (admin only)
+  app.delete('/api/admin/users/:id', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const adminId = req.user?.claims?.sub;
+      
+      // Prevent admin from deleting themselves
+      if (id === adminId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Prevent deleting other admins
+      if (user.role === 'admin') {
+        return res.status(400).json({ message: "Cannot delete admin accounts" });
+      }
+      
+      await storage.deleteUser(id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Adjust user balance (add or withdraw money)
+  app.post('/api/admin/users/:id/balance', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { amount, type, reason } = req.body;
+      const adminId = req.user?.claims?.sub;
+      
+      if (!amount || !type) {
+        return res.status(400).json({ message: "Amount and type are required" });
+      }
+      
+      const numAmount = parseFloat(amount);
+      if (isNaN(numAmount) || numAmount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+      
+      if (!['add', 'withdraw'].includes(type)) {
+        return res.status(400).json({ message: "Type must be 'add' or 'withdraw'" });
+      }
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const currentBalance = parseFloat(user.balance || '0');
+      let newBalance: number;
+      
+      if (type === 'add') {
+        newBalance = currentBalance + numAmount;
+      } else {
+        if (currentBalance < numAmount) {
+          return res.status(400).json({ message: "Insufficient balance for withdrawal" });
+        }
+        newBalance = currentBalance - numAmount;
+      }
+      
+      // Update user balance
+      await storage.updateUserBalance(id, newBalance.toFixed(2));
+      
+      // Create a deposit record for tracking
+      const { nanoid } = await import('nanoid');
+      await storage.createDeposit({
+        id: nanoid(),
+        userId: id,
+        amount: type === 'add' ? numAmount.toString() : `-${numAmount}`,
+        method: 'admin_adjustment',
+        status: 'completed',
+        transactionId: `ADMIN-${Date.now()}`,
+        metadata: JSON.stringify({ 
+          adjustedBy: adminId, 
+          type, 
+          reason: reason || 'Admin adjustment' 
+        }),
+      });
+      
+      const updatedUser = await storage.getUser(id);
+      res.json({ 
+        message: `Successfully ${type === 'add' ? 'added' : 'withdrew'} $${numAmount.toFixed(2)}`,
+        newBalance: updatedUser?.balance 
+      });
+    } catch (error) {
+      console.error("Error adjusting user balance:", error);
+      res.status(500).json({ message: "Failed to adjust balance" });
+    }
+  });
+
   // Admin Challenge Management Routes
   app.post('/api/admin/challenges', adminAuth, async (req: any, res) => {
     try {

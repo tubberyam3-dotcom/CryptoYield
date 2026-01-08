@@ -96,6 +96,7 @@ export interface IStorage {
 
   // Admin User Management operations
   getAllUsers(): Promise<User[]>;
+  deleteUser(userId: string): Promise<void>;
   updateUserRole(userId: string, role: 'user' | 'admin'): Promise<User>;
   updateUserKycStatus(userId: string, kycStatus: 'pending' | 'approved' | 'rejected'): Promise<User>;
   getUserStats(): Promise<{
@@ -569,6 +570,22 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    // Delete related records first (cascade manually)
+    await db.delete(userPortfolios).where(eq(userPortfolios.userId, userId));
+    await db.delete(userBonds).where(eq(userBonds.userId, userId));
+    await db.delete(userStocks).where(eq(userStocks.userId, userId));
+    await db.delete(challengeMembers).where(eq(challengeMembers.userId, userId));
+    await db.delete(deposits).where(eq(deposits.userId, userId));
+    await db.delete(withdrawals).where(eq(withdrawals.userId, userId));
+    await db.delete(userJointAccounts).where(eq(userJointAccounts.userId, userId));
+    await db.delete(dailyBonuses).where(eq(dailyBonuses.userId, userId));
+    await db.delete(xpClaims).where(eq(xpClaims.userId, userId));
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+    // Finally delete the user
+    await db.delete(users).where(eq(users.id, userId));
   }
 
   async updateUserRole(userId: string, role: 'user' | 'admin'): Promise<User> {

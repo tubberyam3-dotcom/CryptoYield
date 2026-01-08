@@ -36,7 +36,12 @@ import {
   FolderPlus,
   Check,
   X,
-  Loader2
+  Loader2,
+  Trash2,
+  DollarSign,
+  Plus,
+  Minus,
+  AlertTriangle
 } from "lucide-react";
 
 interface UserStats {
@@ -66,6 +71,11 @@ export function UserManagement() {
   const [showAddUser, setShowAddUser] = useState(false);
   const [showSendEmail, setShowSendEmail] = useState<string | null>(null);
   const [showTransactions, setShowTransactions] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showBalanceAdjust, setShowBalanceAdjust] = useState<string | null>(null);
+  const [balanceAmount, setBalanceAmount] = useState("");
+  const [balanceType, setBalanceType] = useState<"add" | "withdraw">("add");
+  const [balanceReason, setBalanceReason] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -202,6 +212,54 @@ export function UserManagement() {
     onError: (error: any) => {
       toast({
         title: "Failed to Activate User",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User Deleted",
+        description: "User has been deleted successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users/stats"] });
+      setShowDeleteConfirm(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Delete User",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const adjustBalanceMutation = useMutation({
+    mutationFn: async ({ userId, amount, type, reason }: { userId: string; amount: string; type: string; reason: string }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/balance`, { amount, type, reason });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Balance Adjusted",
+        description: data.message,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowBalanceAdjust(null);
+      setBalanceAmount("");
+      setBalanceType("add");
+      setBalanceReason("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Adjust Balance",
         description: error.message,
         variant: "destructive",
       });
@@ -550,6 +608,23 @@ export function UserManagement() {
                         <FolderPlus className="w-4 h-4 mr-2" />
                         Assign to Group
                       </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setShowBalanceAdjust(user.id)}
+                        data-testid={`menu-adjust-balance-${user.id}`}
+                      >
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        Adjust Balance
+                      </DropdownMenuItem>
+                      {user.role !== 'admin' && (
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={() => setShowDeleteConfirm(user.id)}
+                          data-testid={`menu-delete-${user.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete User
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </td>
@@ -960,6 +1035,151 @@ export function UserManagement() {
               Unable to load user details
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={!!showDeleteConfirm} onOpenChange={() => setShowDeleteConfirm(null)}>
+        <DialogContent className="max-w-md" data-testid="dialog-delete-user">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Delete User
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this user? This action cannot be undone and will remove all associated data including:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <ul className="list-disc list-inside space-y-1">
+              <li>All portfolio investments</li>
+              <li>Bond holdings</li>
+              <li>Stock purchases</li>
+              <li>Transaction history</li>
+              <li>XP and bonuses</li>
+            </ul>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(null)}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => showDeleteConfirm && deleteUserMutation.mutate(showDeleteConfirm)}
+              disabled={deleteUserMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteUserMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Delete User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Balance Adjustment Dialog */}
+      <Dialog open={!!showBalanceAdjust} onOpenChange={() => {
+        setShowBalanceAdjust(null);
+        setBalanceAmount("");
+        setBalanceType("add");
+        setBalanceReason("");
+      }}>
+        <DialogContent className="max-w-md" data-testid="dialog-adjust-balance">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5" />
+              Adjust User Balance
+            </DialogTitle>
+            <DialogDescription>
+              Add or withdraw funds from the user's account
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Button
+                variant={balanceType === "add" ? "default" : "outline"}
+                className={balanceType === "add" ? "bg-green-600 hover:bg-green-700 flex-1" : "flex-1"}
+                onClick={() => setBalanceType("add")}
+                data-testid="button-balance-add"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Funds
+              </Button>
+              <Button
+                variant={balanceType === "withdraw" ? "default" : "outline"}
+                className={balanceType === "withdraw" ? "bg-red-600 hover:bg-red-700 flex-1" : "flex-1"}
+                onClick={() => setBalanceType("withdraw")}
+                data-testid="button-balance-withdraw"
+              >
+                <Minus className="w-4 h-4 mr-2" />
+                Withdraw
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount ($)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                value={balanceAmount}
+                onChange={(e) => setBalanceAmount(e.target.value)}
+                data-testid="input-balance-amount"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason (optional)</Label>
+              <Input
+                id="reason"
+                placeholder="e.g., Bonus, Correction, Refund..."
+                value={balanceReason}
+                onChange={(e) => setBalanceReason(e.target.value)}
+                data-testid="input-balance-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowBalanceAdjust(null);
+                setBalanceAmount("");
+                setBalanceType("add");
+                setBalanceReason("");
+              }}
+              data-testid="button-cancel-balance"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => showBalanceAdjust && adjustBalanceMutation.mutate({
+                userId: showBalanceAdjust,
+                amount: balanceAmount,
+                type: balanceType,
+                reason: balanceReason
+              })}
+              disabled={adjustBalanceMutation.isPending || !balanceAmount || parseFloat(balanceAmount) <= 0}
+              className={balanceType === "add" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
+              data-testid="button-confirm-balance"
+            >
+              {adjustBalanceMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : balanceType === "add" ? (
+                <Plus className="w-4 h-4 mr-2" />
+              ) : (
+                <Minus className="w-4 h-4 mr-2" />
+              )}
+              {balanceType === "add" ? "Add Funds" : "Withdraw Funds"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
