@@ -610,12 +610,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserBalance(userId: string, newBalance: string): Promise<User> {
-    const [user] = await db
+    console.log(`[Storage.updateUserBalance] Updating user ${userId} balance to ${newBalance}`);
+    const result = await db
       .update(users)
       .set({ balance: newBalance, updatedAt: new Date() })
       .where(eq(users.id, userId))
       .returning();
-    return user;
+    
+    console.log(`[Storage.updateUserBalance] Update result:`, result.length > 0 ? `Updated to ${result[0].balance}` : 'No rows updated');
+    
+    if (result.length === 0) {
+      console.error(`[Storage.updateUserBalance] No user found with id ${userId}`);
+      throw new Error(`User not found: ${userId}`);
+    }
+    
+    return result[0];
   }
 
   async updateUserProfile(userId: string, profileData: {
