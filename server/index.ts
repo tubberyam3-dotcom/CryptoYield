@@ -67,5 +67,10 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    // Log environment info for debugging
+    const resendKey = process.env.RESEND_API_KEY;
+    log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    log(`RESEND_API_KEY: ${resendKey ? resendKey.substring(0, 12) + '...' : 'NOT SET'}`);
+    log(`REPLIT_DEPLOYMENT: ${process.env.REPLIT_DEPLOYMENT || 'not set (dev mode)'}`);
   });
 })();
