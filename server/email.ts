@@ -42,13 +42,27 @@ class EmailService {
     }
   }
 
+  private async getApiKey(): Promise<string | null> {
+    // Check database first, then fall back to environment variable
+    try {
+      const dbApiKey = await storage.getSetting('email_resend_api_key');
+      if (dbApiKey?.settingValue) {
+        return dbApiKey.settingValue;
+      }
+    } catch (error) {
+      console.log('Could not fetch API key from database, using env var');
+    }
+    return process.env.RESEND_API_KEY || null;
+  }
+
   async sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    if (!process.env.RESEND_API_KEY) {
+    const apiKey = await this.getApiKey();
+    if (!apiKey) {
       return { success: false, error: 'Email service not configured - missing API key' };
     }
 
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      const resend = new Resend(apiKey);
       
       const fromEmailSetting = await storage.getSetting('email_from_address');
       const fromNameSetting = await storage.getSetting('email_from_name');
@@ -63,8 +77,8 @@ class EmailService {
       console.log(`  From: ${fromName} <${fromEmail}>`);
       console.log(`  To: ${Array.isArray(options.to) ? options.to.join(', ') : options.to}`);
       console.log(`  Subject: ${options.subject}`);
-      console.log(`  API Key present: ${process.env.RESEND_API_KEY ? 'Yes' : 'No'}`);
-      console.log(`  API Key prefix: ${process.env.RESEND_API_KEY?.substring(0, 10)}...`);
+      console.log(`  API Key present: Yes`);
+      console.log(`  API Key prefix: ${apiKey.substring(0, 10)}...`);
 
       const { data, error } = await resend.emails.send({
         from: `${fromName} <${fromEmail}>`,

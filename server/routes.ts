@@ -3307,10 +3307,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current API key status (masked)
+  app.get("/api/admin/email/api-key-status", adminAuth, async (req, res) => {
+    try {
+      // Check database first
+      const dbApiKey = await storage.getSetting('email_resend_api_key');
+      const envApiKey = process.env.RESEND_API_KEY;
+      
+      const activeKey = dbApiKey?.settingValue || envApiKey;
+      const source = dbApiKey?.settingValue ? 'database' : (envApiKey ? 'environment' : 'none');
+      
+      res.json({
+        hasApiKey: !!activeKey,
+        source,
+        apiKeyPrefix: activeKey ? activeKey.substring(0, 12) + '...' : null,
+      });
+    } catch (error: any) {
+      console.error("Error checking API key status:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Save API key to database
+  app.post("/api/admin/email/api-key", adminAuth, async (req: any, res) => {
+    try {
+      const { apiKey } = req.body;
+      const userId = req.user?.claims?.sub || 'admin';
+      
+      if (!apiKey) {
+        return res.status(400).json({ message: "API key is required" });
+      }
+      
+      // Validate API key format
+      if (!apiKey.startsWith('re_')) {
+        return res.status(400).json({ message: "Invalid API key format. Resend API keys start with 're_'" });
+      }
+      
+      // Test the API key before saving
+      const { Resend } = await import('resend');
+      const resend = new Resend(apiKey);
+      
+      try {
+        const { data, error } = await resend.domains.list();
+        if (error) {
+          // Check if it's just a restricted key (can only send emails)
+          if (error.message?.includes('restricted')) {
+            // Key is valid but restricted - still save it
+            console.log('API key is restricted but valid for sending');
+          } else {
+            return res.status(400).json({ 
+              message: `API key validation failed: ${error.message}`,
+              hint: 'Make sure the API key has "Full access" permission in Resend'
+            });
+          }
+        }
+      } catch (apiError: any) {
+        return res.status(400).json({ 
+          message: `Failed to validate API key: ${apiError.message}` 
+        });
+      }
+      
+      // Save to database
+      await storage.setSetting({
+        key: 'email_resend_api_key',
+        value: apiKey,
+        updatedBy: userId,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "API key saved successfully",
+        apiKeyPrefix: apiKey.substring(0, 12) + '...'
+      });
+    } catch (error: any) {
+      console.error("Error saving API key:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Clear database API key (revert to env var)
+  app.delete("/api/admin/email/api-key", adminAuth, async (req: any, res) => {
+    try {
+      // Delete the setting by setting it to empty
+      const userId = req.user?.claims?.sub || 'admin';
+      await storage.setSetting({
+        key: 'email_resend_api_key',
+        value: '',
+        updatedBy: userId,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Database API key cleared. Using environment variable." 
+      });
+    } catch (error: any) {
+      console.error("Error clearing API key:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Resend diagnostic endpoint - check domain and API status
   app.get("/api/admin/email/diagnostics", adminAuth, async (req, res) => {
     try {
-      const apiKey = process.env.RESEND_API_KEY;
+      // Check database first, then env var
+      const dbApiKey = await storage.getSetting('email_resend_api_key');
+      const apiKey = dbApiKey?.settingValue || process.env.RESEND_API_KEY;
       if (!apiKey) {
         return res.json({ 
           status: 'error',
