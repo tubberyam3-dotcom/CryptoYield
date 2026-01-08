@@ -2420,17 +2420,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create a deposit record for tracking
       const { nanoid } = await import('nanoid');
       await storage.createDeposit({
-        id: nanoid(),
         userId: id,
         amount: type === 'add' ? numAmount.toString() : `-${numAmount}`,
-        method: 'admin_adjustment',
+        depositMethod: 'admin_adjustment',
         status: 'completed',
         transactionId: `ADMIN-${Date.now()}`,
-        metadata: JSON.stringify({ 
+        metadata: { 
           adjustedBy: adminId, 
           type, 
           reason: reason || 'Admin adjustment' 
-        }),
+        },
       });
       
       const updatedUser = await storage.getUser(id);

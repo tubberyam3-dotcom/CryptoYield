@@ -251,7 +251,7 @@ export const deposits = pgTable("deposits", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
   amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
-  depositMethod: varchar("deposit_method", { enum: ['crypto', 'bank_transfer', 'card_payment', 'deposit_coupon'] }).notNull(),
+  depositMethod: varchar("deposit_method", { enum: ['crypto', 'bank_transfer', 'card_payment', 'deposit_coupon', 'admin_adjustment'] }).notNull(),
   status: varchar("status", { enum: ['pending', 'completed', 'failed', 'cancelled'] }).default('pending'),
   transactionId: varchar("transaction_id"), // External transaction ID (Stripe, bank, etc.)
   couponCode: varchar("coupon_code"), // For deposit coupon method
