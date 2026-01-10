@@ -4,6 +4,10 @@ This is **Reflux Capital**, a professional investment brokerage and advisory pla
 
 The application follows a clean architecture pattern with clear separation between client, server, and shared components. It provides both user and admin interfaces, with comprehensive portfolio management, bond investment tracking, and community engagement features.
 
+## Documentation
+
+- **AI Agent User Guide**: See `docs/USER_GUIDE_AI.md` for comprehensive documentation of all user flows, API endpoints, and step-by-step instructions for deposits, investments, withdrawals, rewards, and more. This guide is structured for AI agents to consume and assist users.
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
