@@ -38,7 +38,8 @@ export default function RewardsPage() {
 
   const redeemMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', '/api/rewards/redeem', {});
+      const response = await apiRequest('POST', '/api/rewards/redeem', {});
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/rewards/daily-history'] });
@@ -63,7 +64,8 @@ export default function RewardsPage() {
 
   const claimXpMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', '/api/xp/claim', {});
+      const response = await apiRequest('POST', '/api/xp/claim', {});
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
@@ -84,7 +86,8 @@ export default function RewardsPage() {
 
   const convertXpMutation = useMutation({
     mutationFn: async (xpAmount: number) => {
-      return await apiRequest('POST', '/api/xp/convert', { xpAmount });
+      const response = await apiRequest('POST', '/api/xp/convert', { xpAmount });
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
