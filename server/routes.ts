@@ -2083,6 +2083,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin login history endpoint
+  app.get('/api/admin/login-history', adminAuth, async (req: any, res) => {
+    try {
+      const loginHistory = await storage.getAllLoginHistory();
+      res.json(loginHistory);
+    } catch (error) {
+      console.error("Error fetching login history:", error);
+      res.status(500).json({ message: "Failed to fetch login history" });
+    }
+  });
+
   // Bank transfer settings - public endpoint to get deposit info
   app.get('/api/settings/bank-transfer', async (req, res) => {
     try {
