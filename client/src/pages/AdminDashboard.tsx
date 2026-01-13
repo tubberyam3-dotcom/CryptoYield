@@ -40,7 +40,8 @@ import {
   ChevronRight,
   LogOut,
   Mail,
-  ArrowLeftRight
+  ArrowLeftRight,
+  History
 } from "lucide-react";
 
 interface AdminStats {
@@ -81,6 +82,7 @@ const navItems = [
   { id: "challenges", label: "Challenges", icon: Trophy },
   { id: "coupons", label: "Coupons", icon: Ticket },
   { id: "email", label: "Email", icon: Mail },
+  { id: "login-history", label: "Login History", icon: History },
   { id: "system", label: "System", icon: Server },
   { id: "settings", label: "Settings", icon: Settings },
 ];
@@ -148,6 +150,20 @@ export default function AdminDashboard() {
     ipAddress?: string;
   }>>({
     queryKey: ["/api/admin/logs"],
+  });
+
+  const { data: loginHistory, isLoading: loginHistoryLoading } = useQuery<Array<{
+    id: string;
+    userId: string;
+    loginMethod: string;
+    ipAddress: string | null;
+    userAgent: string | null;
+    loginAt: Date;
+    success: boolean;
+    failureReason: string | null;
+    user: { email: string; firstName: string; lastName: string };
+  }>>({
+    queryKey: ["/api/admin/login-history"],
   });
 
   const createPortfolioMutation = useMutation({
@@ -704,6 +720,91 @@ export default function AdminDashboard() {
               <p className="text-muted-foreground">Configure SMTP settings and email notifications</p>
             </div>
             <EmailSettings />
+          </div>
+        );
+
+      case "login-history":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Login History</h2>
+              <p className="text-muted-foreground">View all user login attempts and sessions</p>
+            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Recent Logins
+                </CardTitle>
+                <CardDescription>
+                  All login attempts across the platform (last 500 records)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loginHistoryLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : !loginHistory || loginHistory.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No login history recorded yet
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[600px]">
+                    <div className="space-y-2">
+                      {loginHistory.map((record) => (
+                        <div
+                          key={record.id}
+                          className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`p-2 rounded-full ${
+                              record.success 
+                                ? 'bg-green-100 dark:bg-green-900' 
+                                : 'bg-red-100 dark:bg-red-900'
+                            }`}>
+                              {record.success ? (
+                                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                              ) : (
+                                <X className="h-4 w-4 text-red-600 dark:text-red-400" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {record.user?.firstName || 'Unknown'} {record.user?.lastName || ''}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {record.user?.email || 'Unknown email'}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                IP: {record.ipAddress || 'Unknown'} | Agent: {record.userAgent?.substring(0, 50) || 'Unknown'}...
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant={
+                              record.loginMethod === 'password' ? 'default' :
+                              record.loginMethod === 'oauth' ? 'secondary' : 'outline'
+                            }>
+                              {record.loginMethod === 'xp_code' ? 'XP Code' : 
+                               record.loginMethod.charAt(0).toUpperCase() + record.loginMethod.slice(1)}
+                            </Badge>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              {record.loginAt ? new Date(record.loginAt).toLocaleString() : 'Unknown'}
+                            </div>
+                            {record.failureReason && (
+                              <div className="text-xs text-red-500 mt-1">
+                                {record.failureReason}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
           </div>
         );
 
