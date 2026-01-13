@@ -17,6 +17,7 @@ import {
   systemSettings,
   deposits,
   withdrawals,
+  loginHistory,
   type User,
   type UpsertUser,
   type Portfolio,
@@ -51,6 +52,8 @@ import {
   type InsertDeposit,
   type Withdrawal,
   type InsertWithdrawal,
+  type LoginHistory,
+  type InsertLoginHistory,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
@@ -262,6 +265,11 @@ export interface IStorage {
     type: 'user' | 'admin' | 'system' | 'security';
     ipAddress?: string;
   }>>;
+
+  // Login History operations
+  recordLogin(data: InsertLoginHistory): Promise<LoginHistory>;
+  getUserLoginHistory(userId: string): Promise<LoginHistory[]>;
+  getAllLoginHistory(): Promise<(LoginHistory & { user: { email: string; firstName: string; lastName: string } })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2067,6 +2075,55 @@ export class DatabaseStorage implements IStorage {
       metadata: row.metadata,
       createdAt: row.createdAt,
       processedAt: row.processedAt,
+      user: {
+        email: row.userEmail || '',
+        firstName: row.userFirstName || '',
+        lastName: row.userLastName || '',
+      },
+    }));
+  }
+
+  // Login History operations
+  async recordLogin(data: InsertLoginHistory): Promise<LoginHistory> {
+    const [record] = await db.insert(loginHistory).values(data).returning();
+    return record;
+  }
+
+  async getUserLoginHistory(userId: string): Promise<LoginHistory[]> {
+    return await db.select()
+      .from(loginHistory)
+      .where(eq(loginHistory.userId, userId))
+      .orderBy(desc(loginHistory.loginAt));
+  }
+
+  async getAllLoginHistory(): Promise<(LoginHistory & { user: { email: string; firstName: string; lastName: string } })[]> {
+    const result = await db.select({
+      id: loginHistory.id,
+      userId: loginHistory.userId,
+      loginMethod: loginHistory.loginMethod,
+      ipAddress: loginHistory.ipAddress,
+      userAgent: loginHistory.userAgent,
+      loginAt: loginHistory.loginAt,
+      success: loginHistory.success,
+      failureReason: loginHistory.failureReason,
+      userEmail: users.email,
+      userFirstName: users.firstName,
+      userLastName: users.lastName,
+    })
+    .from(loginHistory)
+    .leftJoin(users, eq(loginHistory.userId, users.id))
+    .orderBy(desc(loginHistory.loginAt))
+    .limit(500);
+
+    return result.map(row => ({
+      id: row.id,
+      userId: row.userId,
+      loginMethod: row.loginMethod,
+      ipAddress: row.ipAddress,
+      userAgent: row.userAgent,
+      loginAt: row.loginAt,
+      success: row.success,
+      failureReason: row.failureReason,
       user: {
         email: row.userEmail || '',
         firstName: row.userFirstName || '',
