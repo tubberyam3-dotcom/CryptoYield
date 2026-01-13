@@ -541,6 +541,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear logout flag
       delete req.session.loggedOut;
       
+      // Record successful login
+      try {
+        await storage.recordLogin({
+          userId: user.id,
+          loginMethod: 'password',
+          ipAddress: req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          success: true,
+        });
+      } catch (loginError) {
+        console.error("Failed to record login:", loginError);
+      }
+      
       // Return user without password hash and xpCode (security)
       const { passwordHash: _, xpCode: __, ...userWithoutSensitiveData } = user;
       res.json({ ...userWithoutSensitiveData, hasXpCode: !!user.xpCode });
@@ -752,6 +765,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Clear logout flag
       delete req.session.loggedOut;
+      
+      // Record successful login
+      try {
+        await storage.recordLogin({
+          userId: user.id,
+          loginMethod: 'xp_code',
+          ipAddress: req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          success: true,
+        });
+      } catch (loginError) {
+        console.error("Failed to record login:", loginError);
+      }
 
       // Return user without password hash and xpCode (security)
       const { passwordHash: _, xpCode: __, ...userWithoutSensitiveData } = user;

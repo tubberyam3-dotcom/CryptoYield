@@ -160,6 +160,19 @@ export async function setupAuth(app: Express) {
           });
           return;
         }
+        
+        // Record successful OAuth login
+        try {
+          await storage.recordLogin({
+            userId: claims.sub,
+            loginMethod: 'oauth',
+            ipAddress: req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown',
+            userAgent: req.headers['user-agent'] || 'unknown',
+            success: true,
+          });
+        } catch (loginError) {
+          console.error("Failed to record OAuth login:", loginError);
+        }
       }
       
       // Clear logout flag on successful OAuth login
