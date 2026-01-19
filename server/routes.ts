@@ -3207,7 +3207,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/coupons", adminAuth, async (req, res) => {
     try {
-      const coupon = await storage.createCoupon(req.body);
+      const { code, description, rewardAmount, maxUses, expiresAt, isActive } = req.body;
+      
+      if (!code || !rewardAmount) {
+        return res.status(400).json({ message: "Code and reward amount are required" });
+      }
+      
+      const couponData = {
+        code: code.toUpperCase(),
+        description: description || null,
+        rewardAmount: rewardAmount.toString(),
+        maxUses: maxUses ? parseInt(maxUses) : null,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        isActive: isActive !== false,
+      };
+      
+      const coupon = await storage.createCoupon(couponData);
       res.json(coupon);
     } catch (error: any) {
       console.error("Error creating coupon:", error);
@@ -3217,7 +3232,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/admin/coupons/:id", adminAuth, async (req, res) => {
     try {
-      const coupon = await storage.updateCoupon(req.params.id, req.body);
+      const { code, description, rewardAmount, maxUses, expiresAt, isActive } = req.body;
+      
+      const updateData: any = {};
+      if (code !== undefined) updateData.code = code.toUpperCase();
+      if (description !== undefined) updateData.description = description;
+      if (rewardAmount !== undefined) updateData.rewardAmount = rewardAmount.toString();
+      if (maxUses !== undefined) updateData.maxUses = maxUses ? parseInt(maxUses) : null;
+      if (expiresAt !== undefined) updateData.expiresAt = expiresAt ? new Date(expiresAt) : null;
+      if (isActive !== undefined) updateData.isActive = isActive;
+      
+      const coupon = await storage.updateCoupon(req.params.id, updateData);
       res.json(coupon);
     } catch (error: any) {
       console.error("Error updating coupon:", error);
@@ -3305,16 +3330,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (dailyBonusAmount) {
         await storage.setSetting({
-          key: 'daily_bonus_amount',
-          value: dailyBonusAmount,
+          settingKey: 'daily_bonus_amount',
+          settingValue: dailyBonusAmount,
           updatedBy: 'admin',
         });
       }
       
       if (xpPerClaim) {
         await storage.setSetting({
-          key: 'xp_per_claim',
-          value: xpPerClaim,
+          settingKey: 'xp_per_claim',
+          settingValue: xpPerClaim,
           updatedBy: 'admin',
         });
       }
@@ -3420,8 +3445,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const [key, value] of Object.entries(validatedSettings)) {
         if (value !== undefined) {
           await storage.setSetting({
-            key,
-            value: value as string,
+            settingKey: key,
+            settingValue: value as string,
             updatedBy: userId,
           });
         }
@@ -3671,8 +3696,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const [key, value] of Object.entries(settings)) {
         if (paymentKeys.includes(key) && value !== undefined) {
           await storage.setSetting({
-            key,
-            value: value as string,
+            settingKey: key,
+            settingValue: value as string,
             updatedBy: userId,
           });
         }
