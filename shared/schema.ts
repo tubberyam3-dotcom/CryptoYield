@@ -113,6 +113,7 @@ export const userPortfolios = pgTable("user_portfolios", {
   investedAmount: decimal("invested_amount", { precision: 18, scale: 8 }).notNull(),
   currentValue: decimal("current_value", { precision: 18, scale: 8 }).notNull(),
   returns: decimal("returns", { precision: 18, scale: 8 }).default('0'),
+  status: varchar("status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

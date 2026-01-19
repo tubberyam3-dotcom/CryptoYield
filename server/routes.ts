@@ -924,13 +924,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/user/portfolios', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const userPortfolioData = insertUserPortfolioSchema.parse({
-        ...req.body,
-        userId,
-        currentValue: req.body.investedAmount, // Initially same as invested amount
-      });
+      const { portfolioId, investedAmount } = req.body;
+
+      // Validate portfolio exists
+      const portfolio = await storage.getPortfolio(portfolioId);
+      if (!portfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+      }
+
+      const investmentAmountNum = parseFloat(investedAmount);
+      const minInvestment = parseFloat(portfolio.minInvestment || '0');
+
+      // Validate minimum investment
+      if (investmentAmountNum < minInvestment) {
+        return res.status(400).json({ 
+          message: `Minimum investment is $${minInvestment.toLocaleString()}` 
+        });
+      }
+
+      // Check user balance
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const userBalance = parseFloat(user.balance?.toString() || '0');
+
+      // Verify sufficient balance
+      if (userBalance < investmentAmountNum) {
+        return res.status(400).json({ 
+          message: `Insufficient balance. You have $${userBalance.toFixed(2)}, but need $${investmentAmountNum.toFixed(2)}` 
+        });
+      }
+
+      // Deduct balance
+      const newBalance = (userBalance - investmentAmountNum).toString();
+      await storage.updateUserBalance(userId, newBalance);
+
+      // Handle joint accounts
+      const accountContext = await storage.getAccountContext(userId);
       
-      const userPortfolio = await storage.createUserPortfolio(userPortfolioData);
+      const userPortfolioData: any = {
+        portfolioId,
+        investedAmount: investedAmount.toString(),
+        currentValue: investedAmount.toString(),
+        status: 'pending', // Set to pending for admin approval
+      };
+
+      if (accountContext.isJointAccount) {
+        userPortfolioData.jointAccountId = accountContext.accountId;
+        userPortfolioData.userId = null;
+      } else {
+        userPortfolioData.userId = userId;
+        userPortfolioData.jointAccountId = null;
+      }
+
+      const validatedData = insertUserPortfolioSchema.parse(userPortfolioData);
+      const userPortfolio = await storage.createUserPortfolio(validatedData);
       res.json(userPortfolio);
     } catch (error) {
       console.error("Error creating user portfolio:", error);
