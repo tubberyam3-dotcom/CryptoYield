@@ -99,9 +99,15 @@ export const portfolios = pgTable("portfolios", {
   riskLevel: varchar("risk_level", { enum: ['low', 'medium', 'high'] }).notNull(),
   currentReturn: decimal("current_return", { precision: 5, scale: 2 }).default('0'),
   whitepaperUrl: varchar("whitepaper_url"), // URL to whitepaper PDF document
-  // New fields for enhanced portfolio management
-  dailyInterestRate: decimal("daily_interest_rate", { precision: 8, scale: 6 }).default('0'), // Daily interest rate (e.g., 0.01 = 1%)
-  investmentPeriodDays: integer("investment_period_days").default(365), // Investment term in days
+  // Automated interest configuration
+  interestRate: decimal("interest_rate", { precision: 8, scale: 6 }).default('0'), // Interest rate per period (e.g., 0.01 = 1%)
+  interestPeriod: varchar("interest_period", { enum: ['hourly', 'daily', 'weekly', 'monthly'] }).default('daily'), // How often interest is calculated
+  payoutTerm: varchar("payout_term", { enum: ['term_based', 'after_maturity'] }).default('term_based'), // When profits are paid out
+  termDuration: integer("term_duration").default(30), // Number of interest periods for full investment term
+  // Legacy fields (kept for compatibility)
+  dailyInterestRate: decimal("daily_interest_rate", { precision: 8, scale: 6 }).default('0'),
+  investmentPeriodDays: integer("investment_period_days").default(365),
+  // Unit-based investment controls
   maxUnitsPerUser: integer("max_units_per_user").default(100), // Maximum units a single user can purchase
   unitPrice: decimal("unit_price", { precision: 18, scale: 8 }).default('100'), // Price per unit
   totalUnitsAvailable: integer("total_units_available").default(1000), // Total units available for purchase
@@ -121,10 +127,16 @@ export const userPortfolios = pgTable("user_portfolios", {
   currentValue: decimal("current_value", { precision: 18, scale: 8 }).notNull(),
   returns: decimal("returns", { precision: 18, scale: 8 }).default('0'),
   status: varchar("status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
-  // New fields for interest tracking and profit accumulation
-  unitsPurchased: decimal("units_purchased", { precision: 18, scale: 8 }).default('1'), // Number of units purchased
-  totalAccruedProfit: decimal("total_accrued_profit", { precision: 18, scale: 8 }).default('0'), // Accumulated profit from daily interest
-  lastInterestAppliedAt: timestamp("last_interest_applied_at"), // Last time interest was applied
+  // Unit tracking
+  unitsPurchased: decimal("units_purchased", { precision: 18, scale: 8 }).default('1'),
+  // Automated interest tracking
+  totalAccruedProfit: decimal("total_accrued_profit", { precision: 18, scale: 8 }).default('0'), // Total profit earned
+  accruedUnpaidProfit: decimal("accrued_unpaid_profit", { precision: 18, scale: 8 }).default('0'), // Profit waiting to be paid (for after_maturity)
+  periodsCompleted: integer("periods_completed").default(0), // Number of interest periods completed
+  nextInterestAt: timestamp("next_interest_at"), // When next interest should be applied
+  lastInterestAppliedAt: timestamp("last_interest_applied_at"), // When interest was last applied
+  maturityPaidAt: timestamp("maturity_paid_at"), // When final payout was made (for after_maturity)
+  // Investment timeline
   investmentStartDate: timestamp("investment_start_date").defaultNow(), // When the investment started
   investmentEndDate: timestamp("investment_end_date"), // When the investment period ends
   createdAt: timestamp("created_at").defaultNow(),
