@@ -99,6 +99,13 @@ export const portfolios = pgTable("portfolios", {
   riskLevel: varchar("risk_level", { enum: ['low', 'medium', 'high'] }).notNull(),
   currentReturn: decimal("current_return", { precision: 5, scale: 2 }).default('0'),
   whitepaperUrl: varchar("whitepaper_url"), // URL to whitepaper PDF document
+  // New fields for enhanced portfolio management
+  dailyInterestRate: decimal("daily_interest_rate", { precision: 8, scale: 6 }).default('0'), // Daily interest rate (e.g., 0.01 = 1%)
+  investmentPeriodDays: integer("investment_period_days").default(365), // Investment term in days
+  maxUnitsPerUser: integer("max_units_per_user").default(100), // Maximum units a single user can purchase
+  unitPrice: decimal("unit_price", { precision: 18, scale: 8 }).default('100'), // Price per unit
+  totalUnitsAvailable: integer("total_units_available").default(1000), // Total units available for purchase
+  unitsSold: integer("units_sold").default(0), // Units already sold
   createdBy: varchar("created_by").references(() => users.id),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -114,6 +121,12 @@ export const userPortfolios = pgTable("user_portfolios", {
   currentValue: decimal("current_value", { precision: 18, scale: 8 }).notNull(),
   returns: decimal("returns", { precision: 18, scale: 8 }).default('0'),
   status: varchar("status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
+  // New fields for interest tracking and profit accumulation
+  unitsPurchased: decimal("units_purchased", { precision: 18, scale: 8 }).default('1'), // Number of units purchased
+  totalAccruedProfit: decimal("total_accrued_profit", { precision: 18, scale: 8 }).default('0'), // Accumulated profit from daily interest
+  lastInterestAppliedAt: timestamp("last_interest_applied_at"), // Last time interest was applied
+  investmentStartDate: timestamp("investment_start_date").defaultNow(), // When the investment started
+  investmentEndDate: timestamp("investment_end_date"), // When the investment period ends
   createdAt: timestamp("created_at").defaultNow(),
 });
 
