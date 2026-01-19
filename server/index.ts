@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startInterestScheduler } from "./interestScheduler";
 
 const app = express();
 app.use(express.json());
@@ -72,5 +73,8 @@ app.use((req, res, next) => {
     log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     log(`RESEND_API_KEY: ${resendKey ? resendKey.substring(0, 12) + '...' : 'NOT SET'}`);
     log(`REPLIT_DEPLOYMENT: ${process.env.REPLIT_DEPLOYMENT || 'not set (dev mode)'}`);
+    
+    // Start the automated interest scheduler
+    startInterestScheduler();
   });
 })();

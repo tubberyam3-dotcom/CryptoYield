@@ -37,8 +37,10 @@ interface PortfolioFormData {
   strategyTag: string;
   minInvestment: string;
   riskLevel: "low" | "medium" | "high";
-  dailyInterestRate: string;
-  investmentPeriodDays: string;
+  interestRate: string;
+  interestPeriod: "hourly" | "daily" | "weekly" | "monthly";
+  payoutTerm: "term_based" | "after_maturity";
+  termDuration: string;
   maxUnitsPerUser: string;
   unitPrice: string;
   totalUnitsAvailable: string;
@@ -52,8 +54,10 @@ const defaultFormData: PortfolioFormData = {
   strategyTag: "",
   minInvestment: "100",
   riskLevel: "medium",
-  dailyInterestRate: "0.01",
-  investmentPeriodDays: "365",
+  interestRate: "0.01",
+  interestPeriod: "daily",
+  payoutTerm: "term_based",
+  termDuration: "30",
   maxUnitsPerUser: "100",
   unitPrice: "100",
   totalUnitsAvailable: "1000",
@@ -178,8 +182,10 @@ export function PortfolioManagement() {
       strategyTag: portfolio.strategyTag || "",
       minInvestment: portfolio.minInvestment?.toString() || "100",
       riskLevel: portfolio.riskLevel as "low" | "medium" | "high",
-      dailyInterestRate: portfolio.dailyInterestRate?.toString() || "0.01",
-      investmentPeriodDays: portfolio.investmentPeriodDays?.toString() || "365",
+      interestRate: portfolio.interestRate?.toString() || portfolio.dailyInterestRate?.toString() || "0.01",
+      interestPeriod: (portfolio.interestPeriod as "hourly" | "daily" | "weekly" | "monthly") || "daily",
+      payoutTerm: (portfolio.payoutTerm as "term_based" | "after_maturity") || "term_based",
+      termDuration: portfolio.termDuration?.toString() || "30",
       maxUnitsPerUser: portfolio.maxUnitsPerUser?.toString() || "100",
       unitPrice: portfolio.unitPrice?.toString() || "100",
       totalUnitsAvailable: portfolio.totalUnitsAvailable?.toString() || "1000",
@@ -563,32 +569,69 @@ function PortfolioForm({
       <Separator />
 
       <div>
-        <h4 className="font-medium mb-4">Interest & Returns</h4>
+        <h4 className="font-medium mb-4">Interest & Returns (Automated)</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="dailyInterestRate">Daily Interest Rate (decimal)</Label>
+            <Label htmlFor="interestRate">Interest Rate per Period (decimal)</Label>
             <Input
-              id="dailyInterestRate"
+              id="interestRate"
               type="number"
               step="0.0001"
               placeholder="0.01"
-              value={formData.dailyInterestRate}
-              onChange={(e) => setFormData({ ...formData, dailyInterestRate: e.target.value })}
+              value={formData.interestRate}
+              onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              e.g., 0.01 = 1% daily, 0.001 = 0.1% daily
+              e.g., 0.01 = 1% per period, 0.001 = 0.1% per period
             </p>
           </div>
 
           <div>
-            <Label htmlFor="investmentPeriodDays">Investment Period (days)</Label>
+            <Label>Interest Period</Label>
+            <Select value={formData.interestPeriod} onValueChange={(value: "hourly" | "daily" | "weekly" | "monthly") => setFormData({ ...formData, interestPeriod: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hourly">Hourly</SelectItem>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              How often interest is calculated and applied
+            </p>
+          </div>
+
+          <div>
+            <Label>Payout Term</Label>
+            <Select value={formData.payoutTerm} onValueChange={(value: "term_based" | "after_maturity") => setFormData({ ...formData, payoutTerm: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="term_based">Term Based (pay each period)</SelectItem>
+                <SelectItem value="after_maturity">After Maturity (pay at end)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              When profits are paid to user balance
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="termDuration">Term Duration (number of periods)</Label>
             <Input
-              id="investmentPeriodDays"
+              id="termDuration"
               type="number"
-              placeholder="365"
-              value={formData.investmentPeriodDays}
-              onChange={(e) => setFormData({ ...formData, investmentPeriodDays: e.target.value })}
+              placeholder="30"
+              value={formData.termDuration}
+              onChange={(e) => setFormData({ ...formData, termDuration: e.target.value })}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Total number of interest periods for full investment term
+            </p>
           </div>
         </div>
       </div>
