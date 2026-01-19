@@ -23,6 +23,7 @@ import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { RewardsManagement } from "@/components/admin/RewardsManagement";
 import { EmailSettings } from "@/components/admin/EmailSettings";
 import { TransactionManagement } from "@/components/admin/TransactionManagement";
+import { PortfolioManagement } from "@/components/admin/PortfolioManagement";
 import type { Portfolio, CommunityChallenge, User } from "@shared/schema";
 import { 
   CheckCircle, 
@@ -447,126 +448,7 @@ export default function AdminDashboard() {
         );
 
       case "portfolios":
-        return (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Portfolio Management</h2>
-                <p className="text-muted-foreground">Manage investment portfolios and staking plans</p>
-              </div>
-              <div className="flex gap-2">
-                <Dialog open={createPortfolioOpen} onOpenChange={setCreatePortfolioOpen}>
-                  <DialogTrigger asChild>
-                    <Button data-testid="button-create-portfolio">
-                      <PieChart className="h-4 w-4 mr-2" />
-                      New Portfolio
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Create New Portfolio</DialogTitle>
-                      <DialogDescription>Add a new investment portfolio to the platform</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Portfolio Name</Label>
-                        <Input
-                          value={newPortfolio.name}
-                          onChange={(e) => setNewPortfolio({ ...newPortfolio, name: e.target.value })}
-                          placeholder="e.g., Growth Portfolio"
-                          data-testid="input-portfolio-name"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Textarea
-                          value={newPortfolio.description}
-                          onChange={(e) => setNewPortfolio({ ...newPortfolio, description: e.target.value })}
-                          placeholder="Describe the portfolio strategy..."
-                          data-testid="input-portfolio-description"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Strategy Tag</Label>
-                        <Input
-                          value={newPortfolio.strategyTag}
-                          onChange={(e) => setNewPortfolio({ ...newPortfolio, strategyTag: e.target.value })}
-                          placeholder="e.g., aggressive-growth"
-                          data-testid="input-portfolio-strategy"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Min Investment ($)</Label>
-                          <Input
-                            type="number"
-                            value={newPortfolio.minInvestment}
-                            onChange={(e) => setNewPortfolio({ ...newPortfolio, minInvestment: e.target.value })}
-                            placeholder="1000"
-                            data-testid="input-portfolio-min-investment"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Risk Level</Label>
-                          <Select
-                            value={newPortfolio.riskLevel}
-                            onValueChange={(value: "low" | "medium" | "high") => setNewPortfolio({ ...newPortfolio, riskLevel: value })}
-                          >
-                            <SelectTrigger data-testid="select-portfolio-risk">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low Risk</SelectItem>
-                              <SelectItem value="medium">Medium Risk</SelectItem>
-                              <SelectItem value="high">High Risk</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={handleCreatePortfolio}
-                        disabled={createPortfolioMutation.isPending}
-                        className="w-full"
-                        data-testid="button-submit-portfolio"
-                      >
-                        {createPortfolioMutation.isPending ? "Creating..." : "Create Portfolio"}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {portfolios?.map((portfolio) => (
-                <Card key={portfolio.id} data-testid={`card-portfolio-${portfolio.id}`}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{portfolio.name}</CardTitle>
-                    <CardDescription>{portfolio.strategyTag}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground line-clamp-2">{portfolio.description}</p>
-                      <div className="flex justify-between text-sm">
-                        <span>Min Investment:</span>
-                        <span className="font-medium">${portfolio.minInvestment}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Risk Level:</span>
-                        <Badge variant={
-                          portfolio.riskLevel === 'high' ? 'destructive' :
-                          portfolio.riskLevel === 'medium' ? 'default' : 'secondary'
-                        }>
-                          {portfolio.riskLevel}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        );
+        return <PortfolioManagement />;
 
       case "challenges":
         return (
