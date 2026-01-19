@@ -21,6 +21,7 @@ import { StockManagement } from "@/components/admin/StockManagement";
 import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApprovals";
 import { BondManagement } from "@/components/admin/BondManagement";
 import { PaymentSettings } from "@/components/admin/PaymentSettings";
+import { PortfolioManagement } from "@/components/admin/PortfolioManagement";
 import { Building2, Save } from "lucide-react";
 import type { Portfolio, CommunityChallenge } from "@shared/schema";
 
@@ -285,132 +286,7 @@ export default function Admin() {
             </TabsList>
             
             <TabsContent value="portfolios" className="space-y-4 sm:space-y-6 mt-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold">Manage Portfolios</h3>
-                
-                <Dialog open={createPortfolioOpen} onOpenChange={setCreatePortfolioOpen}>
-                  <DialogTrigger asChild>
-                    <Button data-testid="button-create-portfolio">
-                      <i className="fas fa-plus mr-2"></i>
-                      Create Portfolio
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md" data-testid="dialog-create-portfolio">
-                    <DialogHeader>
-                      <DialogTitle>Create New Portfolio</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="portfolioName">Portfolio Name</Label>
-                        <Input
-                          id="portfolioName"
-                          placeholder="AI Revolution Portfolio"
-                          value={newPortfolio.name}
-                          onChange={(e) => setNewPortfolio({ ...newPortfolio, name: e.target.value })}
-                          data-testid="input-portfolio-name"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="portfolioDescription">Description</Label>
-                        <Textarea
-                          id="portfolioDescription"
-                          placeholder="Describe the portfolio strategy"
-                          value={newPortfolio.description}
-                          onChange={(e) => setNewPortfolio({ ...newPortfolio, description: e.target.value })}
-                          data-testid="textarea-portfolio-description"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="strategyTag">Strategy Tag</Label>
-                        <Select value={newPortfolio.strategyTag} onValueChange={(value) => setNewPortfolio({ ...newPortfolio, strategyTag: value })}>
-                          <SelectTrigger data-testid="select-strategy-tag">
-                            <SelectValue placeholder="Select strategy" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="AI">AI & Innovation</SelectItem>
-                            <SelectItem value="DeFi">DeFi</SelectItem>
-                            <SelectItem value="Layer2">Layer 2</SelectItem>
-                            <SelectItem value="Gaming">Gaming</SelectItem>
-                            <SelectItem value="Metaverse">Metaverse</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="minInvestment">Minimum Investment ($)</Label>
-                        <Input
-                          id="minInvestment"
-                          type="number"
-                          placeholder="100"
-                          value={newPortfolio.minInvestment}
-                          onChange={(e) => setNewPortfolio({ ...newPortfolio, minInvestment: e.target.value })}
-                          data-testid="input-min-investment"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label>Risk Level</Label>
-                        <Select value={newPortfolio.riskLevel} onValueChange={(value: "low" | "medium" | "high") => setNewPortfolio({ ...newPortfolio, riskLevel: value })}>
-                          <SelectTrigger data-testid="select-risk-level">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">Low Risk</SelectItem>
-                            <SelectItem value="medium">Medium Risk</SelectItem>
-                            <SelectItem value="high">High Risk</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <Button 
-                        className="w-full"
-                        onClick={handleCreatePortfolio}
-                        disabled={createPortfolioMutation.isPending || !newPortfolio.name || !newPortfolio.minInvestment}
-                        data-testid="button-confirm-create-portfolio"
-                      >
-                        {createPortfolioMutation.isPending ? "Creating..." : "Create Portfolio"}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {portfolios?.map((portfolio) => (
-                  <Card key={portfolio.id} className="p-6" data-testid={`card-admin-portfolio-${portfolio.id}`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <Badge className="bg-primary/10 text-primary">
-                        {portfolio.strategyTag}
-                      </Badge>
-                      <Badge className={portfolio.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
-                        {portfolio.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                    
-                    <h3 className="font-semibold mb-2">{portfolio.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {portfolio.description}
-                    </p>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Min Investment</span>
-                        <span>${parseFloat(portfolio.minInvestment).toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Risk Level</span>
-                        <span className="capitalize">{portfolio.riskLevel}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Current Return</span>
-                        <span className="text-green-500">+{portfolio.currentReturn}%</span>
-                      </div>
-                    </div>
-                  </Card>
-                )) || []}
-              </div>
+              <PortfolioManagement />
             </TabsContent>
             
             <TabsContent value="stocks" className="space-y-4 sm:space-y-6 mt-4">

@@ -881,6 +881,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Portfolio Management - Update portfolio
+  app.patch('/api/admin/portfolios/:id', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      // Verify portfolio exists
+      const existingPortfolio = await storage.getPortfolio(id);
+      if (!existingPortfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+      }
+
+      // Clean up the update data - convert numbers to proper types
+      const cleanedData: any = {};
+      
+      if (updateData.name !== undefined) cleanedData.name = updateData.name;
+      if (updateData.description !== undefined) cleanedData.description = updateData.description;
+      if (updateData.detailedDescription !== undefined) cleanedData.detailedDescription = updateData.detailedDescription;
+      if (updateData.strategyTag !== undefined) cleanedData.strategyTag = updateData.strategyTag;
+      if (updateData.assets !== undefined) cleanedData.assets = updateData.assets;
+      if (updateData.minInvestment !== undefined) cleanedData.minInvestment = updateData.minInvestment.toString();
+      if (updateData.riskLevel !== undefined) cleanedData.riskLevel = updateData.riskLevel;
+      if (updateData.currentReturn !== undefined) cleanedData.currentReturn = updateData.currentReturn.toString();
+      if (updateData.whitepaperUrl !== undefined) cleanedData.whitepaperUrl = updateData.whitepaperUrl;
+      if (updateData.dailyInterestRate !== undefined) cleanedData.dailyInterestRate = updateData.dailyInterestRate.toString();
+      if (updateData.investmentPeriodDays !== undefined) cleanedData.investmentPeriodDays = parseInt(updateData.investmentPeriodDays);
+      if (updateData.maxUnitsPerUser !== undefined) cleanedData.maxUnitsPerUser = parseInt(updateData.maxUnitsPerUser);
+      if (updateData.unitPrice !== undefined) cleanedData.unitPrice = updateData.unitPrice.toString();
+      if (updateData.totalUnitsAvailable !== undefined) cleanedData.totalUnitsAvailable = parseInt(updateData.totalUnitsAvailable);
+      if (updateData.isActive !== undefined) cleanedData.isActive = updateData.isActive;
+      
+      cleanedData.updatedAt = new Date();
+
+      const updatedPortfolio = await storage.updatePortfolio(id, cleanedData);
+      res.json(updatedPortfolio);
+    } catch (error) {
+      console.error("Error updating portfolio:", error);
+      res.status(500).json({ message: "Failed to update portfolio" });
+    }
+  });
+
+  // Admin Portfolio Management - Delete portfolio
+  app.delete('/api/admin/portfolios/:id', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+
+      // Verify portfolio exists
+      const existingPortfolio = await storage.getPortfolio(id);
+      if (!existingPortfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+      }
+
+      await storage.deletePortfolio(id);
+      res.json({ message: "Portfolio deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting portfolio:", error);
+      res.status(500).json({ message: "Failed to delete portfolio" });
+    }
+  });
+
+  // Admin Portfolio Management - Get all portfolios with stats
+  app.get('/api/admin/portfolios', adminAuth, async (req: any, res) => {
+    try {
+      const portfolios = await storage.getPortfolios();
+      res.json(portfolios);
+    } catch (error) {
+      console.error("Error fetching admin portfolios:", error);
+      res.status(500).json({ message: "Failed to fetch portfolios" });
+    }
+  });
+
+  // Admin Portfolio Management - Approve/Reject user portfolio investment
+  app.patch('/api/admin/user-portfolios/:id/status', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'approved' or 'rejected'" });
+      }
+
+      const updatedUserPortfolio = await storage.updateUserPortfolio(id, { status });
+      
+      // If rejected, refund the user's balance and restore portfolio units
+      if (status === 'rejected') {
+        const userPortfolio = await storage.getUserPortfolioById(id);
+        if (userPortfolio && userPortfolio.userId) {
+          const user = await storage.getUser(userPortfolio.userId);
+          if (user) {
+            const currentBalance = parseFloat(user.balance?.toString() || '0');
+            const refundAmount = parseFloat(userPortfolio.investedAmount.toString());
+            const newBalance = (currentBalance + refundAmount).toString();
+            await storage.updateUserBalance(userPortfolio.userId, newBalance);
+          }
+          
+          // Restore portfolio units that were consumed when investment was created
+          if (userPortfolio.portfolioId && userPortfolio.unitsPurchased) {
+            const portfolio = await storage.getPortfolio(userPortfolio.portfolioId);
+            if (portfolio) {
+              const currentUnitsSold = portfolio.unitsSold || 0;
+              const unitsToRestore = userPortfolio.unitsPurchased || 0;
+              const newUnitsSold = Math.max(0, currentUnitsSold - unitsToRestore);
+              await storage.updatePortfolio(userPortfolio.portfolioId, { 
+                unitsSold: newUnitsSold 
+              });
+            }
+          }
+        }
+      }
+
+      res.json(updatedUserPortfolio);
+    } catch (error) {
+      console.error("Error updating user portfolio status:", error);
+      res.status(500).json({ message: "Failed to update portfolio status" });
+    }
+  });
+
+  // Admin Portfolio Management - Get pending portfolio investments
+  app.get('/api/admin/user-portfolios/pending', adminAuth, async (req: any, res) => {
+    try {
+      const pendingInvestments = await storage.getPendingPortfolioInvestments();
+      res.json(pendingInvestments);
+    } catch (error) {
+      console.error("Error fetching pending portfolio investments:", error);
+      res.status(500).json({ message: "Failed to fetch pending investments" });
+    }
+  });
+
+  // Daily interest accrual endpoint - can be called by admin or scheduled job
+  app.post('/api/admin/portfolios/accrue-interest', adminAuth, async (req: any, res) => {
+    try {
+      const result = await storage.accrueInterestForAllPortfolios();
+      res.json({ message: "Interest accrued successfully", ...result });
+    } catch (error) {
+      console.error("Error accruing interest:", error);
+      res.status(500).json({ message: "Failed to accrue interest" });
+    }
+  });
+
   // User Profile update route
   app.patch('/api/user/profile', enhancedAuth, async (req: any, res) => {
     try {
@@ -924,7 +1063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/user/portfolios', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { portfolioId, investedAmount } = req.body;
+      const { portfolioId, investedAmount, unitsToPurchase } = req.body;
 
       // Validate portfolio exists
       const portfolio = await storage.getPortfolio(portfolioId);
@@ -934,11 +1073,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const investmentAmountNum = parseFloat(investedAmount);
       const minInvestment = parseFloat(portfolio.minInvestment || '0');
+      const unitPrice = parseFloat(portfolio.unitPrice?.toString() || '100');
+      const maxUnitsPerUser = portfolio.maxUnitsPerUser || 100;
+      const totalUnitsAvailable = portfolio.totalUnitsAvailable || 1000;
+      const unitsSold = portfolio.unitsSold || 0;
+      const investmentPeriodDays = portfolio.investmentPeriodDays || 365;
+
+      // Calculate units to purchase (either from request or calculate based on investment amount)
+      const units = unitsToPurchase ? parseFloat(unitsToPurchase) : Math.floor(investmentAmountNum / unitPrice);
+      const actualInvestmentAmount = units * unitPrice;
 
       // Validate minimum investment
-      if (investmentAmountNum < minInvestment) {
+      if (actualInvestmentAmount < minInvestment) {
         return res.status(400).json({ 
           message: `Minimum investment is $${minInvestment.toLocaleString()}` 
+        });
+      }
+
+      // Validate max units per user
+      if (units > maxUnitsPerUser) {
+        return res.status(400).json({ 
+          message: `Maximum ${maxUnitsPerUser} units allowed per user` 
+        });
+      }
+
+      // Validate units available
+      const remainingUnits = totalUnitsAvailable - unitsSold;
+      if (units > remainingUnits) {
+        return res.status(400).json({ 
+          message: `Only ${remainingUnits} units available for this portfolio` 
         });
       }
 
@@ -951,24 +1114,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userBalance = parseFloat(user.balance?.toString() || '0');
 
       // Verify sufficient balance
-      if (userBalance < investmentAmountNum) {
+      if (userBalance < actualInvestmentAmount) {
         return res.status(400).json({ 
-          message: `Insufficient balance. You have $${userBalance.toFixed(2)}, but need $${investmentAmountNum.toFixed(2)}` 
+          message: `Insufficient balance. You have $${userBalance.toFixed(2)}, but need $${actualInvestmentAmount.toFixed(2)}` 
         });
       }
 
       // Deduct balance
-      const newBalance = (userBalance - investmentAmountNum).toString();
+      const newBalance = (userBalance - actualInvestmentAmount).toString();
       await storage.updateUserBalance(userId, newBalance);
+
+      // Calculate investment end date
+      const investmentStartDate = new Date();
+      const investmentEndDate = new Date(investmentStartDate);
+      investmentEndDate.setDate(investmentEndDate.getDate() + investmentPeriodDays);
 
       // Handle joint accounts
       const accountContext = await storage.getAccountContext(userId);
       
       const userPortfolioData: any = {
         portfolioId,
-        investedAmount: investedAmount.toString(),
-        currentValue: investedAmount.toString(),
+        investedAmount: actualInvestmentAmount.toString(),
+        currentValue: actualInvestmentAmount.toString(),
         status: 'pending', // Set to pending for admin approval
+        unitsPurchased: units.toString(),
+        totalAccruedProfit: '0',
+        investmentStartDate,
+        investmentEndDate,
       };
 
       if (accountContext.isJointAccount) {
@@ -981,6 +1153,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertUserPortfolioSchema.parse(userPortfolioData);
       const userPortfolio = await storage.createUserPortfolio(validatedData);
+
+      // Update units sold in portfolio
+      await storage.updatePortfolio(portfolioId, { 
+        unitsSold: unitsSold + units 
+      });
+
       res.json(userPortfolio);
     } catch (error) {
       console.error("Error creating user portfolio:", error);

@@ -121,6 +121,9 @@ export interface IStorage {
   getUserPortfolios(userId: string): Promise<(UserPortfolio & { portfolio: Portfolio })[]>;
   createUserPortfolio(userPortfolio: InsertUserPortfolio): Promise<UserPortfolio>;
   updateUserPortfolio(id: string, updates: Partial<InsertUserPortfolio>): Promise<UserPortfolio>;
+  getUserPortfolioById(id: string): Promise<UserPortfolio | undefined>;
+  getPendingPortfolioInvestments(): Promise<(UserPortfolio & { portfolio: Portfolio; user?: { email: string; firstName: string; lastName: string } })[]>;
+  accrueInterestForAllPortfolios(): Promise<{ processed: number; totalInterestAdded: string }>;
   
   // Bond operations
   getBondProducts(): Promise<BondProduct[]>;
@@ -775,6 +778,86 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userPortfolios.id, id))
       .returning();
     return updated;
+  }
+
+  async getUserPortfolioById(id: string): Promise<UserPortfolio | undefined> {
+    const [portfolio] = await db.select().from(userPortfolios).where(eq(userPortfolios.id, id));
+    return portfolio;
+  }
+
+  async getPendingPortfolioInvestments(): Promise<(UserPortfolio & { portfolio: Portfolio; user?: { email: string; firstName: string; lastName: string } })[]> {
+    const pending = await db
+      .select()
+      .from(userPortfolios)
+      .leftJoin(portfolios, eq(userPortfolios.portfolioId, portfolios.id))
+      .leftJoin(users, eq(userPortfolios.userId, users.id))
+      .where(eq(userPortfolios.status, 'pending'))
+      .orderBy(desc(userPortfolios.createdAt));
+
+    return pending.map(row => ({
+      ...row.user_portfolios,
+      portfolio: row.portfolios!,
+      user: row.users ? {
+        email: row.users.email || '',
+        firstName: row.users.firstName || '',
+        lastName: row.users.lastName || ''
+      } : undefined
+    }));
+  }
+
+  async accrueInterestForAllPortfolios(): Promise<{ processed: number; totalInterestAdded: string }> {
+    // Get all approved user portfolios
+    const approvedPortfolios = await db
+      .select()
+      .from(userPortfolios)
+      .leftJoin(portfolios, eq(userPortfolios.portfolioId, portfolios.id))
+      .where(eq(userPortfolios.status, 'approved'));
+
+    let processed = 0;
+    let totalInterestAdded = 0;
+
+    for (const row of approvedPortfolios) {
+      const userPortfolio = row.user_portfolios;
+      const portfolio = row.portfolios;
+
+      if (!portfolio || !userPortfolio) continue;
+
+      const dailyInterestRate = parseFloat(portfolio.dailyInterestRate?.toString() || '0');
+      if (dailyInterestRate <= 0) continue;
+
+      const lastApplied = userPortfolio.lastInterestAppliedAt || userPortfolio.createdAt;
+      const now = new Date();
+      
+      // Only apply interest if at least 24 hours have passed
+      const hoursSinceLastApplied = (now.getTime() - new Date(lastApplied!).getTime()) / (1000 * 60 * 60);
+      if (hoursSinceLastApplied < 24) continue;
+
+      const daysSinceLastApplied = Math.floor(hoursSinceLastApplied / 24);
+      if (daysSinceLastApplied <= 0) continue;
+
+      const currentValue = parseFloat(userPortfolio.currentValue?.toString() || '0');
+      const interestToAdd = currentValue * dailyInterestRate * daysSinceLastApplied;
+      const newValue = currentValue + interestToAdd;
+      const currentProfit = parseFloat(userPortfolio.totalAccruedProfit?.toString() || '0');
+      const newProfit = currentProfit + interestToAdd;
+      const currentReturns = parseFloat(userPortfolio.returns?.toString() || '0');
+      const newReturns = currentReturns + interestToAdd;
+
+      await db
+        .update(userPortfolios)
+        .set({
+          currentValue: newValue.toString(),
+          returns: newReturns.toString(),
+          totalAccruedProfit: newProfit.toString(),
+          lastInterestAppliedAt: now
+        })
+        .where(eq(userPortfolios.id, userPortfolio.id));
+
+      processed++;
+      totalInterestAdded += interestToAdd;
+    }
+
+    return { processed, totalInterestAdded: totalInterestAdded.toFixed(2) };
   }
 
   // Bond operations
