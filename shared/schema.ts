@@ -93,6 +93,7 @@ export const portfolios = pgTable("portfolios", {
   name: varchar("name").notNull(),
   description: text("description"),
   detailedDescription: text("detailed_description"), // Full detailed description for detail page
+  imageUrl: varchar("image_url"), // Portfolio cover image URL
   strategyTag: varchar("strategy_tag"), // e.g., "growth", "value", "dividend", "balanced"
   assets: jsonb("assets").notNull(), // Array of stocks, ETFs, mutual funds with allocations
   minInvestment: decimal("min_investment", { precision: 18, scale: 8 }).notNull(),

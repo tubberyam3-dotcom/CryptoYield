@@ -899,6 +899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updateData.name !== undefined) cleanedData.name = updateData.name;
       if (updateData.description !== undefined) cleanedData.description = updateData.description;
       if (updateData.detailedDescription !== undefined) cleanedData.detailedDescription = updateData.detailedDescription;
+      if (updateData.imageUrl !== undefined) cleanedData.imageUrl = updateData.imageUrl;
       if (updateData.strategyTag !== undefined) cleanedData.strategyTag = updateData.strategyTag;
       if (updateData.assets !== undefined) cleanedData.assets = updateData.assets;
       if (updateData.minInvestment !== undefined) cleanedData.minInvestment = updateData.minInvestment.toString();
@@ -907,6 +908,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updateData.whitepaperUrl !== undefined) cleanedData.whitepaperUrl = updateData.whitepaperUrl;
       if (updateData.dailyInterestRate !== undefined) cleanedData.dailyInterestRate = updateData.dailyInterestRate.toString();
       if (updateData.investmentPeriodDays !== undefined) cleanedData.investmentPeriodDays = parseInt(updateData.investmentPeriodDays);
+      if (updateData.interestRate !== undefined) cleanedData.interestRate = updateData.interestRate.toString();
+      if (updateData.interestPeriod !== undefined) cleanedData.interestPeriod = updateData.interestPeriod;
+      if (updateData.payoutTerm !== undefined) cleanedData.payoutTerm = updateData.payoutTerm;
+      if (updateData.termDuration !== undefined) cleanedData.termDuration = parseInt(updateData.termDuration);
       if (updateData.maxUnitsPerUser !== undefined) cleanedData.maxUnitsPerUser = parseInt(updateData.maxUnitsPerUser);
       if (updateData.unitPrice !== undefined) cleanedData.unitPrice = updateData.unitPrice.toString();
       if (updateData.totalUnitsAvailable !== undefined) cleanedData.totalUnitsAvailable = parseInt(updateData.totalUnitsAvailable);

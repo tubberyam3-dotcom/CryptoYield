@@ -67,45 +67,59 @@ export function FeaturedPortfolios() {
         {portfolios?.slice(0, 3).map((portfolio) => (
           <Card 
             key={portfolio.id} 
-            className="p-6 card-hover cursor-pointer nude-gradient-light border-nude-medium/20" 
+            className="card-hover cursor-pointer nude-gradient-light border-nude-medium/20 overflow-hidden" 
             data-testid={`card-portfolio-${portfolio.id}`}
           >
-            <div className="flex items-center justify-between mb-4">
-              <Badge className={getStrategyColor(portfolio.strategyTag || '')}>
-                {portfolio.strategyTag || 'General'}
-              </Badge>
-              <div className="text-green-500 text-sm font-medium" data-testid={`text-portfolio-return-${portfolio.id}`}>
-                +{portfolio.currentReturn}%
+            {portfolio.imageUrl && (
+              <div className="w-full h-32 overflow-hidden bg-muted">
+                <img 
+                  src={portfolio.imageUrl} 
+                  alt={portfolio.name} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                  }}
+                />
               </div>
-            </div>
-            
-            <h3 className="text-lg font-semibold mb-2" data-testid={`text-portfolio-name-${portfolio.id}`}>
-              {portfolio.name}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4" data-testid={`text-portfolio-description-${portfolio.id}`}>
-              {portfolio.description}
-            </p>
-            
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Min. Investment</span>
-                <span className="font-medium" data-testid={`text-portfolio-min-investment-${portfolio.id}`}>
-                  ${parseFloat(portfolio.minInvestment).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Risk Level</span>
-                <Badge variant="outline" className={getRiskColor(portfolio.riskLevel)}>
-                  {portfolio.riskLevel}
+            )}
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <Badge className={getStrategyColor(portfolio.strategyTag || '')}>
+                  {portfolio.strategyTag || 'General'}
                 </Badge>
+                <div className="text-green-500 text-sm font-medium" data-testid={`text-portfolio-return-${portfolio.id}`}>
+                  +{portfolio.currentReturn}%
+                </div>
               </div>
+              
+              <h3 className="text-lg font-semibold mb-2" data-testid={`text-portfolio-name-${portfolio.id}`}>
+                {portfolio.name}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4" data-testid={`text-portfolio-description-${portfolio.id}`}>
+                {portfolio.description}
+              </p>
+              
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Min. Investment</span>
+                  <span className="font-medium" data-testid={`text-portfolio-min-investment-${portfolio.id}`}>
+                    ${parseFloat(portfolio.minInvestment).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Risk Level</span>
+                  <Badge variant="outline" className={getRiskColor(portfolio.riskLevel)}>
+                    {portfolio.riskLevel}
+                  </Badge>
+                </div>
+              </div>
+              
+              <QuickInvestButton 
+                portfolio={portfolio}
+                size="sm"
+                className="w-full"
+              />
             </div>
-            
-            <QuickInvestButton 
-              portfolio={portfolio}
-              size="sm"
-              className="w-full"
-            />
           </Card>
         )) || []}
       </div>

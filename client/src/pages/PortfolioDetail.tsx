@@ -231,7 +231,7 @@ export default function PortfolioDetail() {
           {/* Hero Image Banner */}
           <div className="relative rounded-xl overflow-hidden h-48 sm:h-64 mb-6">
             <img 
-              src={portfolio.strategyTag?.toLowerCase().includes('ai') ? aiTechImage : financeChartImage} 
+              src={portfolio.imageUrl || (portfolio.strategyTag?.toLowerCase().includes('ai') ? aiTechImage : financeChartImage)} 
               alt={portfolio.name}
               className="w-full h-full object-cover"
               data-testid="img-portfolio-hero"

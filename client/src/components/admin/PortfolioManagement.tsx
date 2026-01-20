@@ -26,7 +26,8 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  ImageIcon
 } from "lucide-react";
 import type { Portfolio } from "@shared/schema";
 
@@ -34,6 +35,7 @@ interface PortfolioFormData {
   name: string;
   description: string;
   detailedDescription: string;
+  imageUrl: string;
   strategyTag: string;
   minInvestment: string;
   riskLevel: "low" | "medium" | "high";
@@ -51,6 +53,7 @@ const defaultFormData: PortfolioFormData = {
   name: "",
   description: "",
   detailedDescription: "",
+  imageUrl: "",
   strategyTag: "",
   minInvestment: "100",
   riskLevel: "medium",
@@ -179,6 +182,7 @@ export function PortfolioManagement() {
       name: portfolio.name,
       description: portfolio.description || "",
       detailedDescription: portfolio.detailedDescription || "",
+      imageUrl: portfolio.imageUrl || "",
       strategyTag: portfolio.strategyTag || "",
       minInvestment: portfolio.minInvestment?.toString() || "100",
       riskLevel: portfolio.riskLevel as "low" | "medium" | "high",
@@ -309,7 +313,19 @@ export function PortfolioManagement() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {portfolios?.map((portfolio) => (
-          <Card key={portfolio.id} className="relative">
+          <Card key={portfolio.id} className="relative overflow-hidden">
+            {portfolio.imageUrl && (
+              <div className="w-full h-32 overflow-hidden bg-muted">
+                <img 
+                  src={portfolio.imageUrl} 
+                  alt={portfolio.name} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <Badge className="bg-primary/10 text-primary">
@@ -479,6 +495,34 @@ function PortfolioForm({
             onChange={(e) => setFormData({ ...formData, detailedDescription: e.target.value })}
             rows={4}
           />
+        </div>
+
+        <div className="md:col-span-2">
+          <Label htmlFor="imageUrl">Portfolio Image URL</Label>
+          <Input
+            id="imageUrl"
+            placeholder="https://example.com/portfolio-image.jpg"
+            value={formData.imageUrl}
+            onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Recommended size: 400x200px (2:1 aspect ratio). Images will be cropped to fit.
+          </p>
+          {formData.imageUrl && (
+            <div className="mt-3 relative">
+              <div className="w-full h-32 rounded-lg overflow-hidden border bg-muted">
+                <img 
+                  src={formData.imageUrl} 
+                  alt="Portfolio preview" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Image preview (cropped to fit card)</p>
+            </div>
+          )}
         </div>
 
         <div>

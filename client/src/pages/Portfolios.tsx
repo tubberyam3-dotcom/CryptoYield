@@ -118,50 +118,64 @@ export default function Portfolios() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {portfolios?.map((portfolio) => (
-                  <Card key={portfolio.id} className="p-6 hover-lift" data-testid={`card-portfolio-${portfolio.id}`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <Badge className={getStrategyColor(portfolio.strategyTag || '')}>
-                        {portfolio.strategyTag || 'General'}
-                      </Badge>
-                      <div className="text-green-500 text-sm font-medium">
-                        +{portfolio.currentReturn}%
+                  <Card key={portfolio.id} className="hover-lift overflow-hidden" data-testid={`card-portfolio-${portfolio.id}`}>
+                    {portfolio.imageUrl && (
+                      <div className="w-full h-32 overflow-hidden bg-muted">
+                        <img 
+                          src={portfolio.imageUrl} 
+                          alt={portfolio.name} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                          }}
+                        />
                       </div>
-                    </div>
-                    
-                    <h3 className="text-lg font-semibold mb-2">{portfolio.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {portfolio.description}
-                    </p>
-                    
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Min. Investment</span>
-                        <span className="font-medium">
-                          ${parseFloat(portfolio.minInvestment).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Risk Level</span>
-                        <Badge variant="outline" className={getRiskColor(portfolio.riskLevel)}>
-                          {portfolio.riskLevel}
+                    )}
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <Badge className={getStrategyColor(portfolio.strategyTag || '')}>
+                          {portfolio.strategyTag || 'General'}
                         </Badge>
+                        <div className="text-green-500 text-sm font-medium">
+                          +{portfolio.currentReturn}%
+                        </div>
                       </div>
-                    </div>
+                      
+                      <h3 className="text-lg font-semibold mb-2">{portfolio.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {portfolio.description}
+                      </p>
+                      
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Min. Investment</span>
+                          <span className="font-medium">
+                            ${parseFloat(portfolio.minInvestment).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Risk Level</span>
+                          <Badge variant="outline" className={getRiskColor(portfolio.riskLevel)}>
+                            {portfolio.riskLevel}
+                          </Badge>
+                        </div>
+                      </div>
 
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setLocation(`/portfolios/${portfolio.id}`)}
-                        className="flex-1"
-                        data-testid={`button-learn-more-${portfolio.id}`}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Learn More
-                      </Button>
-                      <QuickInvestButton 
-                        portfolio={portfolio}
-                        className="flex-1"
-                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setLocation(`/portfolios/${portfolio.id}`)}
+                          className="flex-1"
+                          data-testid={`button-learn-more-${portfolio.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Learn More
+                        </Button>
+                        <QuickInvestButton 
+                          portfolio={portfolio}
+                          className="flex-1"
+                        />
+                      </div>
                     </div>
                   </Card>
                 )) || []}
