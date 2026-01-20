@@ -456,6 +456,76 @@ class EmailService {
     });
   }
 
+  async sendInvestmentEncouragementEmail(email: string, firstName: string): Promise<{ success: boolean; error?: string }> {
+    const enabled = await storage.getSetting('email_welcome_enabled');
+    if (enabled?.settingValue !== 'true') {
+      console.log('Investment encouragement email skipped - email notifications disabled');
+      return { success: true };
+    }
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1a1a1a; margin: 0;">Ready to Start Your Investment Journey?</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Hey ${firstName || 'there'},
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Now that your account is all set up, why not begin your investment journey today? Whether you're interested in curated portfolios, stable bond yields, or exploring individual stocks, we've got options to match your goals and risk appetite.
+        </p>
+        
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="color: #1a1a1a; margin: 0 0 15px 0;">💡 Why Start Now?</h3>
+          <ul style="color: #333; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li><strong>Grow Your Savings:</strong> Invest in portfolios with strategic, diversified assets.</li>
+            <li><strong>Daily Rewards:</strong> Log in each day to claim your $100 bonus.</li>
+            <li><strong>Flexible Options:</strong> Start small or go big — it's completely up to you.</li>
+          </ul>
+        </div>
+        
+        <div style="background-color: #e4fe7b; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="color: #1a1a1a; margin: 0 0 15px 0;">🎯 Easy First Steps:</h3>
+          <ol style="color: #333; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li><strong>Fund Your Wallet</strong> – Deposit securely via crypto, bank transfer, or card.</li>
+            <li><strong>Choose Your Portfolio</strong> – Browse our active strategies, from Growth to Income-focused plans.</li>
+            <li><strong>Invest & Monitor</strong> – Watch your portfolio grow right from your dashboard.</li>
+          </ol>
+        </div>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          No matter where you are in your financial journey, we're here to support you every step of the way.
+        </p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${APP_DOMAIN}/dashboard" 
+             style="background-color: #e4fe7b; color: #1a1a1a; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+            👉 Log In to Your Dashboard
+          </a>
+        </div>
+        
+        <p style="color: #666; font-size: 14px; line-height: 1.6;">
+          If you have any questions or need guidance picking the right plan, don't hesitate to reply to this email or use the live chat available 24/7 on our website.
+        </p>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6; margin-top: 25px;">
+          Here's to your success,
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Happy investing,<br>
+          <strong>The Reflux Capital Team</strong>
+        </p>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Ready to Start Your Investment Journey? 🚀',
+      html,
+    });
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     if (!process.env.RESEND_API_KEY) {
       return { success: false, error: 'Resend API key not configured' };

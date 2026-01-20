@@ -18,6 +18,7 @@ import {
   deposits,
   withdrawals,
   loginHistory,
+  scheduledEmails,
   type User,
   type UpsertUser,
   type Portfolio,
@@ -273,6 +274,19 @@ export interface IStorage {
   recordLogin(data: InsertLoginHistory): Promise<LoginHistory>;
   getUserLoginHistory(userId: string): Promise<LoginHistory[]>;
   getAllLoginHistory(): Promise<(LoginHistory & { user: { email: string; firstName: string; lastName: string } })[]>;
+  
+  // Scheduled Email operations
+  createScheduledEmail(userId: string, emailType: string, recipientEmail: string, recipientFirstName: string | null, scheduledFor: Date): Promise<void>;
+  getPendingScheduledEmails(): Promise<Array<{
+    id: string;
+    userId: string;
+    emailType: string;
+    recipientEmail: string;
+    recipientFirstName: string | null;
+    scheduledFor: Date;
+  }>>;
+  markScheduledEmailSent(id: string): Promise<void>;
+  markScheduledEmailFailed(id: string, errorMessage: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2304,6 +2318,63 @@ export class DatabaseStorage implements IStorage {
         lastName: row.userLastName || '',
       },
     }));
+  }
+
+  // Scheduled Email operations
+  async createScheduledEmail(
+    userId: string, 
+    emailType: string, 
+    recipientEmail: string, 
+    recipientFirstName: string | null, 
+    scheduledFor: Date
+  ): Promise<void> {
+    await db.insert(scheduledEmails).values({
+      userId,
+      emailType: emailType as any,
+      recipientEmail,
+      recipientFirstName,
+      scheduledFor,
+      status: 'pending',
+    });
+  }
+
+  async getPendingScheduledEmails(): Promise<Array<{
+    id: string;
+    userId: string;
+    emailType: string;
+    recipientEmail: string;
+    recipientFirstName: string | null;
+    scheduledFor: Date;
+  }>> {
+    const now = new Date();
+    const result = await db.select({
+      id: scheduledEmails.id,
+      userId: scheduledEmails.userId,
+      emailType: scheduledEmails.emailType,
+      recipientEmail: scheduledEmails.recipientEmail,
+      recipientFirstName: scheduledEmails.recipientFirstName,
+      scheduledFor: scheduledEmails.scheduledFor,
+    })
+    .from(scheduledEmails)
+    .where(
+      and(
+        eq(scheduledEmails.status, 'pending'),
+        sql`${scheduledEmails.scheduledFor} <= ${now}`
+      )
+    );
+    return result;
+  }
+
+  async markScheduledEmailSent(id: string): Promise<void> {
+    await db.update(scheduledEmails)
+      .set({ status: 'sent', sentAt: new Date() })
+      .where(eq(scheduledEmails.id, id));
+  }
+
+  async markScheduledEmailFailed(id: string, errorMessage: string): Promise<void> {
+    await db.update(scheduledEmails)
+      .set({ status: 'failed', errorMessage })
+      .where(eq(scheduledEmails.id, id));
   }
 }
 

@@ -312,6 +312,20 @@ export const loginHistory = pgTable("login_history", {
   failureReason: varchar("failure_reason"),
 });
 
+// Scheduled emails for delayed sending
+export const scheduledEmails = pgTable("scheduled_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  emailType: varchar("email_type", { enum: ['investment_encouragement', 'follow_up', 'reminder'] }).notNull(),
+  recipientEmail: varchar("recipient_email").notNull(),
+  recipientFirstName: varchar("recipient_first_name"),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  sentAt: timestamp("sent_at"),
+  status: varchar("status", { enum: ['pending', 'sent', 'failed', 'cancelled'] }).default('pending'),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   portfolios: many(userPortfolios),
@@ -492,6 +506,12 @@ export const insertLoginHistorySchema = createInsertSchema(loginHistory).omit({
   loginAt: true,
 });
 
+export const insertScheduledEmailSchema = createInsertSchema(scheduledEmails).omit({
+  id: true,
+  sentAt: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -532,6 +552,8 @@ export type Withdrawal = typeof withdrawals.$inferSelect;
 export type InsertWithdrawal = z.infer<typeof insertWithdrawalSchema>;
 export type LoginHistory = typeof loginHistory.$inferSelect;
 export type InsertLoginHistory = z.infer<typeof insertLoginHistorySchema>;
+export type ScheduledEmail = typeof scheduledEmails.$inferSelect;
+export type InsertScheduledEmail = z.infer<typeof insertScheduledEmailSchema>;
 
 // Account type definition
 export type AccountType = "personal" | "business" | "joint";

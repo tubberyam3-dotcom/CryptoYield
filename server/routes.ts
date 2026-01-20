@@ -2445,6 +2445,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const { emailService } = await import('./email');
           await emailService.sendAccountApprovedEmail(user.email, user.firstName || 'User');
+          
+          // Schedule investment encouragement email for 1 hour later
+          const oneHourLater = new Date(Date.now() + 60 * 60 * 1000);
+          await storage.createScheduledEmail(
+            user.id,
+            'investment_encouragement',
+            user.email,
+            user.firstName || null,
+            oneHourLater
+          );
+          console.log(`Scheduled investment encouragement email for ${user.email} at ${oneHourLater.toISOString()}`);
         } catch (emailError) {
           console.error('Failed to send account approval email:', emailError);
         }
