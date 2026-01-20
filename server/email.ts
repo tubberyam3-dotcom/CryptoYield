@@ -413,6 +413,138 @@ class EmailService {
     });
   }
 
+  async sendPortfolioPurchaseEmail(
+    email: string, 
+    firstName: string, 
+    portfolioName: string, 
+    investedAmount: string, 
+    units: number
+  ): Promise<{ success: boolean; error?: string }> {
+    const enabled = await storage.getSetting('email_welcome_enabled');
+    if (enabled?.settingValue !== 'true') {
+      return { success: true };
+    }
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="width: 80px; height: 80px; background-color: #fef3c7; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">📋</span>
+          </div>
+          <h1 style="color: #1a1a1a; margin: 0;">Investment Request Submitted</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Hi ${firstName || 'there'},
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Your investment request has been submitted and is now <strong>pending approval</strong>.
+        </p>
+        <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="color: #1a1a1a; margin: 0 0 15px 0;">Investment Details</h3>
+          <table style="width: 100%; font-size: 14px;">
+            <tr>
+              <td style="color: #666; padding: 5px 0;">Portfolio:</td>
+              <td style="color: #1a1a1a; font-weight: bold; text-align: right;">${portfolioName}</td>
+            </tr>
+            <tr>
+              <td style="color: #666; padding: 5px 0;">Units:</td>
+              <td style="color: #1a1a1a; font-weight: bold; text-align: right;">${units}</td>
+            </tr>
+            <tr>
+              <td style="color: #666; padding: 5px 0;">Amount:</td>
+              <td style="color: #1a1a1a; font-weight: bold; text-align: right;">$${parseFloat(investedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+            </tr>
+          </table>
+        </div>
+        <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <p style="color: #92400e; font-size: 14px; margin: 0;">
+            <strong>What happens next?</strong><br>
+            Our team will review your investment request. You'll receive a confirmation email once it's approved and your funds are allocated.
+          </p>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${APP_DOMAIN}/dashboard" 
+             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            View Your Dashboard
+          </a>
+        </div>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Investment Request Submitted - ${portfolioName}`,
+      html,
+    });
+  }
+
+  async sendPortfolioApprovedEmail(
+    email: string, 
+    firstName: string, 
+    portfolioName: string, 
+    investedAmount: string, 
+    units: number
+  ): Promise<{ success: boolean; error?: string }> {
+    const enabled = await storage.getSetting('email_welcome_enabled');
+    if (enabled?.settingValue !== 'true') {
+      return { success: true };
+    }
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="width: 80px; height: 80px; background-color: #dcfce7; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">✅</span>
+          </div>
+          <h1 style="color: #1a1a1a; margin: 0;">Investment Approved!</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Hi ${firstName || 'there'},
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Great news! Your investment has been <strong style="color: #22c55e;">approved</strong> and is now active.
+        </p>
+        <div style="background-color: #dcfce7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e;">
+          <h3 style="color: #166534; margin: 0 0 15px 0;">Investment Confirmed</h3>
+          <table style="width: 100%; font-size: 14px;">
+            <tr>
+              <td style="color: #166534; padding: 5px 0;">Portfolio:</td>
+              <td style="color: #166534; font-weight: bold; text-align: right;">${portfolioName}</td>
+            </tr>
+            <tr>
+              <td style="color: #166534; padding: 5px 0;">Units:</td>
+              <td style="color: #166534; font-weight: bold; text-align: right;">${units}</td>
+            </tr>
+            <tr>
+              <td style="color: #166534; padding: 5px 0;">Amount Invested:</td>
+              <td style="color: #166534; font-weight: bold; text-align: right;">$${parseFloat(investedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+            </tr>
+          </table>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Your investment will now begin earning returns based on the portfolio's configured interest rate. You can track your investment performance anytime from your dashboard.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${APP_DOMAIN}/portfolios" 
+             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            View Your Investments
+          </a>
+        </div>
+        <p style="color: #666; font-size: 14px; line-height: 1.6;">
+          Thank you for investing with Reflux Capital. We're excited to help you grow your wealth!
+        </p>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Investment Approved - ${portfolioName} 🎉`,
+      html,
+    });
+  }
+
   async sendPasswordResetEmail(email: string, firstName: string, resetToken: string): Promise<{ success: boolean; error?: string }> {
     const resetUrl = `${APP_DOMAIN}/reset-password?token=${resetToken}`;
 

@@ -969,9 +969,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedUserPortfolio = await storage.updateUserPortfolio(id, { status });
       
+      // Get the user portfolio details for email notifications
+      const userPortfolio = await storage.getUserPortfolioById(id);
+      
+      // If approved, send approval notification email
+      if (status === 'approved' && userPortfolio && userPortfolio.userId) {
+        const user = await storage.getUser(userPortfolio.userId);
+        const portfolio = userPortfolio.portfolioId ? await storage.getPortfolio(userPortfolio.portfolioId) : null;
+        
+        if (user?.email && portfolio) {
+          try {
+            const { emailService } = await import('./email');
+            await emailService.sendPortfolioApprovedEmail(
+              user.email,
+              user.firstName || 'Investor',
+              portfolio.name,
+              userPortfolio.investedAmount.toString(),
+              parseInt(userPortfolio.unitsPurchased?.toString() || '1')
+            );
+          } catch (emailError) {
+            console.error('Failed to send portfolio approval email:', emailError);
+          }
+        }
+      }
+      
       // If rejected, refund the user's balance and restore portfolio units
       if (status === 'rejected') {
-        const userPortfolio = await storage.getUserPortfolioById(id);
         if (userPortfolio && userPortfolio.userId) {
           const user = await storage.getUser(userPortfolio.userId);
           if (user) {
@@ -1163,6 +1186,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updatePortfolio(portfolioId, { 
         unitsSold: unitsSold + units 
       });
+
+      // Send purchase notification email
+      if (user.email) {
+        try {
+          const { emailService } = await import('./email');
+          await emailService.sendPortfolioPurchaseEmail(
+            user.email,
+            user.firstName || 'Investor',
+            portfolio.name,
+            actualInvestmentAmount.toString(),
+            units
+          );
+        } catch (emailError) {
+          console.error('Failed to send portfolio purchase email:', emailError);
+        }
+      }
 
       res.json(userPortfolio);
     } catch (error) {
