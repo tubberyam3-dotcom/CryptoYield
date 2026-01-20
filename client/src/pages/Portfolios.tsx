@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QuickInvestButton } from "@/components/investment/QuickInvestButton";
+import { ActivePortfolioChart } from "@/components/portfolio/ActivePortfolioChart";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -69,7 +70,12 @@ export default function Portfolios() {
         <TopBar title="Portfolios" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
-          {/* My Investments */}
+          {/* Gamified Active Portfolio Chart */}
+          {userPortfolios && Array.isArray(userPortfolios) && userPortfolios.length > 0 && (
+            <ActivePortfolioChart investments={userPortfolios} />
+          )}
+
+          {/* My Investments Details */}
           {userPortfolios && Array.isArray(userPortfolios) && userPortfolios.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">My Investments</h2>
