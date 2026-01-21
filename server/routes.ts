@@ -887,11 +887,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updateData = req.body;
 
+      console.log('[Portfolio Update] Received update request for ID:', id);
+      console.log('[Portfolio Update] Update data:', JSON.stringify(updateData, null, 2));
+
       // Verify portfolio exists
       const existingPortfolio = await storage.getPortfolio(id);
       if (!existingPortfolio) {
+        console.log('[Portfolio Update] Portfolio not found:', id);
         return res.status(404).json({ message: "Portfolio not found" });
       }
+
+      console.log('[Portfolio Update] Existing portfolio:', existingPortfolio.name);
 
       // Clean up the update data - convert numbers to proper types
       const cleanedData: any = {};
@@ -919,7 +925,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       cleanedData.updatedAt = new Date();
 
+      console.log('[Portfolio Update] Cleaned data to save:', JSON.stringify(cleanedData, null, 2));
+
       const updatedPortfolio = await storage.updatePortfolio(id, cleanedData);
+      
+      console.log('[Portfolio Update] Updated portfolio:', updatedPortfolio.name, 'imageUrl:', updatedPortfolio.imageUrl);
+      
       res.json(updatedPortfolio);
     } catch (error) {
       console.error("Error updating portfolio:", error);

@@ -109,16 +109,23 @@ export function PortfolioManagement() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<PortfolioFormData> }) => {
+      console.log('[Portfolio Update] Sending update for:', id, data);
       const response = await apiRequest("PATCH", `/api/admin/portfolios/${id}`, data);
-      return response.json();
+      const result = await response.json();
+      console.log('[Portfolio Update] Response:', result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[Portfolio Update] Success, invalidating cache');
       toast({ title: "Success", description: "Portfolio updated successfully!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"], refetchType: 'all' });
+      queryClient.refetchQueries({ queryKey: ["/api/portfolios"] });
+      setFormData(defaultFormData);
       setEditOpen(false);
       setSelectedPortfolio(null);
     },
     onError: (error) => {
+      console.error('[Portfolio Update] Error:', error);
       if (isUnauthorizedError(error)) {
         toast({ title: "Unauthorized", description: "Please log in", variant: "destructive" });
         return;
