@@ -76,8 +76,10 @@ export function PortfolioManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: portfolios, isLoading } = useQuery<Portfolio[]>({
+  const { data: portfolios, isLoading, refetch: refetchPortfolios } = useQuery<Portfolio[]>({
     queryKey: ["/api/portfolios"],
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: pendingInvestments } = useQuery<any[]>({
@@ -111,26 +113,30 @@ export function PortfolioManagement() {
     mutationFn: async ({ id, data }: { id: string; data: Partial<PortfolioFormData> }) => {
       console.log('[Portfolio Update] Sending update for:', id, data);
       const response = await apiRequest("PATCH", `/api/admin/portfolios/${id}`, data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Update failed');
+      }
       const result = await response.json();
       console.log('[Portfolio Update] Response:', result);
       return result;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log('[Portfolio Update] Success, invalidating cache');
       toast({ title: "Success", description: "Portfolio updated successfully!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"], refetchType: 'all' });
-      queryClient.refetchQueries({ queryKey: ["/api/portfolios"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+      await refetchPortfolios();
       setFormData(defaultFormData);
       setEditOpen(false);
       setSelectedPortfolio(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('[Portfolio Update] Error:', error);
       if (isUnauthorizedError(error)) {
         toast({ title: "Unauthorized", description: "Please log in", variant: "destructive" });
         return;
       }
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to update portfolio", variant: "destructive" });
     },
   });
 
