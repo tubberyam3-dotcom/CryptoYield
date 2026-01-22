@@ -24,6 +24,7 @@ import { RewardsManagement } from "@/components/admin/RewardsManagement";
 import { EmailSettings } from "@/components/admin/EmailSettings";
 import { TransactionManagement } from "@/components/admin/TransactionManagement";
 import { PortfolioManagement } from "@/components/admin/PortfolioManagement";
+import { InvestmentHistory } from "@/components/admin/InvestmentHistory";
 import type { Portfolio, CommunityChallenge, User } from "@shared/schema";
 import { 
   CheckCircle, 
@@ -42,7 +43,8 @@ import {
   LogOut,
   Mail,
   ArrowLeftRight,
-  History
+  History,
+  TrendingUp
 } from "lucide-react";
 
 interface AdminStats {
@@ -75,6 +77,7 @@ interface SystemHealth {
 
 const navItems = [
   { id: "approvals", label: "Approvals", icon: CheckCircle },
+  { id: "investments", label: "Investment History", icon: TrendingUp },
   { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
   { id: "rewards", label: "Rewards", icon: Gift },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -345,6 +348,9 @@ export default function AdminDashboard() {
             <TransactionManagement />
           </div>
         );
+
+      case "investments":
+        return <InvestmentHistory />;
 
       case "rewards":
         return (

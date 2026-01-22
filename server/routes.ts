@@ -1048,6 +1048,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin - Get ALL user investments (for investment history)
+  app.get('/api/admin/all-investments', adminAuth, async (req: any, res) => {
+    try {
+      const allInvestments = await storage.getAllUserInvestments();
+      res.json(allInvestments);
+    } catch (error) {
+      console.error("Error fetching all investments:", error);
+      res.status(500).json({ message: "Failed to fetch investments" });
+    }
+  });
+
+  // Admin - Get ALL bond investments
+  app.get('/api/admin/all-bonds', adminAuth, async (req: any, res) => {
+    try {
+      const allBonds = await storage.getAllUserBonds();
+      res.json(allBonds);
+    } catch (error) {
+      console.error("Error fetching all bonds:", error);
+      res.status(500).json({ message: "Failed to fetch bonds" });
+    }
+  });
+
+  // Admin - Get ALL stock purchases
+  app.get('/api/admin/stock-purchases', adminAuth, async (req: any, res) => {
+    try {
+      const allStocks = await storage.getAllStockPurchases();
+      res.json(allStocks);
+    } catch (error) {
+      console.error("Error fetching all stock purchases:", error);
+      res.status(500).json({ message: "Failed to fetch stock purchases" });
+    }
+  });
+
   // Daily interest accrual endpoint - can be called by admin or scheduled job
   app.post('/api/admin/portfolios/accrue-interest', adminAuth, async (req: any, res) => {
     try {

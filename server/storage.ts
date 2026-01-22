@@ -124,6 +124,9 @@ export interface IStorage {
   updateUserPortfolio(id: string, updates: Partial<InsertUserPortfolio>): Promise<UserPortfolio>;
   getUserPortfolioById(id: string): Promise<UserPortfolio | undefined>;
   getPendingPortfolioInvestments(): Promise<(UserPortfolio & { portfolio: Portfolio; user?: { email: string; firstName: string; lastName: string } })[]>;
+  getAllUserInvestments(): Promise<any[]>;
+  getAllUserBonds(): Promise<any[]>;
+  getAllStockPurchases(): Promise<any[]>;
   accrueInterestForAllPortfolios(): Promise<{ processed: number; totalInterestAdded: string; maturityPayouts: number }>;
   
   // Bond operations
@@ -816,6 +819,83 @@ export class DatabaseStorage implements IStorage {
         firstName: row.users.firstName || '',
         lastName: row.users.lastName || ''
       } : undefined
+    }));
+  }
+
+  async getAllUserInvestments(): Promise<any[]> {
+    const allInvestments = await db
+      .select()
+      .from(userPortfolios)
+      .leftJoin(portfolios, eq(userPortfolios.portfolioId, portfolios.id))
+      .leftJoin(users, eq(userPortfolios.userId, users.id))
+      .orderBy(desc(userPortfolios.createdAt));
+
+    return allInvestments.map(row => ({
+      ...row.user_portfolios,
+      portfolio: row.portfolios ? {
+        id: row.portfolios.id,
+        name: row.portfolios.name,
+        interestRate: row.portfolios.interestRate,
+        interestPeriod: row.portfolios.interestPeriod,
+        payoutTerm: row.portfolios.payoutTerm,
+        termDuration: row.portfolios.termDuration,
+        riskLevel: row.portfolios.riskLevel
+      } : null,
+      user: row.users ? {
+        id: row.users.id,
+        firstName: row.users.firstName || '',
+        lastName: row.users.lastName || '',
+        email: row.users.email || ''
+      } : null
+    }));
+  }
+
+  async getAllUserBonds(): Promise<any[]> {
+    const allBonds = await db
+      .select()
+      .from(userBonds)
+      .leftJoin(bondProducts, eq(userBonds.bondProductId, bondProducts.id))
+      .leftJoin(users, eq(userBonds.userId, users.id))
+      .orderBy(desc(userBonds.purchaseDate));
+
+    return allBonds.map(row => ({
+      ...row.user_bonds,
+      bond: row.bond_products ? {
+        id: row.bond_products.id,
+        name: row.bond_products.name,
+        bondType: row.bond_products.bondType,
+        yield: row.bond_products.yield,
+        maturityMonths: row.bond_products.maturityMonths
+      } : null,
+      user: row.users ? {
+        id: row.users.id,
+        firstName: row.users.firstName || '',
+        lastName: row.users.lastName || '',
+        email: row.users.email || ''
+      } : null
+    }));
+  }
+
+  async getAllStockPurchases(): Promise<any[]> {
+    const allStocks = await db
+      .select()
+      .from(userStocks)
+      .leftJoin(stockProducts, eq(userStocks.stockProductId, stockProducts.id))
+      .leftJoin(users, eq(userStocks.userId, users.id))
+      .orderBy(desc(userStocks.createdAt));
+
+    return allStocks.map(row => ({
+      ...row.user_stocks,
+      symbol: row.stock_products?.symbol || '',
+      quantity: row.user_stocks?.quantity || '0',
+      purchasePrice: row.user_stocks?.purchasePrice || '0',
+      totalAmount: row.user_stocks?.totalValue || '0',
+      user: row.users ? {
+        id: row.users.id,
+        firstName: row.users.firstName || '',
+        lastName: row.users.lastName || '',
+        email: row.users.email || ''
+      } : null
     }));
   }
 
