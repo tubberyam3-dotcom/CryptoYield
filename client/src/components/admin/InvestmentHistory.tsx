@@ -108,8 +108,10 @@ function formatDate(date: string | null) {
   });
 }
 
-function formatCurrency(amount: string | number) {
+function formatCurrency(amount: string | number | undefined | null) {
+  if (amount === undefined || amount === null) return '$0.00';
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(num)) return '$0.00';
   return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 }
 
