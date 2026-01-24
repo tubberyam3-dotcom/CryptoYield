@@ -889,7 +889,7 @@ export class DatabaseStorage implements IStorage {
       symbol: row.stock_products?.symbol || '',
       quantity: row.user_stocks?.quantity || '0',
       purchasePrice: row.user_stocks?.purchasePrice || '0',
-      totalAmount: row.user_stocks?.totalValue || '0',
+      totalAmount: row.user_stocks?.totalInvested || '0',
       user: row.users ? {
         id: row.users.id,
         firstName: row.users.firstName || '',
