@@ -124,7 +124,7 @@ function getStatusColor(status: string) {
 }
 
 function InvestmentDetailModal({ investment }: { investment: InvestmentDetail }) {
-  const dailyPayout = parseFloat(investment.portfolio.interestRate || '0') * parseFloat(investment.currentValue);
+  const dailyPayout = parseFloat(investment.portfolio?.interestRate || '0') * parseFloat(investment.currentValue);
   const daysRemaining = investment.investmentEndDate 
     ? Math.max(0, Math.ceil((new Date(investment.investmentEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
@@ -134,12 +134,12 @@ function InvestmentDetailModal({ investment }: { investment: InvestmentDetail })
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">Investor</p>
-          <p className="font-medium">{investment.user.firstName} {investment.user.lastName}</p>
-          <p className="text-xs text-muted-foreground">{investment.user.email}</p>
+          <p className="font-medium">{investment.user?.firstName} {investment.user?.lastName}</p>
+          <p className="text-xs text-muted-foreground">{investment.user?.email}</p>
         </div>
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">Portfolio</p>
-          <p className="font-medium">{investment.portfolio.name}</p>
+          <p className="font-medium">{investment.portfolio?.name}</p>
           <Badge variant="outline" className={getStatusColor(investment.status)}>
             {investment.status}
           </Badge>
@@ -181,7 +181,7 @@ function InvestmentDetailModal({ investment }: { investment: InvestmentDetail })
           </div>
           <div>
             <p className="text-muted-foreground">Periods Completed</p>
-            <p className="font-medium">{investment.periodsCompleted} / {investment.portfolio.termDuration}</p>
+            <p className="font-medium">{investment.periodsCompleted} / {investment.portfolio?.termDuration}</p>
           </div>
         </div>
       </div>
@@ -194,18 +194,18 @@ function InvestmentDetailModal({ investment }: { investment: InvestmentDetail })
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-muted-foreground">Interest Rate</p>
-            <p className="font-medium">{(parseFloat(investment.portfolio.interestRate || '0') * 100).toFixed(2)}%</p>
+            <p className="font-medium">{(parseFloat(investment.portfolio?.interestRate || '0') * 100).toFixed(2)}%</p>
           </div>
           <div>
             <p className="text-muted-foreground">Interest Period</p>
-            <p className="font-medium capitalize">{investment.portfolio.interestPeriod}</p>
+            <p className="font-medium capitalize">{investment.portfolio?.interestPeriod}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Payout Term</p>
-            <p className="font-medium capitalize">{investment.portfolio.payoutTerm?.replace('_', ' ')}</p>
+            <p className="font-medium capitalize">{investment.portfolio?.payoutTerm?.replace('_', ' ')}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Est. {investment.portfolio.interestPeriod} Payout</p>
+            <p className="text-muted-foreground">Est. {investment.portfolio?.interestPeriod} Payout</p>
             <p className="font-medium text-green-500">{formatCurrency(dailyPayout)}</p>
           </div>
         </div>
@@ -269,27 +269,27 @@ export function InvestmentHistory() {
 
   const filteredInvestments = allInvestments?.filter(inv => {
     const matchesSearch = 
-      inv.user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.portfolio.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      inv.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inv.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inv.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inv.portfolio?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || inv.status === statusFilter;
     return matchesSearch && matchesStatus;
   }) || [];
 
   const filteredBonds = allBonds?.filter(bond => {
     const matchesSearch = 
-      bond.user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bond.user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bond.bond.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      bond.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bond.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bond.bond?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || bond.status === statusFilter;
     return matchesSearch && matchesStatus;
   }) || [];
 
   const filteredStocks = stockPurchases?.filter(stock => {
     const matchesSearch = 
-      stock.user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      stock.user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      stock.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      stock.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       stock.symbol?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || stock.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -418,8 +418,8 @@ export function InvestmentHistory() {
                             <User className="w-5 h-5 text-primary" />
                           </div>
                           <div>
-                            <p className="font-medium">{investment.user.firstName} {investment.user.lastName}</p>
-                            <p className="text-sm text-muted-foreground">{investment.portfolio.name}</p>
+                            <p className="font-medium">{investment.user?.firstName} {investment.user?.lastName}</p>
+                            <p className="text-sm text-muted-foreground">{investment.portfolio?.name}</p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -478,13 +478,13 @@ export function InvestmentHistory() {
                             <Wallet className="w-5 h-5 text-blue-500" />
                           </div>
                           <div>
-                            <p className="font-medium">{bond.user.firstName} {bond.user.lastName}</p>
-                            <p className="text-sm text-muted-foreground">{bond.bond.name}</p>
+                            <p className="font-medium">{bond.user?.firstName} {bond.user?.lastName}</p>
+                            <p className="text-sm text-muted-foreground">{bond.bond?.name}</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="font-medium">{formatCurrency(bond.investmentAmount)}</p>
-                          <p className="text-sm text-muted-foreground">{bond.bond.yield}% yield</p>
+                          <p className="text-sm text-muted-foreground">{bond.bond?.yield}% yield</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground">Maturity</p>
@@ -527,7 +527,7 @@ export function InvestmentHistory() {
                             {stock.symbol?.substring(0, 2)}
                           </div>
                           <div>
-                            <p className="font-medium">{stock.user.firstName} {stock.user.lastName}</p>
+                            <p className="font-medium">{stock.user?.firstName} {stock.user?.lastName}</p>
                             <p className="text-sm text-muted-foreground">{stock.symbol}</p>
                           </div>
                         </div>
