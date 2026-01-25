@@ -25,6 +25,7 @@ import { EmailSettings } from "@/components/admin/EmailSettings";
 import { TransactionManagement } from "@/components/admin/TransactionManagement";
 import { PortfolioManagement } from "@/components/admin/PortfolioManagement";
 import { InvestmentHistory } from "@/components/admin/InvestmentHistory";
+import { AdminPurchaseForUser } from "@/components/admin/AdminPurchaseForUser";
 import type { Portfolio, CommunityChallenge, User } from "@shared/schema";
 import { 
   CheckCircle, 
@@ -44,7 +45,8 @@ import {
   Mail,
   ArrowLeftRight,
   History,
-  TrendingUp
+  TrendingUp,
+  ShoppingCart
 } from "lucide-react";
 
 interface AdminStats {
@@ -77,6 +79,7 @@ interface SystemHealth {
 
 const navItems = [
   { id: "approvals", label: "Approvals", icon: CheckCircle },
+  { id: "purchase-for-user", label: "Purchase for User", icon: ShoppingCart },
   { id: "investments", label: "Investment History", icon: TrendingUp },
   { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
   { id: "rewards", label: "Rewards", icon: Gift },
@@ -348,6 +351,9 @@ export default function AdminDashboard() {
             <TransactionManagement />
           </div>
         );
+
+      case "purchase-for-user":
+        return <AdminPurchaseForUser />;
 
       case "investments":
         return <InvestmentHistory />;

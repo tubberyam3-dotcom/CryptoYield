@@ -1888,6 +1888,222 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin - Purchase portfolio investment for a user
+  app.post('/api/admin/users/:userId/invest-portfolio', adminAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { portfolioId, investedAmount, unitsToPurchase, autoApprove } = req.body;
+
+      // Validate user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Validate portfolio exists
+      const portfolio = await storage.getPortfolio(portfolioId);
+      if (!portfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+      }
+
+      const investmentAmountNum = parseFloat(investedAmount);
+      const minInvestment = parseFloat(portfolio.minInvestment || '0');
+      const unitPrice = parseFloat(portfolio.unitPrice?.toString() || '100');
+      const maxUnitsPerUser = portfolio.maxUnitsPerUser || 100;
+      const totalUnitsAvailable = portfolio.totalUnitsAvailable || 1000;
+      const unitsSold = portfolio.unitsSold || 0;
+      const investmentPeriodDays = portfolio.investmentPeriodDays || 365;
+
+      // Calculate units to purchase
+      const units = unitsToPurchase ? parseFloat(unitsToPurchase) : Math.floor(investmentAmountNum / unitPrice);
+      const actualInvestmentAmount = units * unitPrice;
+
+      // Validate minimum investment
+      if (actualInvestmentAmount < minInvestment) {
+        return res.status(400).json({ 
+          message: `Minimum investment is $${minInvestment.toLocaleString()}` 
+        });
+      }
+
+      // Validate max units per user
+      if (units > maxUnitsPerUser) {
+        return res.status(400).json({ 
+          message: `Maximum ${maxUnitsPerUser} units allowed per user` 
+        });
+      }
+
+      // Validate units available
+      const remainingUnits = totalUnitsAvailable - unitsSold;
+      if (units > remainingUnits) {
+        return res.status(400).json({ 
+          message: `Only ${remainingUnits} units available for this portfolio` 
+        });
+      }
+
+      // Check user balance
+      const userBalance = parseFloat(user.balance?.toString() || '0');
+      if (userBalance < actualInvestmentAmount) {
+        return res.status(400).json({ 
+          message: `Insufficient balance. User has $${userBalance.toFixed(2)}, but needs $${actualInvestmentAmount.toFixed(2)}` 
+        });
+      }
+
+      // Deduct balance
+      const newBalance = (userBalance - actualInvestmentAmount).toString();
+      await storage.updateUserBalance(userId, newBalance);
+
+      // Calculate investment dates
+      const investmentStartDate = new Date();
+      const investmentEndDate = new Date(investmentStartDate);
+      investmentEndDate.setDate(investmentEndDate.getDate() + investmentPeriodDays);
+
+      // Handle joint accounts
+      const accountContext = await storage.getAccountContext(userId);
+      
+      const userPortfolioData: any = {
+        portfolioId,
+        investedAmount: actualInvestmentAmount.toString(),
+        currentValue: actualInvestmentAmount.toString(),
+        status: autoApprove ? 'approved' : 'pending',
+        unitsPurchased: units.toString(),
+        totalAccruedProfit: '0',
+        investmentStartDate,
+        investmentEndDate,
+      };
+
+      if (accountContext.isJointAccount) {
+        userPortfolioData.jointAccountId = accountContext.accountId;
+        userPortfolioData.userId = null;
+      } else {
+        userPortfolioData.userId = userId;
+        userPortfolioData.jointAccountId = null;
+      }
+
+      const validatedData = insertUserPortfolioSchema.parse(userPortfolioData);
+      const userPortfolio = await storage.createUserPortfolio(validatedData);
+
+      // Update units sold in portfolio
+      await storage.updatePortfolio(portfolioId, { 
+        unitsSold: unitsSold + units 
+      });
+
+      // Send notification email
+      if (user.email) {
+        try {
+          const { emailService } = await import('./email');
+          await emailService.sendPortfolioPurchaseEmail(
+            user.email,
+            user.firstName || 'Investor',
+            portfolio.name,
+            actualInvestmentAmount.toString(),
+            units
+          );
+        } catch (emailError) {
+          console.error('Failed to send portfolio purchase email:', emailError);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        investment: userPortfolio,
+        message: `Successfully purchased ${units} units of ${portfolio.name} for user ${user.firstName} ${user.lastName}` 
+      });
+    } catch (error) {
+      console.error("Error creating portfolio investment for user:", error);
+      res.status(500).json({ message: "Failed to create portfolio investment" });
+    }
+  });
+
+  // Admin - Purchase stock for a user
+  app.post('/api/admin/users/:userId/buy-stock', adminAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { stockProductId, symbol, name, sector, quantity, purchasePrice, autoApprove } = req.body;
+
+      // Validate user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let stockProduct;
+      
+      // If stockProductId is provided, use it
+      if (stockProductId) {
+        stockProduct = await storage.getStockProduct(stockProductId);
+        if (!stockProduct) {
+          return res.status(404).json({ message: "Stock product not found" });
+        }
+      } else if (symbol && name) {
+        // Check if stock product already exists for this symbol
+        const existingProducts = await storage.getStockProducts();
+        stockProduct = existingProducts.find((p: any) => p.symbol === symbol.toUpperCase());
+        
+        // If not found, create a new stock product
+        if (!stockProduct) {
+          const newStockProduct = await storage.createStockProduct({
+            symbol: symbol.toUpperCase(),
+            name: name,
+            sector: sector || null,
+            description: null,
+            currentPrice: purchasePrice,
+            isAdminOffering: false,
+          });
+          stockProduct = newStockProduct;
+        }
+      } else {
+        return res.status(400).json({ message: "Either stockProductId or symbol/name is required" });
+      }
+
+      const quantityNum = parseFloat(quantity);
+      const priceNum = parseFloat(purchasePrice || stockProduct.currentPrice || '0');
+      const totalInvested = quantityNum * priceNum;
+
+      // Check user balance
+      const userBalance = parseFloat(user.balance?.toString() || '0');
+      if (userBalance < totalInvested) {
+        return res.status(400).json({ 
+          message: `Insufficient balance. User has $${userBalance.toFixed(2)}, but needs $${totalInvested.toFixed(2)}` 
+        });
+      }
+
+      // Deduct balance
+      const newBalance = (userBalance - totalInvested).toString();
+      await storage.updateUserBalance(userId, newBalance);
+
+      // Handle joint accounts
+      const accountContext = await storage.getAccountContext(userId);
+
+      const userStockData: any = {
+        stockProductId: stockProduct.id,
+        quantity: quantityNum.toString(),
+        purchasePrice: priceNum.toString(),
+        totalInvested: totalInvested.toString(),
+        status: autoApprove ? 'approved' : 'pending',
+      };
+
+      if (accountContext.isJointAccount) {
+        userStockData.jointAccountId = accountContext.accountId;
+        userStockData.userId = null;
+      } else {
+        userStockData.userId = userId;
+        userStockData.jointAccountId = null;
+      }
+
+      const validatedData = insertUserStockSchema.parse(userStockData);
+      const userStockRecord = await storage.createUserStock(validatedData);
+
+      res.json({ 
+        success: true, 
+        purchase: userStockRecord,
+        message: `Successfully purchased ${quantityNum} shares of ${stockProduct.symbol} for user ${user.firstName} ${user.lastName}` 
+      });
+    } catch (error) {
+      console.error("Error creating stock purchase for user:", error);
+      res.status(500).json({ message: "Failed to create stock purchase" });
+    }
+  });
+
   // User stock operations
   app.get('/api/user/stocks', enhancedAuth, async (req: any, res) => {
     try {
