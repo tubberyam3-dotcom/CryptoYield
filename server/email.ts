@@ -545,6 +545,85 @@ class EmailService {
     });
   }
 
+  async sendAdminPortfolioPurchaseEmail(
+    email: string, 
+    firstName: string, 
+    portfolioName: string, 
+    investedAmount: string, 
+    units: number,
+    status: 'approved' | 'pending'
+  ): Promise<{ success: boolean; error?: string }> {
+    const enabled = await storage.getSetting('email_welcome_enabled');
+    if (enabled?.settingValue !== 'true') {
+      return { success: true };
+    }
+
+    const isApproved = status === 'approved';
+    const statusColor = isApproved ? '#22c55e' : '#f59e0b';
+    const statusBg = isApproved ? '#dcfce7' : '#fef3c7';
+    const statusText = isApproved ? 'Approved & Active' : 'Pending Review';
+    const icon = isApproved ? '✅' : '📋';
+    const headerColor = isApproved ? '#166534' : '#92400e';
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="width: 80px; height: 80px; background-color: ${statusBg}; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">${icon}</span>
+          </div>
+          <h1 style="color: #1a1a1a; margin: 0;">Portfolio Investment Made on Your Behalf</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Hi ${firstName || 'there'},
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          A portfolio investment has been made on your behalf by our investment team. The funds have been deducted from your account balance.
+        </p>
+        <div style="background-color: ${statusBg}; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid ${statusColor};">
+          <h3 style="color: ${headerColor}; margin: 0 0 15px 0;">Investment Details</h3>
+          <table style="width: 100%; font-size: 14px;">
+            <tr>
+              <td style="color: ${headerColor}; padding: 5px 0;">Portfolio:</td>
+              <td style="color: ${headerColor}; font-weight: bold; text-align: right;">${portfolioName}</td>
+            </tr>
+            <tr>
+              <td style="color: ${headerColor}; padding: 5px 0;">Units Purchased:</td>
+              <td style="color: ${headerColor}; font-weight: bold; text-align: right;">${units}</td>
+            </tr>
+            <tr>
+              <td style="color: ${headerColor}; padding: 5px 0;">Amount Invested:</td>
+              <td style="color: ${headerColor}; font-weight: bold; text-align: right;">$${parseFloat(investedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+            </tr>
+            <tr>
+              <td style="color: ${headerColor}; padding: 5px 0;">Status:</td>
+              <td style="color: ${statusColor}; font-weight: bold; text-align: right;">${statusText}</td>
+            </tr>
+          </table>
+        </div>
+        ${isApproved 
+          ? `<p style="color: #333; font-size: 16px; line-height: 1.6;">Your investment is now active and will begin earning returns based on the portfolio's configured interest rate.</p>` 
+          : `<p style="color: #333; font-size: 16px; line-height: 1.6;">Your investment is pending final approval. You will receive another notification once it has been fully approved.</p>`
+        }
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${APP_DOMAIN}/portfolios" 
+             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            View Your Investments
+          </a>
+        </div>
+        <p style="color: #666; font-size: 14px; line-height: 1.6;">
+          If you have any questions about this investment, please contact our support team.
+        </p>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Portfolio Investment Made on Your Behalf - ${portfolioName}`,
+      html,
+    });
+  }
+
   async sendPasswordResetEmail(email: string, firstName: string, resetToken: string): Promise<{ success: boolean; error?: string }> {
     const resetUrl = `${APP_DOMAIN}/reset-password?token=${resetToken}`;
 

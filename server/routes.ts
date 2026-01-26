@@ -1991,15 +1991,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user.email) {
         try {
           const { emailService } = await import('./email');
-          await emailService.sendPortfolioPurchaseEmail(
+          await emailService.sendAdminPortfolioPurchaseEmail(
             user.email,
             user.firstName || 'Investor',
             portfolio.name,
             actualInvestmentAmount.toString(),
-            units
+            units,
+            autoApprove ? 'approved' : 'pending'
           );
         } catch (emailError) {
-          console.error('Failed to send portfolio purchase email:', emailError);
+          console.error('Failed to send admin portfolio purchase email:', emailError);
         }
       }
 
