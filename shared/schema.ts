@@ -103,7 +103,7 @@ export const portfolios = pgTable("portfolios", {
   // Automated interest configuration
   interestRate: decimal("interest_rate", { precision: 8, scale: 6 }).default('0'), // Interest rate per period (e.g., 0.01 = 1%)
   interestPeriod: varchar("interest_period", { enum: ['hourly', 'daily', 'weekly', 'monthly'] }).default('daily'), // How often interest is calculated
-  payoutTerm: varchar("payout_term", { enum: ['term_based', 'after_maturity'] }).default('term_based'), // When profits are paid out
+  payoutTerm: varchar("payout_term", { enum: ['term_based', 'after_maturity', 'profit_only', 'capital_and_interest'] }).default('profit_only'), // When profits are paid out
   termDuration: integer("term_duration").default(30), // Number of interest periods for full investment term
   // Legacy fields (kept for compatibility)
   dailyInterestRate: decimal("daily_interest_rate", { precision: 8, scale: 6 }).default('0'),

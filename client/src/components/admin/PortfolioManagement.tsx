@@ -41,7 +41,7 @@ interface PortfolioFormData {
   riskLevel: "low" | "medium" | "high";
   interestRate: string;
   interestPeriod: "hourly" | "daily" | "weekly" | "monthly";
-  payoutTerm: "term_based" | "after_maturity";
+  payoutTerm: "term_based" | "after_maturity" | "profit_only" | "capital_and_interest";
   termDuration: string;
   maxUnitsPerUser: string;
   unitPrice: string;
@@ -59,7 +59,7 @@ const defaultFormData: PortfolioFormData = {
   riskLevel: "medium",
   interestRate: "0.01",
   interestPeriod: "daily",
-  payoutTerm: "term_based",
+  payoutTerm: "profit_only",
   termDuration: "30",
   maxUnitsPerUser: "100",
   unitPrice: "100",
@@ -201,7 +201,7 @@ export function PortfolioManagement() {
       riskLevel: portfolio.riskLevel as "low" | "medium" | "high",
       interestRate: portfolio.interestRate?.toString() || portfolio.dailyInterestRate?.toString() || "0.01",
       interestPeriod: (portfolio.interestPeriod as "hourly" | "daily" | "weekly" | "monthly") || "daily",
-      payoutTerm: (portfolio.payoutTerm as "term_based" | "after_maturity") || "term_based",
+      payoutTerm: (portfolio.payoutTerm as "term_based" | "after_maturity" | "profit_only" | "capital_and_interest") || "profit_only",
       termDuration: portfolio.termDuration?.toString() || "30",
       maxUnitsPerUser: portfolio.maxUnitsPerUser?.toString() || "100",
       unitPrice: portfolio.unitPrice?.toString() || "100",
@@ -663,17 +663,19 @@ function PortfolioForm({
 
           <div>
             <Label>Payout Term</Label>
-            <Select value={formData.payoutTerm} onValueChange={(value: "term_based" | "after_maturity") => setFormData({ ...formData, payoutTerm: value })}>
+            <Select value={formData.payoutTerm} onValueChange={(value: "term_based" | "after_maturity" | "profit_only" | "capital_and_interest") => setFormData({ ...formData, payoutTerm: value })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="term_based">Term Based (pay each period)</SelectItem>
-                <SelectItem value="after_maturity">After Maturity (pay at end)</SelectItem>
+                <SelectItem value="profit_only">Profit Only (capital returned at end)</SelectItem>
+                <SelectItem value="capital_and_interest">Capital + Interest (paid together each period)</SelectItem>
+                <SelectItem value="term_based">Term Based (legacy - pay each period)</SelectItem>
+                <SelectItem value="after_maturity">After Maturity (legacy - pay at end)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground mt-1">
-              When profits are paid to user balance
+              Profit Only: Interest paid each period, capital returned at maturity. Capital + Interest: Both paid together proportionally.
             </p>
           </div>
 

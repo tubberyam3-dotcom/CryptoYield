@@ -947,19 +947,29 @@ export class DatabaseStorage implements IStorage {
       // Skip if no new periods have elapsed and not at maturity
       if (periodsElapsed <= 0) {
         // Check for maturity payout when no new periods to apply
-        if (payoutTerm === 'after_maturity' && currentPeriodsCompleted >= termDuration && !userPortfolio.maturityPaidAt) {
-          const unpaidProfit = parseFloat(userPortfolio.accruedUnpaidProfit?.toString() || '0');
-          if (unpaidProfit > 0 && userPortfolio.userId) {
-            const user = await this.getUser(userPortfolio.userId);
-            if (user) {
-              const currentBalance = parseFloat(user.balance?.toString() || '0');
-              await this.updateUserBalance(userPortfolio.userId, (currentBalance + unpaidProfit).toString());
-              await db.update(userPortfolios).set({
-                maturityPaidAt: now,
-                accruedUnpaidProfit: '0'
-              }).where(eq(userPortfolios.id, userPortfolio.id));
+        if (currentPeriodsCompleted >= termDuration && !userPortfolio.maturityPaidAt && userPortfolio.userId) {
+          const user = await this.getUser(userPortfolio.userId);
+          if (user) {
+            const currentBalance = parseFloat(user.balance?.toString() || '0');
+            const investedAmt = parseFloat(userPortfolio.investedAmount?.toString() || '0');
+            
+            if (payoutTerm === 'profit_only') {
+              // Return capital at maturity
+              await this.updateUserBalance(userPortfolio.userId, (currentBalance + investedAmt).toString());
+              await db.update(userPortfolios).set({ maturityPaidAt: now }).where(eq(userPortfolios.id, userPortfolio.id));
+              maturityPayouts++;
+            } else if (payoutTerm === 'after_maturity') {
+              // Return capital + unpaid profit at maturity
+              const unpaidProfit = parseFloat(userPortfolio.accruedUnpaidProfit?.toString() || '0');
+              const totalPayout = unpaidProfit + investedAmt;
+              await this.updateUserBalance(userPortfolio.userId, (currentBalance + totalPayout).toString());
+              await db.update(userPortfolios).set({ maturityPaidAt: now, accruedUnpaidProfit: '0' }).where(eq(userPortfolios.id, userPortfolio.id));
               maturityPayouts++;
               totalInterestAdded += unpaidProfit;
+            } else if (payoutTerm === 'capital_and_interest') {
+              // Already paid out fully through periods
+              await db.update(userPortfolios).set({ maturityPaidAt: now }).where(eq(userPortfolios.id, userPortfolio.id));
+              maturityPayouts++;
             }
           }
         }
@@ -970,19 +980,29 @@ export class DatabaseStorage implements IStorage {
       
       if (totalPeriodsToApply <= 0) {
         // All periods completed, check for maturity payout
-        if (payoutTerm === 'after_maturity' && currentPeriodsCompleted >= termDuration && !userPortfolio.maturityPaidAt) {
-          const unpaidProfit = parseFloat(userPortfolio.accruedUnpaidProfit?.toString() || '0');
-          if (unpaidProfit > 0 && userPortfolio.userId) {
-            const user = await this.getUser(userPortfolio.userId);
-            if (user) {
-              const currentBalance = parseFloat(user.balance?.toString() || '0');
-              await this.updateUserBalance(userPortfolio.userId, (currentBalance + unpaidProfit).toString());
-              await db.update(userPortfolios).set({
-                maturityPaidAt: now,
-                accruedUnpaidProfit: '0'
-              }).where(eq(userPortfolios.id, userPortfolio.id));
+        if (currentPeriodsCompleted >= termDuration && !userPortfolio.maturityPaidAt && userPortfolio.userId) {
+          const user = await this.getUser(userPortfolio.userId);
+          if (user) {
+            const currentBalance = parseFloat(user.balance?.toString() || '0');
+            const investedAmt = parseFloat(userPortfolio.investedAmount?.toString() || '0');
+            
+            if (payoutTerm === 'profit_only') {
+              // Return capital at maturity
+              await this.updateUserBalance(userPortfolio.userId, (currentBalance + investedAmt).toString());
+              await db.update(userPortfolios).set({ maturityPaidAt: now }).where(eq(userPortfolios.id, userPortfolio.id));
+              maturityPayouts++;
+            } else if (payoutTerm === 'after_maturity') {
+              // Return capital + unpaid profit at maturity
+              const unpaidProfit = parseFloat(userPortfolio.accruedUnpaidProfit?.toString() || '0');
+              const totalPayout = unpaidProfit + investedAmt;
+              await this.updateUserBalance(userPortfolio.userId, (currentBalance + totalPayout).toString());
+              await db.update(userPortfolios).set({ maturityPaidAt: now, accruedUnpaidProfit: '0' }).where(eq(userPortfolios.id, userPortfolio.id));
               maturityPayouts++;
               totalInterestAdded += unpaidProfit;
+            } else if (payoutTerm === 'capital_and_interest') {
+              // Already paid out fully through periods
+              await db.update(userPortfolios).set({ maturityPaidAt: now }).where(eq(userPortfolios.id, userPortfolio.id));
+              maturityPayouts++;
             }
           }
         }
@@ -1009,8 +1029,10 @@ export class DatabaseStorage implements IStorage {
       };
 
       // Handle payout based on payoutTerm
-      if (payoutTerm === 'term_based') {
-        // Pay interest directly to user balance
+      const investedAmount = parseFloat(userPortfolio.investedAmount?.toString() || '0');
+      
+      if (payoutTerm === 'term_based' || payoutTerm === 'profit_only') {
+        // Pay interest directly to user balance each period
         if (userPortfolio.userId) {
           const user = await this.getUser(userPortfolio.userId);
           if (user) {
@@ -1018,18 +1040,48 @@ export class DatabaseStorage implements IStorage {
             await this.updateUserBalance(userPortfolio.userId, (currentBalance + interestToAdd).toString());
           }
         }
+        
+        // For profit_only: return capital at maturity
+        if (payoutTerm === 'profit_only' && newPeriodsCompleted >= termDuration && userPortfolio.userId && !userPortfolio.maturityPaidAt) {
+          const user = await this.getUser(userPortfolio.userId);
+          if (user) {
+            const currentBalance = parseFloat(user.balance?.toString() || '0');
+            await this.updateUserBalance(userPortfolio.userId, (currentBalance + investedAmount).toString());
+            updateData.maturityPaidAt = now;
+            maturityPayouts++;
+          }
+        }
+      } else if (payoutTerm === 'capital_and_interest') {
+        // Pay both interest and proportional capital each period
+        const capitalPerPeriod = investedAmount / termDuration;
+        const totalPayout = interestToAdd + capitalPerPeriod;
+        
+        if (userPortfolio.userId) {
+          const user = await this.getUser(userPortfolio.userId);
+          if (user) {
+            const currentBalance = parseFloat(user.balance?.toString() || '0');
+            await this.updateUserBalance(userPortfolio.userId, (currentBalance + totalPayout).toString());
+          }
+        }
+        
+        // Mark as matured when all periods complete
+        if (newPeriodsCompleted >= termDuration && !userPortfolio.maturityPaidAt) {
+          updateData.maturityPaidAt = now;
+          maturityPayouts++;
+        }
       } else {
-        // Accumulate for maturity payout
+        // after_maturity: Accumulate for maturity payout
         const currentUnpaid = parseFloat(userPortfolio.accruedUnpaidProfit?.toString() || '0');
         updateData.accruedUnpaidProfit = (currentUnpaid + interestToAdd).toString();
         
-        // Check if maturity reached
-        if (newPeriodsCompleted >= termDuration && userPortfolio.userId) {
+        // Check if maturity reached - return both capital and accumulated profit
+        if (newPeriodsCompleted >= termDuration && userPortfolio.userId && !userPortfolio.maturityPaidAt) {
           const user = await this.getUser(userPortfolio.userId);
           if (user) {
             const totalUnpaid = currentUnpaid + interestToAdd;
+            const totalPayout = totalUnpaid + investedAmount; // Return capital + all accumulated profit
             const currentBalance = parseFloat(user.balance?.toString() || '0');
-            await this.updateUserBalance(userPortfolio.userId, (currentBalance + totalUnpaid).toString());
+            await this.updateUserBalance(userPortfolio.userId, (currentBalance + totalPayout).toString());
             updateData.maturityPaidAt = now;
             updateData.accruedUnpaidProfit = '0';
             maturityPayouts++;
