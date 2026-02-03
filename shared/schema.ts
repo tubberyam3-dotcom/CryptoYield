@@ -57,6 +57,9 @@ export const users = pgTable("users", {
   // Verification document (using text for large base64 data URLs)
   verificationDocumentUrl: text("verification_document_url"),
   verificationDocumentType: varchar("verification_document_type", { enum: ['passport', 'drivers_license', 'national_id', 'other'] }),
+  verificationDocumentNumber: varchar("verification_document_number"),
+  // Referral tracking
+  referralCode: varchar("referral_code"),
   // Password reset
   passwordResetToken: varchar("password_reset_token"),
   passwordResetExpiry: timestamp("password_reset_expiry"),

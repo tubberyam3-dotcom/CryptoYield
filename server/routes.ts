@@ -400,6 +400,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phoneNumber: phone || null,
         country: country || null,
         verificationDocumentType: documentType || null,
+        verificationDocumentNumber: documentNumber || null,
+        referralCode: referralCode || null,
         businessName: accountType === 'business' ? businessName : null,
         businessType: accountType === 'business' ? businessType : null,
         taxId: accountType === 'business' ? taxId : null,

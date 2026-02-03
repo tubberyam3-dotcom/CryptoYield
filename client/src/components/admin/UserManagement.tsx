@@ -939,6 +939,12 @@ export function UserManagement() {
                         {userDetails.verificationDocumentType?.replace(/_/g, ' ') || 'Unknown'}
                       </span>
                     </div>
+                    {userDetails.verificationDocumentNumber && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Document Number</span>
+                        <span className="font-medium">{userDetails.verificationDocumentNumber}</span>
+                      </div>
+                    )}
                     <div className="border rounded-lg p-4 bg-muted/50">
                       <img 
                         src={userDetails.verificationDocumentUrl} 
@@ -975,8 +981,30 @@ export function UserManagement() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
-                    No verification document uploaded
+                  <div className="space-y-2">
+                    {(userDetails.verificationDocumentType || userDetails.verificationDocumentNumber) ? (
+                      <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm">
+                        {userDetails.verificationDocumentType && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Document Type</span>
+                            <span className="font-medium capitalize">
+                              {userDetails.verificationDocumentType?.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                        )}
+                        {userDetails.verificationDocumentNumber && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Document Number</span>
+                            <span className="font-medium">{userDetails.verificationDocumentNumber}</span>
+                          </div>
+                        )}
+                        <p className="text-muted-foreground italic">No document image uploaded</p>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
+                        No verification document provided
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1007,6 +1035,12 @@ export function UserManagement() {
                       {userDetails.createdAt ? new Date(userDetails.createdAt).toLocaleDateString() : 'Unknown'}
                     </span>
                   </div>
+                  {userDetails.referralCode && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Referral Code Used</span>
+                      <span className="font-medium">{userDetails.referralCode}</span>
+                    </div>
+                  )}
                 </div>
                 {userDetails.accountType === 'business' && (
                   <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
