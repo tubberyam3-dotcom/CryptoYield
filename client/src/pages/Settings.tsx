@@ -197,6 +197,7 @@ export default function Settings() {
       zipCode: string;
       country: string;
       verificationDocumentType?: string;
+      verificationDocumentUrl?: string;
     }) => {
       const response = await apiRequest("PATCH", "/api/user/profile", profileData);
       return response.json();
@@ -219,7 +220,32 @@ export default function Settings() {
     },
   });
 
-  const handleKycSubmit = () => {
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleKycSubmit = async () => {
+    let documentUrl: string | undefined;
+    
+    if (kycData.idFront) {
+      try {
+        documentUrl = await fileToBase64(kycData.idFront);
+      } catch (error) {
+        console.error('Error converting file to base64:', error);
+        toast({
+          title: "Upload Failed",
+          description: "Could not process the document file.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     updateProfileMutation.mutate({
       firstName: kycData.firstName,
       lastName: kycData.lastName,
@@ -229,6 +255,7 @@ export default function Settings() {
       zipCode: kycData.postalCode,
       country: kycData.country,
       verificationDocumentType: kycData.idType as any,
+      verificationDocumentUrl: documentUrl,
     });
   };
 
