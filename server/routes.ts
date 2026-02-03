@@ -1137,6 +1137,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { phoneNumber, address, city, state, zipCode, country, firstName, lastName, verificationDocumentUrl, verificationDocumentType } = req.body;
       
+      // Validate verification document if provided
+      let validatedDocumentUrl = verificationDocumentUrl;
+      if (verificationDocumentUrl) {
+        // Check if it's a valid data URL with allowed image types
+        const dataUrlPattern = /^data:(image\/(jpeg|jpg|png|gif|webp)|application\/pdf);base64,/i;
+        if (!dataUrlPattern.test(verificationDocumentUrl)) {
+          return res.status(400).json({ message: "Invalid document format. Only images (JPEG, PNG, GIF, WebP) or PDF files are allowed." });
+        }
+        
+        // Check size limit (approximately 5MB in base64 = ~6.67MB string length)
+        const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+        const base64Data = verificationDocumentUrl.split(',')[1] || '';
+        const sizeInBytes = (base64Data.length * 3) / 4;
+        if (sizeInBytes > maxSizeBytes) {
+          return res.status(400).json({ message: "Document file is too large. Maximum size is 5MB." });
+        }
+      }
+      
       const updatedUser = await storage.updateUserProfile(userId, {
         phoneNumber,
         address,
@@ -1146,7 +1164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         country,
         firstName,
         lastName,
-        verificationDocumentUrl,
+        verificationDocumentUrl: validatedDocumentUrl,
         verificationDocumentType,
       });
       

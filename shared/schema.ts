@@ -54,8 +54,8 @@ export const users = pgTable("users", {
   state: varchar("state"),
   zipCode: varchar("zip_code"),
   country: varchar("country"),
-  // Verification document
-  verificationDocumentUrl: varchar("verification_document_url"),
+  // Verification document (using text for large base64 data URLs)
+  verificationDocumentUrl: text("verification_document_url"),
   verificationDocumentType: varchar("verification_document_type", { enum: ['passport', 'drivers_license', 'national_id', 'other'] }),
   // Password reset
   passwordResetToken: varchar("password_reset_token"),
