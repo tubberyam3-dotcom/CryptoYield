@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Search, 
   Eye, 
@@ -18,7 +20,8 @@ import {
   User,
   PieChart,
   Wallet,
-  Briefcase
+  Briefcase,
+  XCircle
 } from "lucide-react";
 
 interface InvestmentDetail {
@@ -253,6 +256,9 @@ export function InvestmentHistory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedInvestment, setSelectedInvestment] = useState<InvestmentDetail | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [investmentToCancel, setInvestmentToCancel] = useState<InvestmentDetail | null>(null);
+  const { toast } = useToast();
 
   const { data: allInvestments, isLoading: investmentsLoading } = useQuery<InvestmentDetail[]>({
     queryKey: ["/api/admin/all-investments"],
@@ -267,6 +273,29 @@ export function InvestmentHistory() {
   const { data: stockPurchases, isLoading: stocksLoading } = useQuery<StockPurchase[]>({
     queryKey: ["/api/admin/stock-purchases"],
     staleTime: 0,
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async (investmentId: string) => {
+      const response = await apiRequest('POST', `/api/admin/user-portfolios/${investmentId}/cancel`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Investment Cancelled",
+        description: `Refunded $${data.refundAmount} to user's account.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-investments"] });
+      setCancelDialogOpen(false);
+      setInvestmentToCancel(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel investment",
+        variant: "destructive",
+      });
+    },
   });
 
   const filteredInvestments = allInvestments?.filter(inv => {
@@ -375,6 +404,7 @@ export function InvestmentHistory() {
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -445,6 +475,19 @@ export function InvestmentHistory() {
                               <InvestmentDetailModal investment={investment} />
                             </DialogContent>
                           </Dialog>
+                          {investment.status !== 'cancelled' && investment.status !== 'rejected' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setInvestmentToCancel(investment);
+                                setCancelDialogOpen(true);
+                              }}
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -553,6 +596,42 @@ export function InvestmentHistory() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Investment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this investment? This will refund the remaining capital and any accrued profits to the user's account.
+            </DialogDescription>
+          </DialogHeader>
+          {investmentToCancel && (
+            <div className="space-y-2 py-4">
+              <p><strong>User:</strong> {investmentToCancel.user?.firstName} {investmentToCancel.user?.lastName}</p>
+              <p><strong>Portfolio:</strong> {investmentToCancel.portfolio?.name}</p>
+              <p><strong>Current Value:</strong> {formatCurrency(investmentToCancel.currentValue)}</p>
+              <p><strong>Unpaid Profit:</strong> {formatCurrency(investmentToCancel.accruedUnpaidProfit || '0')}</p>
+              <p className="text-green-600 font-semibold">
+                <strong>Total Refund:</strong> {formatCurrency(
+                  (parseFloat(investmentToCancel.currentValue || '0') + parseFloat(investmentToCancel.accruedUnpaidProfit || '0')).toString()
+                )}
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+              Keep Investment
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => investmentToCancel && cancelMutation.mutate(investmentToCancel.id)}
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? "Cancelling..." : "Cancel & Refund"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

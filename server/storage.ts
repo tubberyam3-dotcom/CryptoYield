@@ -128,6 +128,7 @@ export interface IStorage {
   getAllUserBonds(): Promise<any[]>;
   getAllStockPurchases(): Promise<any[]>;
   accrueInterestForAllPortfolios(): Promise<{ processed: number; totalInterestAdded: string; maturityPayouts: number }>;
+  cancelUserPortfolio(id: string): Promise<{ refundAmount: string; userId: string }>;
   
   // Bond operations
   getBondProducts(): Promise<BondProduct[]>;
@@ -800,6 +801,47 @@ export class DatabaseStorage implements IStorage {
   async getUserPortfolioById(id: string): Promise<UserPortfolio | undefined> {
     const [portfolio] = await db.select().from(userPortfolios).where(eq(userPortfolios.id, id));
     return portfolio;
+  }
+
+  async cancelUserPortfolio(id: string): Promise<{ refundAmount: string; userId: string }> {
+    const userPortfolio = await this.getUserPortfolioById(id);
+    if (!userPortfolio) {
+      throw new Error('Investment not found');
+    }
+    if (!userPortfolio.userId) {
+      throw new Error('Investment has no associated user');
+    }
+    if (userPortfolio.status === 'cancelled') {
+      throw new Error('Investment is already cancelled');
+    }
+
+    const currentValue = parseFloat(userPortfolio.currentValue?.toString() || '0');
+    const accruedUnpaidProfit = parseFloat(userPortfolio.accruedUnpaidProfit?.toString() || '0');
+    const refundAmount = currentValue + accruedUnpaidProfit;
+
+    const user = await this.getUser(userPortfolio.userId);
+    if (user) {
+      const currentBalance = parseFloat(user.balance?.toString() || '0');
+      await this.updateUserBalance(userPortfolio.userId, (currentBalance + refundAmount).toString());
+    }
+
+    if (userPortfolio.portfolioId && userPortfolio.unitsPurchased) {
+      const portfolio = await this.getPortfolio(userPortfolio.portfolioId);
+      if (portfolio) {
+        const currentUnitsSold = portfolio.unitsSold || 0;
+        const unitsToRestore = userPortfolio.unitsPurchased || 0;
+        const newUnitsSold = Math.max(0, currentUnitsSold - unitsToRestore);
+        await this.updatePortfolio(userPortfolio.portfolioId, { unitsSold: newUnitsSold });
+      }
+    }
+
+    await db.update(userPortfolios).set({ 
+      status: 'cancelled',
+      currentValue: '0',
+      accruedUnpaidProfit: '0'
+    }).where(eq(userPortfolios.id, id));
+
+    return { refundAmount: refundAmount.toFixed(2), userId: userPortfolio.userId };
   }
 
   async getPendingPortfolioInvestments(): Promise<(UserPortfolio & { portfolio: Portfolio; user?: { email: string; firstName: string; lastName: string } })[]> {

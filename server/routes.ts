@@ -1048,6 +1048,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin - Cancel a user's investment and refund capital + proceeds
+  app.post('/api/admin/user-portfolios/:id/cancel', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const result = await storage.cancelUserPortfolio(id);
+      
+      // Send notification email to user
+      const user = await storage.getUser(result.userId);
+      const userPortfolio = await storage.getUserPortfolioById(id);
+      if (user?.email && userPortfolio?.portfolioId) {
+        const portfolio = await storage.getPortfolio(userPortfolio.portfolioId);
+        if (portfolio) {
+          try {
+            const { emailService } = await import('./email');
+            await emailService.sendEmail(
+              user.email,
+              'Investment Cancelled - Funds Refunded',
+              `<p>Dear ${user.firstName || 'Investor'},</p>
+               <p>Your investment in <strong>${portfolio.name}</strong> has been cancelled by an administrator.</p>
+               <p><strong>Refunded Amount:</strong> $${result.refundAmount}</p>
+               <p>The funds have been credited back to your account balance.</p>
+               <p>If you have any questions, please contact our support team.</p>`
+            );
+          } catch (emailError) {
+            console.error('Failed to send investment cancellation email:', emailError);
+          }
+        }
+      }
+
+      res.json({ 
+        message: 'Investment cancelled successfully', 
+        refundAmount: result.refundAmount 
+      });
+    } catch (error: any) {
+      console.error("Error cancelling user portfolio:", error);
+      res.status(500).json({ message: error.message || "Failed to cancel investment" });
+    }
+  });
+
   // Admin - Get ALL user investments (for investment history)
   app.get('/api/admin/all-investments', adminAuth, async (req: any, res) => {
     try {
