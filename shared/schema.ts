@@ -500,6 +500,8 @@ export const insertDepositSchema = createInsertSchema(deposits).omit({
 
 export const insertWithdrawalSchema = createInsertSchema(withdrawals).omit({
   id: true,
+  userId: true,
+  status: true,
   createdAt: true,
   processedAt: true,
 });
