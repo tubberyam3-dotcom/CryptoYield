@@ -211,7 +211,7 @@ export interface IStorage {
   updatePasswordHash(userId: string, passwordHash: string): Promise<void>;
   
   // Deposit operations
-  createDeposit(deposit: InsertDeposit): Promise<Deposit>;
+  createDeposit(deposit: InsertDeposit, createdAt?: Date): Promise<Deposit>;
   getUserDeposits(userId: string): Promise<Deposit[]>;
   updateDepositStatus(id: string, status: 'pending' | 'completed' | 'failed', transactionId?: string): Promise<Deposit>;
   processCryptoDeposit(userId: string, amount: string, cryptoAddress: string): Promise<Deposit>;
@@ -2074,8 +2074,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Deposit operations
-  async createDeposit(deposit: InsertDeposit): Promise<Deposit> {
-    const [newDeposit] = await db.insert(deposits).values(deposit).returning();
+  async createDeposit(deposit: InsertDeposit, createdAt?: Date): Promise<Deposit> {
+    const values: any = { ...deposit };
+    if (createdAt) values.createdAt = createdAt;
+    const [newDeposit] = await db.insert(deposits).values(values).returning();
     return newDeposit;
   }
 

@@ -76,6 +76,7 @@ export function UserManagement() {
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceType, setBalanceType] = useState<"add" | "withdraw">("add");
   const [balanceReason, setBalanceReason] = useState("");
+  const [balanceDate, setBalanceDate] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -242,8 +243,8 @@ export function UserManagement() {
   });
 
   const adjustBalanceMutation = useMutation({
-    mutationFn: async ({ userId, amount, type, reason }: { userId: string; amount: string; type: string; reason: string }) => {
-      const response = await apiRequest("POST", `/api/admin/users/${userId}/balance`, { amount, type, reason });
+    mutationFn: async ({ userId, amount, type, reason, date }: { userId: string; amount: string; type: string; reason: string; date?: string }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/balance`, { amount, type, reason, date });
       return response.json();
     },
     onSuccess: (data) => {
@@ -256,6 +257,7 @@ export function UserManagement() {
       setBalanceAmount("");
       setBalanceType("add");
       setBalanceReason("");
+      setBalanceDate("");
     },
     onError: (error: any) => {
       toast({
@@ -1124,6 +1126,7 @@ export function UserManagement() {
         setBalanceAmount("");
         setBalanceType("add");
         setBalanceReason("");
+        setBalanceDate("");
       }}>
         <DialogContent className="max-w-md" data-testid="dialog-adjust-balance">
           <DialogHeader>
@@ -1179,6 +1182,17 @@ export function UserManagement() {
                 data-testid="input-balance-reason"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="balanceDate">Transaction Date (optional)</Label>
+              <Input
+                id="balanceDate"
+                type="date"
+                value={balanceDate}
+                onChange={(e) => setBalanceDate(e.target.value)}
+                data-testid="input-balance-date"
+              />
+              <p className="text-xs text-muted-foreground">Leave blank to use today's date</p>
+            </div>
           </div>
           <DialogFooter>
             <Button 
@@ -1188,6 +1202,7 @@ export function UserManagement() {
                 setBalanceAmount("");
                 setBalanceType("add");
                 setBalanceReason("");
+                setBalanceDate("");
               }}
               data-testid="button-cancel-balance"
             >
@@ -1198,7 +1213,8 @@ export function UserManagement() {
                 userId: showBalanceAdjust,
                 amount: balanceAmount,
                 type: balanceType,
-                reason: balanceReason
+                reason: balanceReason,
+                date: balanceDate || undefined
               })}
               disabled={adjustBalanceMutation.isPending || !balanceAmount || parseFloat(balanceAmount) <= 0}
               className={balanceType === "add" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}

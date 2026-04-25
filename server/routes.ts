@@ -3016,7 +3016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/users/:id/balance', adminAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const { amount, type, reason } = req.body;
+      const { amount, type, reason, date } = req.body;
       const adminId = req.user?.claims?.sub;
       
       if (!amount || !type) {
@@ -3066,6 +3066,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create a deposit record for tracking
       const { nanoid } = await import('nanoid');
+      const customDate = date ? new Date(date) : undefined;
       await storage.createDeposit({
         userId: id,
         amount: type === 'add' ? numAmount.toString() : `-${numAmount}`,
@@ -3077,7 +3078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type, 
           reason: reason || 'Admin adjustment' 
         },
-      });
+      }, customDate);
       
       const updatedUser = await storage.getUser(id);
       res.json({ 
