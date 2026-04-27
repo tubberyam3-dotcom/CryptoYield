@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { Slider } from "@/components/ui/slider";
 import { 
   Plus, 
   Edit, 
@@ -27,7 +28,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  ImageIcon
+  ImageIcon,
+  Gauge
 } from "lucide-react";
 import type { Portfolio } from "@shared/schema";
 
@@ -47,6 +49,7 @@ interface PortfolioFormData {
   unitPrice: string;
   totalUnitsAvailable: string;
   isActive: boolean;
+  meterReduction: string;
 }
 
 const defaultFormData: PortfolioFormData = {
@@ -65,6 +68,7 @@ const defaultFormData: PortfolioFormData = {
   unitPrice: "100",
   totalUnitsAvailable: "1000",
   isActive: true,
+  meterReduction: "0",
 };
 
 export function PortfolioManagement() {
@@ -207,6 +211,7 @@ export function PortfolioManagement() {
       unitPrice: portfolio.unitPrice?.toString() || "100",
       totalUnitsAvailable: portfolio.totalUnitsAvailable?.toString() || "1000",
       isActive: portfolio.isActive ?? true,
+      meterReduction: (portfolio as any).meterReduction?.toString() || "0",
     });
     setEditOpen(true);
   };
@@ -405,6 +410,18 @@ export function PortfolioManagement() {
                   </div>
                 </div>
               </div>
+
+              {parseFloat((portfolio as any).meterReduction?.toString() || '0') > 0 && (
+                <div className="mt-3 flex items-center gap-2 rounded-md border border-orange-500/20 bg-orange-500/5 px-3 py-2 text-xs">
+                  <Gauge className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <span className="text-orange-600 dark:text-orange-400 font-medium">
+                    Meter: {(portfolio as any).meterReduction}% reduction
+                  </span>
+                  <span className="text-muted-foreground ml-auto">
+                    Eff. {(parseFloat(portfolio.interestRate?.toString() || portfolio.dailyInterestRate?.toString() || '0') * (1 - parseFloat((portfolio as any).meterReduction || '0') / 100) * 100).toFixed(3)}%/{portfolio.interestPeriod || 'day'}
+                  </span>
+                </div>
+              )}
 
               <div className="flex gap-2 mt-4 pt-4 border-t">
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(portfolio)}>
@@ -692,6 +709,64 @@ function PortfolioForm({
               Total number of interest periods for full investment term
             </p>
           </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-medium mb-1 flex items-center gap-2">
+          <Gauge className="w-4 h-4 text-orange-500" />
+          Investment Meter (Optional)
+        </h4>
+        <p className="text-sm text-muted-foreground mb-4">
+          Reduce the effective interest rate by a percentage. Set to 0 to use the full rate.
+        </p>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Slider
+                min={0}
+                max={100}
+                step={0.5}
+                value={[parseFloat(formData.meterReduction) || 0]}
+                onValueChange={([val]) => setFormData({ ...formData, meterReduction: val.toString() })}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>0% (no reduction)</span>
+                <span>100% (full reduction)</span>
+              </div>
+            </div>
+            <div className="w-24">
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={formData.meterReduction}
+                onChange={(e) => {
+                  const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
+                  setFormData({ ...formData, meterReduction: val.toString() });
+                }}
+                className="text-center font-medium"
+              />
+              <p className="text-xs text-center text-muted-foreground mt-1">% reduction</p>
+            </div>
+          </div>
+          {parseFloat(formData.meterReduction) > 0 && (
+            <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-3 text-sm">
+              <p className="font-medium text-orange-600 dark:text-orange-400">Effective Rate Preview</p>
+              <p className="text-muted-foreground mt-1">
+                Base rate: <span className="font-mono font-medium">{(parseFloat(formData.interestRate || '0') * 100).toFixed(4)}%</span> per {formData.interestPeriod}
+              </p>
+              <p className="text-muted-foreground">
+                After {formData.meterReduction}% reduction: <span className="font-mono font-medium text-foreground">
+                  {(parseFloat(formData.interestRate || '0') * (1 - parseFloat(formData.meterReduction) / 100) * 100).toFixed(4)}%
+                </span> per {formData.interestPeriod}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

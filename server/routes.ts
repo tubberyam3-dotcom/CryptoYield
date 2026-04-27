@@ -923,6 +923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updateData.maxUnitsPerUser !== undefined) cleanedData.maxUnitsPerUser = parseInt(updateData.maxUnitsPerUser);
       if (updateData.unitPrice !== undefined) cleanedData.unitPrice = updateData.unitPrice.toString();
       if (updateData.totalUnitsAvailable !== undefined) cleanedData.totalUnitsAvailable = parseInt(updateData.totalUnitsAvailable);
+      if (updateData.meterReduction !== undefined) cleanedData.meterReduction = parseFloat(updateData.meterReduction).toString();
       if (updateData.isActive !== undefined) cleanedData.isActive = updateData.isActive;
       
       cleanedData.updatedAt = new Date();

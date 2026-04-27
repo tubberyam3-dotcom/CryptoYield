@@ -961,8 +961,10 @@ export class DatabaseStorage implements IStorage {
       if (userPortfolio.maturityPaidAt) continue; // Already paid out at maturity
 
       // Get interest configuration (use new fields, fallback to legacy)
-      const interestRate = parseFloat(portfolio.interestRate?.toString() || portfolio.dailyInterestRate?.toString() || '0');
-      if (interestRate <= 0) continue;
+      const baseInterestRate = parseFloat(portfolio.interestRate?.toString() || portfolio.dailyInterestRate?.toString() || '0');
+      if (baseInterestRate <= 0) continue;
+      const meterReduction = parseFloat((portfolio as any).meterReduction?.toString() || '0');
+      const interestRate = baseInterestRate * (1 - Math.min(100, Math.max(0, meterReduction)) / 100);
 
       const interestPeriod = (portfolio.interestPeriod as string) || 'daily';
       const payoutTerm = (portfolio.payoutTerm as string) || 'term_based';

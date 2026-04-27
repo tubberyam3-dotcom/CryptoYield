@@ -116,6 +116,7 @@ export const portfolios = pgTable("portfolios", {
   unitPrice: decimal("unit_price", { precision: 18, scale: 8 }).default('100'), // Price per unit
   totalUnitsAvailable: integer("total_units_available").default(1000), // Total units available for purchase
   unitsSold: integer("units_sold").default(0), // Units already sold
+  meterReduction: decimal("meter_reduction", { precision: 5, scale: 2 }).default('0'), // % reduction applied to interestRate (0-100)
   createdBy: varchar("created_by").references(() => users.id),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
