@@ -261,18 +261,20 @@ export function PortfolioManagement() {
                 Create Portfolio
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
+            <DialogContent className="max-w-2xl !flex flex-col max-h-[90vh]">
+              <DialogHeader className="shrink-0">
                 <DialogTitle>Create New Portfolio</DialogTitle>
                 <DialogDescription>Set up a new investment portfolio with interest rates and unit limits</DialogDescription>
               </DialogHeader>
-              <PortfolioForm
-                formData={formData}
-                setFormData={setFormData}
-                onSubmit={() => createMutation.mutate(formData)}
-                isLoading={createMutation.isPending}
-                submitLabel="Create Portfolio"
-              />
+              <div className="overflow-y-auto flex-1 pr-1">
+                <PortfolioForm
+                  formData={formData}
+                  setFormData={setFormData}
+                  onSubmit={() => createMutation.mutate(formData)}
+                  isLoading={createMutation.isPending}
+                  submitLabel="Create Portfolio"
+                />
+              </div>
             </DialogContent>
           </Dialog>
         </div>
@@ -438,18 +440,20 @@ export function PortfolioManagement() {
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl !flex flex-col max-h-[90vh]">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Edit Portfolio</DialogTitle>
             <DialogDescription>Update portfolio settings and parameters</DialogDescription>
           </DialogHeader>
-          <PortfolioForm
-            formData={formData}
-            setFormData={setFormData}
-            onSubmit={() => selectedPortfolio && updateMutation.mutate({ id: selectedPortfolio.id, data: formData })}
-            isLoading={updateMutation.isPending}
-            submitLabel="Save Changes"
-          />
+          <div className="overflow-y-auto flex-1 pr-1">
+            <PortfolioForm
+              formData={formData}
+              setFormData={setFormData}
+              onSubmit={() => selectedPortfolio && updateMutation.mutate({ id: selectedPortfolio.id, data: formData })}
+              isLoading={updateMutation.isPending}
+              submitLabel="Save Changes"
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
