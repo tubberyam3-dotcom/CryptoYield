@@ -188,6 +188,88 @@ class EmailService {
     });
   }
 
+  async sendMerchantPayInstructions(
+    email: string,
+    firstName: string,
+    amount: string,
+    bankDetails: {
+      bankName?: string;
+      accountName?: string;
+      accountNumber?: string;
+      routingNumber?: string;
+      swiftCode?: string;
+      iban?: string;
+      bankAddress?: string;
+      instructions?: string;
+    }
+  ): Promise<{ success: boolean; error?: string }> {
+    const formatAmount = parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const detailRows = [
+      { label: 'Bank Name', value: bankDetails.bankName },
+      { label: 'Account Name', value: bankDetails.accountName },
+      { label: 'Account Number', value: bankDetails.accountNumber },
+      { label: 'Routing Number (ACH)', value: bankDetails.routingNumber },
+      { label: 'SWIFT / BIC Code', value: bankDetails.swiftCode },
+      { label: 'IBAN', value: bankDetails.iban },
+      { label: 'Bank Address', value: bankDetails.bankAddress },
+    ]
+      .filter(row => row.value)
+      .map(row => `
+        <tr>
+          <td style="padding: 10px 16px; color: #666; font-size: 14px; border-bottom: 1px solid #f0f0f0; white-space: nowrap;">${row.label}</td>
+          <td style="padding: 10px 16px; color: #1a1a1a; font-size: 14px; font-weight: bold; border-bottom: 1px solid #f0f0f0; font-family: monospace;">${row.value}</td>
+        </tr>`)
+      .join('');
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1a1a1a; margin: 0 0 8px 0;">Merchant Paired — Transfer Instructions</h1>
+          <p style="color: #666; margin: 0; font-size: 15px;">Your deposit request has been matched with a merchant</p>
+        </div>
+
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${firstName || 'there'},</p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Great news! You've been paired with a verified merchant. Please transfer the amount below to the bank account details provided and your deposit will be credited once confirmed.
+        </p>
+
+        <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #6ee7b7; border-radius: 10px; padding: 20px; margin: 24px 0; text-align: center;">
+          <p style="color: #065f46; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px 0;">Amount to Transfer</p>
+          <p style="color: #047857; font-size: 36px; font-weight: bold; margin: 0;">$${formatAmount}</p>
+        </div>
+
+        <div style="background-color: #f9fafb; border-radius: 10px; overflow: hidden; margin: 24px 0;">
+          <div style="background-color: #059669; padding: 12px 16px;">
+            <p style="color: #ffffff; font-size: 14px; font-weight: bold; margin: 0;">🏦 Bank Transfer Details</p>
+          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+            ${detailRows || '<tr><td style="padding: 16px; color: #666;">Contact support for bank details.</td></tr>'}
+          </table>
+        </div>
+
+        ${bankDetails.instructions ? `
+        <div style="background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="color: #92400e; font-size: 14px; margin: 0;"><strong>⚠️ Important:</strong> ${bankDetails.instructions}</p>
+        </div>` : ''}
+
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          Once you've completed the transfer, your deposit will be reviewed and credited to your account within <strong>1–2 business days</strong>.
+        </p>
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          If you have any questions, please contact our support team.
+        </p>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Merchant Pay Instructions — Transfer $${formatAmount} | Reflux Capital`,
+      html,
+    });
+  }
+
   async sendDepositConfirmation(email: string, firstName: string, amount: string, status: string): Promise<{ success: boolean; error?: string }> {
     const enabled = await storage.getSetting('email_deposit_enabled');
     if (enabled?.settingValue !== 'true') {

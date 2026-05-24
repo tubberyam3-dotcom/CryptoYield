@@ -4280,10 +4280,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'pending',
         metadata: { submittedAt: new Date().toISOString() },
       });
+
+      // Send email with bank details to the user
+      try {
+        const user = await storage.getUser(userId);
+        if (user?.email) {
+          const [bankName, accountName, accountNumber, routingNumber, swiftCode, iban, bankAddress, instructions] = await Promise.all([
+            storage.getSetting('merchant_bank_name'),
+            storage.getSetting('merchant_account_name'),
+            storage.getSetting('merchant_account_number'),
+            storage.getSetting('merchant_routing_number'),
+            storage.getSetting('merchant_swift_code'),
+            storage.getSetting('merchant_iban'),
+            storage.getSetting('merchant_bank_address'),
+            storage.getSetting('merchant_instructions'),
+          ]);
+          const { emailService } = await import('./email');
+          await emailService.sendMerchantPayInstructions(
+            user.email,
+            user.firstName || 'Investor',
+            parseFloat(amount).toFixed(2),
+            {
+              bankName: bankName?.settingValue,
+              accountName: accountName?.settingValue,
+              accountNumber: accountNumber?.settingValue,
+              routingNumber: routingNumber?.settingValue,
+              swiftCode: swiftCode?.settingValue,
+              iban: iban?.settingValue,
+              bankAddress: bankAddress?.settingValue,
+              instructions: instructions?.settingValue,
+            }
+          );
+        }
+      } catch (emailError) {
+        console.error('Failed to send merchant pay instructions email:', emailError);
+      }
+
       res.json({
         success: true,
         deposit,
-        message: `Merchant Pay deposit request of $${parseFloat(amount).toFixed(2)} submitted! It will be reviewed by an admin.`,
+        message: `Merchant Pay deposit request of $${parseFloat(amount).toFixed(2)} submitted! Transfer instructions have been sent to your email.`,
       });
     } catch (error: any) {
       console.error("Error processing merchant pay deposit:", error);
