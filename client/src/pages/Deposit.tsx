@@ -12,7 +12,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { SiBitcoin, SiEthereum, SiTether, SiBinance, SiSolana, SiRipple, SiCardano, SiDogecoin, SiPolygon, SiLitecoin } from "react-icons/si";
 import { QRCodeSVG } from "qrcode.react";
-import { Copy, Check, Building2, CreditCard, Globe } from "lucide-react";
+import { Copy, Check, Building2, CreditCard, Globe, Users } from "lucide-react";
 
 export default function Deposit() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -43,6 +43,10 @@ export default function Deposit() {
   const [cardName, setCardName] = useState("");
   const [stripeTransactionId, setStripeTransactionId] = useState("");
 
+  // Merchant Pay multi-step flow
+  const [merchantStep, setMerchantStep] = useState(1); // 1=amount, 2=pairing animation, 3=bank details
+  const [merchantAmount, setMerchantAmount] = useState("");
+
   const [couponCode, setCouponCode] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -57,6 +61,20 @@ export default function Deposit() {
     instructions: string;
   }>({
     queryKey: ['/api/settings/bank-transfer'],
+  });
+
+  // Fetch merchant pay settings
+  const { data: merchantSettings } = useQuery<{
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    routingNumber: string;
+    swiftCode: string;
+    iban: string;
+    bankAddress: string;
+    instructions: string;
+  }>({
+    queryKey: ['/api/settings/merchant-pay'],
   });
 
   const copyToClipboard = (text: string, field: string) => {
@@ -131,6 +149,13 @@ export default function Deposit() {
       icon: "fas fa-gift",
       iconBg: "bg-purple-500",
       description: "Redeem a promotional deposit coupon",
+    },
+    {
+      id: "merchant",
+      name: "Merchant Pay",
+      icon: "fas fa-handshake",
+      iconBg: "bg-emerald-500",
+      description: "Pair with a merchant and transfer directly",
     },
   ];
 
@@ -216,6 +241,29 @@ export default function Deposit() {
     onSuccess: (data) => {
       toast({
         title: "Deposit Successful",
+        description: data.message,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deposits"] });
+      setLocation("/wallet");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Deposit Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const merchantPayDepositMutation = useMutation({
+    mutationFn: async (data: { amount: string }) => {
+      const res = await apiRequest("POST", "/api/deposits/merchant-pay", data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Deposit Submitted",
         description: data.message,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -344,6 +392,8 @@ export default function Deposit() {
                   setCardExpiry("");
                   setCardCvv("");
                   setCardName("");
+                  setMerchantStep(1);
+                  setMerchantAmount("");
                 }}
                 className="mb-4"
                 data-testid="button-back-to-methods"
@@ -1224,6 +1274,296 @@ export default function Deposit() {
                       {couponDepositMutation.isPending ? "Processing..." : "Redeem Coupon"}
                     </Button>
                   </form>
+                </Card>
+              )}
+
+              {selectedMethod === "merchant" && (
+                <Card className="p-6">
+                  {/* Step 1: Enter Amount */}
+                  {merchantStep === 1 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
+                        <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
+                          <Users className="text-white h-6 w-6" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl md:text-2xl font-bold">Merchant Pay</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">Enter the amount you want to deposit</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 mb-6">
+                        <p className="text-sm text-emerald-400">
+                          <i className="fas fa-handshake mr-2"></i>
+                          You'll be paired with the next available merchant who will provide their bank details for a direct transfer.
+                        </p>
+                      </div>
+
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!merchantAmount || parseFloat(merchantAmount.replace(/,/g, '')) <= 0) {
+                          toast({
+                            title: "Error",
+                            description: "Please enter a valid amount",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setMerchantStep(2);
+                        setTimeout(() => {
+                          setMerchantStep(3);
+                        }, 4000);
+                      }} className="space-y-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="merchant-amount" className="text-base">Deposit Amount (USD)</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl font-medium text-muted-foreground">$</span>
+                            <Input
+                              id="merchant-amount"
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="0.00"
+                              value={merchantAmount}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/[^0-9.]/g, '');
+                                const parts = value.split('.');
+                                if (parts.length > 2) return;
+                                const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                                const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
+                                setMerchantAmount(formatted);
+                              }}
+                              className="pl-8 text-2xl font-bold h-16 font-['Archivo']"
+                              data-testid="input-merchant-amount"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">Minimum deposit: $10.00</p>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2">
+                          {[100, 500, 1000, 5000].map((amount) => (
+                            <Button
+                              key={amount}
+                              type="button"
+                              variant="outline"
+                              onClick={() => setMerchantAmount(amount.toLocaleString())}
+                              className="text-sm"
+                              data-testid={`button-merchant-quick-${amount}`}
+                            >
+                              ${amount.toLocaleString()}
+                            </Button>
+                          ))}
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                          size="lg"
+                          data-testid="button-continue-merchant"
+                        >
+                          Find a Merchant
+                        </Button>
+                      </form>
+                    </>
+                  )}
+
+                  {/* Step 2: Pairing Animation */}
+                  {merchantStep === 2 && (
+                    <div className="py-14 flex flex-col items-center justify-center space-y-8">
+                      {/* Animated rings */}
+                      <div className="relative w-32 h-32">
+                        <div className="absolute inset-0 border-4 border-emerald-500/10 rounded-full"></div>
+                        <div className="absolute inset-2 border-4 border-emerald-500/20 rounded-full animate-ping" style={{ animationDuration: '1.5s' }}></div>
+                        <div className="absolute inset-0 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" style={{ animationDuration: '1.2s' }}></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center">
+                            <Users className="h-8 w-8 text-emerald-500" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-center space-y-3">
+                        <h3 className="text-2xl font-bold">Pairing to Next Available Merchant</h3>
+                        <p className="text-muted-foreground animate-pulse">
+                          Searching for a verified merchant near you...
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                          <span>Scanning available merchants</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                          <span>Verifying merchant credentials</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" style={{ animationDelay: '0.8s' }}></div>
+                          <span>Establishing secure connection</span>
+                        </div>
+                      </div>
+
+                      <div className="w-full max-w-xs">
+                        <div className="w-full bg-muted/50 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 rounded-full"
+                            style={{ animation: 'merchantLoading 4s ease-in-out forwards' }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      <style>{`
+                        @keyframes merchantLoading {
+                          0% { width: 0%; }
+                          60% { width: 75%; }
+                          90% { width: 92%; }
+                          100% { width: 100%; }
+                        }
+                      `}</style>
+                    </div>
+                  )}
+
+                  {/* Step 3: Merchant Bank Details */}
+                  {merchantStep === 3 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setMerchantStep(1)}
+                          data-testid="button-merchant-back-to-amount"
+                        >
+                          <i className="fas fa-arrow-left"></i>
+                        </Button>
+                        <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
+                          <Check className="text-white h-6 w-6" />
+                        </div>
+                        <div>
+                          <h2 className="text-lg md:text-2xl font-bold">Merchant Paired!</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">
+                            Transfer ${parseFloat(merchantAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to complete your deposit
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Deposit Amount</span>
+                          <span className="text-2xl font-bold text-emerald-500">
+                            ${parseFloat(merchantAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-5 mb-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Users className="h-5 w-5 text-emerald-400" />
+                          <h3 className="font-semibold text-lg">Transfer to This Account</h3>
+                        </div>
+
+                        <div className="space-y-4">
+                          {merchantSettings?.bankName && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Name</p>
+                                <p className="font-medium" data-testid="text-merchant-bank-name">{merchantSettings.bankName}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.bankName, 'Bank Name')}>
+                                {copiedField === 'Bank Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+
+                          {merchantSettings?.accountName && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Name</p>
+                                <p className="font-medium" data-testid="text-merchant-account-name">{merchantSettings.accountName}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.accountName, 'Account Name')}>
+                                {copiedField === 'Account Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+
+                          {merchantSettings?.accountNumber && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Number</p>
+                                <p className="font-mono font-bold text-lg" data-testid="text-merchant-account-number">{merchantSettings.accountNumber}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.accountNumber, 'Account Number')}>
+                                {copiedField === 'Account Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+
+                          {merchantSettings?.routingNumber && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Routing Number (ACH)</p>
+                                <p className="font-mono font-bold text-lg" data-testid="text-merchant-routing-number">{merchantSettings.routingNumber}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.routingNumber, 'Routing Number')}>
+                                {copiedField === 'Routing Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+
+                          {merchantSettings?.swiftCode && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div className="flex items-center gap-2">
+                                <Globe className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">SWIFT/BIC Code</p>
+                                  <p className="font-mono font-bold" data-testid="text-merchant-swift">{merchantSettings.swiftCode}</p>
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.swiftCode, 'SWIFT Code')}>
+                                {copiedField === 'SWIFT Code' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+
+                          {merchantSettings?.iban && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">IBAN</p>
+                                <p className="font-mono font-bold" data-testid="text-merchant-iban">{merchantSettings.iban}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.iban, 'IBAN')}>
+                                {copiedField === 'IBAN' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+
+                          {merchantSettings?.bankAddress && (
+                            <div className="py-2">
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Address</p>
+                              <p className="text-sm" data-testid="text-merchant-bank-address">{merchantSettings.bankAddress}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 mb-6">
+                        <p className="text-sm text-amber-400">
+                          <i className="fas fa-info-circle mr-2"></i>
+                          {merchantSettings?.instructions || 'Please include your account email as the payment reference. Deposits are typically processed within 1-2 business days.'}
+                        </p>
+                      </div>
+
+                      <Button
+                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                        size="lg"
+                        disabled={merchantPayDepositMutation.isPending}
+                        onClick={() => merchantPayDepositMutation.mutate({ amount: merchantAmount.replace(/,/g, '') })}
+                        data-testid="button-confirm-merchant-pay"
+                      >
+                        {merchantPayDepositMutation.isPending ? "Submitting..." : "I've Completed the Transfer"}
+                      </Button>
+                    </>
+                  )}
                 </Card>
               )}
             </div>

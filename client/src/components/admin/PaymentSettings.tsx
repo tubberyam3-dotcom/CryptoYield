@@ -70,6 +70,16 @@ interface PaymentConfig {
   wire_iban?: string;
   wire_address?: string;
   wire_instructions?: string;
+  // Merchant Pay details
+  deposit_merchant_enabled?: string;
+  merchant_bank_name?: string;
+  merchant_account_name?: string;
+  merchant_account_number?: string;
+  merchant_routing_number?: string;
+  merchant_swift_code?: string;
+  merchant_iban?: string;
+  merchant_bank_address?: string;
+  merchant_instructions?: string;
   // Supported currencies
   supported_currencies?: string;
   default_currency?: string;
@@ -118,6 +128,15 @@ export function PaymentSettings() {
     wire_iban: "",
     wire_address: "",
     wire_instructions: "",
+    deposit_merchant_enabled: "true",
+    merchant_bank_name: "",
+    merchant_account_name: "",
+    merchant_account_number: "",
+    merchant_routing_number: "",
+    merchant_swift_code: "",
+    merchant_iban: "",
+    merchant_bank_address: "",
+    merchant_instructions: "",
     supported_currencies: "USD,EUR,GBP",
     default_currency: "USD",
   });
@@ -210,10 +229,11 @@ export function PaymentSettings() {
       </div>
 
       <Tabs defaultValue="methods" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="methods" data-testid="tab-payment-methods">Methods</TabsTrigger>
           <TabsTrigger value="crypto" data-testid="tab-crypto-addresses">Crypto</TabsTrigger>
           <TabsTrigger value="bank" data-testid="tab-bank-details">Bank</TabsTrigger>
+          <TabsTrigger value="merchant" data-testid="tab-merchant-pay">Merchant</TabsTrigger>
           <TabsTrigger value="currency" data-testid="tab-currency">Currency</TabsTrigger>
         </TabsList>
 
@@ -283,6 +303,23 @@ export function PaymentSettings() {
                       checked={formData.deposit_card_enabled === "true"}
                       onCheckedChange={() => toggleField("deposit_card_enabled")}
                       data-testid="switch-deposit-card"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                        <Wallet className="w-5 h-5 text-emerald-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Merchant Pay</p>
+                        <p className="text-xs text-muted-foreground">Peer-to-peer merchant transfers</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={formData.deposit_merchant_enabled === "true"}
+                      onCheckedChange={() => toggleField("deposit_merchant_enabled")}
+                      data-testid="switch-deposit-merchant"
                     />
                   </div>
                 </div>
@@ -862,6 +899,104 @@ export function PaymentSettings() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="merchant" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-emerald-500" />
+                Merchant Pay — Bank Details
+              </CardTitle>
+              <CardDescription>
+                Bank account users will send money to when using Merchant Pay
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Bank Name</Label>
+                <Input
+                  value={formData.merchant_bank_name}
+                  onChange={(e) => updateField("merchant_bank_name", e.target.value)}
+                  placeholder="e.g., Chase Bank"
+                  data-testid="input-merchant-bank-name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Account Name</Label>
+                <Input
+                  value={formData.merchant_account_name}
+                  onChange={(e) => updateField("merchant_account_name", e.target.value)}
+                  placeholder="e.g., Reflux Capital LLC"
+                  data-testid="input-merchant-account-name"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Account Number</Label>
+                  <Input
+                    value={formData.merchant_account_number}
+                    onChange={(e) => updateField("merchant_account_number", e.target.value)}
+                    placeholder="8827364519"
+                    data-testid="input-merchant-account-number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Routing Number (ACH)</Label>
+                  <Input
+                    value={formData.merchant_routing_number}
+                    onChange={(e) => updateField("merchant_routing_number", e.target.value)}
+                    placeholder="021000021"
+                    data-testid="input-merchant-routing-number"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>SWIFT/BIC Code</Label>
+                  <Input
+                    value={formData.merchant_swift_code}
+                    onChange={(e) => updateField("merchant_swift_code", e.target.value)}
+                    placeholder="CHASUS33"
+                    data-testid="input-merchant-swift"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>IBAN (Optional)</Label>
+                  <Input
+                    value={formData.merchant_iban}
+                    onChange={(e) => updateField("merchant_iban", e.target.value)}
+                    placeholder="US..."
+                    data-testid="input-merchant-iban"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Bank Address</Label>
+                <Input
+                  value={formData.merchant_bank_address}
+                  onChange={(e) => updateField("merchant_bank_address", e.target.value)}
+                  placeholder="270 Park Avenue, New York, NY 10017"
+                  data-testid="input-merchant-bank-address"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Deposit Instructions</Label>
+                <Textarea
+                  value={formData.merchant_instructions}
+                  onChange={(e) => updateField("merchant_instructions", e.target.value)}
+                  placeholder="Instructions shown to users after being paired with a merchant..."
+                  className="min-h-[80px]"
+                  data-testid="input-merchant-instructions"
+                />
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="currency" className="space-y-6">

@@ -4230,6 +4230,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Merchant Pay settings - public endpoint
+  app.get('/api/settings/merchant-pay', async (req, res) => {
+    try {
+      const settings = {
+        bankName: await storage.getSetting('merchant_bank_name'),
+        accountName: await storage.getSetting('merchant_account_name'),
+        accountNumber: await storage.getSetting('merchant_account_number'),
+        routingNumber: await storage.getSetting('merchant_routing_number'),
+        swiftCode: await storage.getSetting('merchant_swift_code'),
+        iban: await storage.getSetting('merchant_iban'),
+        bankAddress: await storage.getSetting('merchant_bank_address'),
+        instructions: await storage.getSetting('merchant_instructions'),
+      };
+      res.json({
+        bankName: settings.bankName?.settingValue || '',
+        accountName: settings.accountName?.settingValue || '',
+        accountNumber: settings.accountNumber?.settingValue || '',
+        routingNumber: settings.routingNumber?.settingValue || '',
+        swiftCode: settings.swiftCode?.settingValue || '',
+        iban: settings.iban?.settingValue || '',
+        bankAddress: settings.bankAddress?.settingValue || '',
+        instructions: settings.instructions?.settingValue || 'Please include your account email as the payment reference. Deposits are typically processed within 1-2 business days.',
+      });
+    } catch (error) {
+      console.error("Error fetching merchant pay settings:", error);
+      res.status(500).json({ message: "Failed to fetch merchant pay settings" });
+    }
+  });
+
+  // Merchant Pay deposit endpoint
+  app.post("/api/deposits/merchant-pay", enhancedAuth, async (req: any, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      const { amount } = req.body;
+      if (!amount || parseFloat(amount) <= 0) {
+        return res.status(400).json({ message: "Valid deposit amount is required" });
+      }
+      const deposit = await storage.createDeposit({
+        userId,
+        amount: parseFloat(amount).toFixed(8),
+        depositMethod: 'merchant_pay',
+        status: 'pending',
+        metadata: { submittedAt: new Date().toISOString() },
+      });
+      res.json({
+        success: true,
+        deposit,
+        message: `Merchant Pay deposit request of $${parseFloat(amount).toFixed(2)} submitted! It will be reviewed by an admin.`,
+      });
+    } catch (error: any) {
+      console.error("Error processing merchant pay deposit:", error);
+      res.status(400).json({ message: error.message || "Failed to process merchant pay deposit" });
+    }
+  });
+
   // Payment settings endpoints
   const paymentKeys = [
     // Deposit/Withdrawal toggles
@@ -4248,6 +4309,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Wire transfer details
     'wire_bank_name', 'wire_account_name', 'wire_account_number', 'wire_routing_number',
     'wire_swift_code', 'wire_iban', 'wire_address', 'wire_instructions',
+    // Merchant Pay details
+    'merchant_bank_name', 'merchant_account_name', 'merchant_account_number', 'merchant_routing_number',
+    'merchant_swift_code', 'merchant_iban', 'merchant_bank_address', 'merchant_instructions',
+    'deposit_merchant_enabled',
     // Currency settings
     'supported_currencies', 'default_currency'
   ];
