@@ -44,8 +44,10 @@ export default function Deposit() {
   const [stripeTransactionId, setStripeTransactionId] = useState("");
 
   // Merchant Pay multi-step flow
-  const [merchantStep, setMerchantStep] = useState(1); // 1=amount, 2=pairing animation, 3=bank details
+  const [merchantStep, setMerchantStep] = useState(1); // 1=amount, 2=pairing animation, 3=bank details, 4=countdown
   const [merchantAmount, setMerchantAmount] = useState("");
+  const [merchantDepositCreatedAt, setMerchantDepositCreatedAt] = useState<Date | null>(null);
+  const [, setMerchantCountdownTick] = useState(0);
 
   const [couponCode, setCouponCode] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -78,12 +80,13 @@ export default function Deposit() {
   });
 
   // Check for existing pending merchant pay deposit
-  const { data: userDeposits } = useQuery<Array<{ depositMethod: string; status: string }>>({
+  const { data: userDeposits } = useQuery<Array<{ depositMethod: string; status: string; createdAt: string }>>({
     queryKey: ['/api/deposits'],
   });
-  const hasPendingMerchantPay = userDeposits?.some(
+  const pendingMerchantDeposit = userDeposits?.find(
     (d) => d.depositMethod === 'merchant_pay' && d.status === 'pending'
-  ) ?? false;
+  );
+  const hasPendingMerchantPay = !!pendingMerchantDeposit;
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -127,6 +130,26 @@ export default function Deposit() {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Merchant Pay 2-day countdown ticker
+  useEffect(() => {
+    const active = merchantStep === 4 || (merchantStep === 1 && hasPendingMerchantPay);
+    if (!active) return;
+    const timer = setInterval(() => setMerchantCountdownTick((t) => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, [merchantStep, hasPendingMerchantPay]);
+
+  const getMerchantTimeLeft = (from: Date | string | null) => {
+    if (!from) return { days: 2, hours: 0, minutes: 0, seconds: 0 };
+    const deadline = new Date(from).getTime() + 2 * 24 * 60 * 60 * 1000;
+    const total = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+    return {
+      days: Math.floor(total / 86400),
+      hours: Math.floor((total % 86400) / 3600),
+      minutes: Math.floor((total % 3600) / 60),
+      seconds: total % 60,
+    };
   };
 
   const depositMethods = [
@@ -1297,23 +1320,127 @@ export default function Deposit() {
                       </div>
 
                       {hasPendingMerchantPay ? (
-                        <div className="py-8 text-center space-y-6">
-                          <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto">
-                            <i className="fas fa-clock text-3xl text-amber-500"></i>
+                        <div className="space-y-6">
+                          {/* Countdown banner */}
+                          {(() => {
+                            const tl = getMerchantTimeLeft(pendingMerchantDeposit?.createdAt ?? null);
+                            return (
+                              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 text-center space-y-4">
+                                <div className="flex items-center justify-center gap-2 text-amber-400">
+                                  <i className="fas fa-clock text-lg"></i>
+                                  <span className="font-semibold text-sm uppercase tracking-wide">Transfer Window</span>
+                                </div>
+                                <div className="flex justify-center gap-3">
+                                  {[
+                                    { v: tl.days, l: 'Days' },
+                                    { v: tl.hours, l: 'Hrs' },
+                                    { v: tl.minutes, l: 'Min' },
+                                    { v: tl.seconds, l: 'Sec' },
+                                  ].map(({ v, l }) => (
+                                    <div key={l} className="flex flex-col items-center bg-background rounded-lg px-3 py-2 min-w-[52px] border border-border">
+                                      <span className="text-2xl font-bold font-mono">{String(v).padStart(2, '0')}</span>
+                                      <span className="text-xs text-muted-foreground">{l}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  You have a pending Merchant Pay deposit. Complete your bank transfer using the details below.
+                                </p>
+                              </div>
+                            );
+                          })()}
+                          {/* Merchant bank details */}
+                          <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-5">
+                            <div className="flex items-center gap-2 mb-4">
+                              <Users className="h-5 w-5 text-emerald-400" />
+                              <h3 className="font-semibold text-lg">Transfer to This Account</h3>
+                            </div>
+                            <div className="space-y-4">
+                              {merchantSettings?.bankName && (
+                                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Name</p>
+                                    <p className="font-medium">{merchantSettings.bankName}</p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.bankName, 'Bank Name')}>
+                                    {copiedField === 'Bank Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                  </Button>
+                                </div>
+                              )}
+                              {merchantSettings?.accountName && (
+                                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Name</p>
+                                    <p className="font-medium">{merchantSettings.accountName}</p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.accountName, 'Account Name')}>
+                                    {copiedField === 'Account Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                  </Button>
+                                </div>
+                              )}
+                              {merchantSettings?.accountNumber && (
+                                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Number</p>
+                                    <p className="font-mono font-bold text-lg">{merchantSettings.accountNumber}</p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.accountNumber, 'Account Number')}>
+                                    {copiedField === 'Account Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                  </Button>
+                                </div>
+                              )}
+                              {merchantSettings?.routingNumber && (
+                                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Routing Number (ACH)</p>
+                                    <p className="font-mono font-bold text-lg">{merchantSettings.routingNumber}</p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.routingNumber, 'Routing Number')}>
+                                    {copiedField === 'Routing Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                  </Button>
+                                </div>
+                              )}
+                              {merchantSettings?.swiftCode && (
+                                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                                  <div className="flex items-center gap-2">
+                                    <Globe className="h-4 w-4 text-muted-foreground" />
+                                    <div>
+                                      <p className="text-xs text-muted-foreground uppercase tracking-wide">SWIFT/BIC Code</p>
+                                      <p className="font-mono font-bold">{merchantSettings.swiftCode}</p>
+                                    </div>
+                                  </div>
+                                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.swiftCode, 'SWIFT Code')}>
+                                    {copiedField === 'SWIFT Code' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                  </Button>
+                                </div>
+                              )}
+                              {merchantSettings?.iban && (
+                                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">IBAN</p>
+                                    <p className="font-mono font-bold">{merchantSettings.iban}</p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.iban, 'IBAN')}>
+                                    {copiedField === 'IBAN' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                  </Button>
+                                </div>
+                              )}
+                              {merchantSettings?.bankAddress && (
+                                <div className="py-2">
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Address</p>
+                                  <p className="text-sm">{merchantSettings.bankAddress}</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <h3 className="text-xl font-bold">Deposit Already Pending</h3>
-                            <p className="text-muted-foreground max-w-sm mx-auto text-sm">
-                              You have a Merchant Pay deposit currently under review. You cannot place another one until it is completed or cancelled.
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => setLocation("/wallet")}
-                          >
-                            View in Wallet
-                          </Button>
+                          {merchantSettings?.instructions && (
+                            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                              <p className="text-sm text-amber-400">
+                                <i className="fas fa-info-circle mr-2"></i>
+                                {merchantSettings.instructions}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       ) : (
                       <>
@@ -1340,7 +1467,11 @@ export default function Deposit() {
                         Promise.all([
                           merchantPayDepositMutation.mutateAsync({ amount: merchantAmount.replace(/,/g, '') }),
                           new Promise(resolve => setTimeout(resolve, 4000)),
-                        ]).then(() => {
+                        ]).then(([result]) => {
+                          const createdAt = result?.deposit?.createdAt
+                            ? new Date(result.deposit.createdAt)
+                            : new Date();
+                          setMerchantDepositCreatedAt(createdAt);
                           setMerchantStep(3);
                         }).catch(() => {
                           // error toast + step reset handled inside mutation onError
@@ -1590,10 +1721,159 @@ export default function Deposit() {
                       <Button
                         className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
                         size="lg"
-                        onClick={() => setLocation("/wallet")}
+                        onClick={() => {
+                          if (!merchantDepositCreatedAt) setMerchantDepositCreatedAt(new Date());
+                          setMerchantStep(4);
+                        }}
                         data-testid="button-confirm-merchant-pay"
                       >
                         Proceed with Transfer
+                      </Button>
+                    </>
+                  )}
+
+                  {/* Step 4: Countdown + bank details */}
+                  {merchantStep === 4 && (
+                    <>
+                      <div className="flex items-center space-x-4 mb-6">
+                        <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
+                          <i className="fas fa-university text-white text-lg"></i>
+                        </div>
+                        <div>
+                          <h2 className="text-lg md:text-2xl font-bold">Complete Your Transfer</h2>
+                          <p className="text-xs md:text-sm text-muted-foreground">Send your payment within the window below</p>
+                        </div>
+                      </div>
+
+                      {/* Countdown */}
+                      {(() => {
+                        const tl = getMerchantTimeLeft(merchantDepositCreatedAt);
+                        return (
+                          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 text-center space-y-4 mb-6">
+                            <div className="flex items-center justify-center gap-2 text-amber-400">
+                              <i className="fas fa-clock text-lg"></i>
+                              <span className="font-semibold text-sm uppercase tracking-wide">Transfer Window</span>
+                            </div>
+                            <div className="flex justify-center gap-3">
+                              {[
+                                { v: tl.days, l: 'Days' },
+                                { v: tl.hours, l: 'Hrs' },
+                                { v: tl.minutes, l: 'Min' },
+                                { v: tl.seconds, l: 'Sec' },
+                              ].map(({ v, l }) => (
+                                <div key={l} className="flex flex-col items-center bg-background rounded-lg px-3 py-2 min-w-[52px] border border-border">
+                                  <span className="text-2xl font-bold font-mono">{String(v).padStart(2, '0')}</span>
+                                  <span className="text-xs text-muted-foreground">{l}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Transfer <span className="font-semibold text-foreground">${parseFloat(merchantAmount.replace(/,/g, '') || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> to the account below before the window closes.
+                            </p>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Bank details */}
+                      <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-5 mb-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Users className="h-5 w-5 text-emerald-400" />
+                          <h3 className="font-semibold text-lg">Transfer to This Account</h3>
+                        </div>
+                        <div className="space-y-4">
+                          {merchantSettings?.bankName && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Name</p>
+                                <p className="font-medium">{merchantSettings.bankName}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.bankName, 'Bank Name')}>
+                                {copiedField === 'Bank Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+                          {merchantSettings?.accountName && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Name</p>
+                                <p className="font-medium">{merchantSettings.accountName}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.accountName, 'Account Name')}>
+                                {copiedField === 'Account Name' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+                          {merchantSettings?.accountNumber && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Number</p>
+                                <p className="font-mono font-bold text-lg">{merchantSettings.accountNumber}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.accountNumber, 'Account Number')}>
+                                {copiedField === 'Account Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+                          {merchantSettings?.routingNumber && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Routing Number (ACH)</p>
+                                <p className="font-mono font-bold text-lg">{merchantSettings.routingNumber}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.routingNumber, 'Routing Number')}>
+                                {copiedField === 'Routing Number' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+                          {merchantSettings?.swiftCode && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div className="flex items-center gap-2">
+                                <Globe className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">SWIFT/BIC Code</p>
+                                  <p className="font-mono font-bold">{merchantSettings.swiftCode}</p>
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.swiftCode, 'SWIFT Code')}>
+                                {copiedField === 'SWIFT Code' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+                          {merchantSettings?.iban && (
+                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">IBAN</p>
+                                <p className="font-mono font-bold">{merchantSettings.iban}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(merchantSettings.iban, 'IBAN')}>
+                                {copiedField === 'IBAN' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+                          {merchantSettings?.bankAddress && (
+                            <div className="py-2">
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Bank Address</p>
+                              <p className="text-sm">{merchantSettings.bankAddress}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {merchantSettings?.instructions && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 mb-6">
+                          <p className="text-sm text-amber-400">
+                            <i className="fas fa-info-circle mr-2"></i>
+                            {merchantSettings.instructions}
+                          </p>
+                        </div>
+                      )}
+
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setLocation("/wallet")}
+                      >
+                        View in Wallet
                       </Button>
                     </>
                   )}
