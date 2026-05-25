@@ -77,6 +77,14 @@ export default function Deposit() {
     queryKey: ['/api/settings/merchant-pay'],
   });
 
+  // Check for existing pending merchant pay deposit
+  const { data: userDeposits } = useQuery<Array<{ depositMethod: string; status: string }>>({
+    queryKey: ['/api/deposits'],
+  });
+  const hasPendingMerchantPay = userDeposits?.some(
+    (d) => d.depositMethod === 'merchant_pay' && d.status === 'pending'
+  ) ?? false;
+
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
     setCopiedField(field);
@@ -261,16 +269,12 @@ export default function Deposit() {
       const res = await apiRequest("POST", "/api/deposits/merchant-pay", data);
       return res.json();
     },
-    onSuccess: (data) => {
-      toast({
-        title: "Deposit Submitted",
-        description: data.message,
-      });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deposits"] });
-      setLocation("/wallet");
     },
     onError: (error: Error) => {
+      setMerchantStep(1);
       toast({
         title: "Deposit Failed",
         description: error.message,
@@ -1292,6 +1296,27 @@ export default function Deposit() {
                         </div>
                       </div>
 
+                      {hasPendingMerchantPay ? (
+                        <div className="py-8 text-center space-y-6">
+                          <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto">
+                            <i className="fas fa-clock text-3xl text-amber-500"></i>
+                          </div>
+                          <div className="space-y-2">
+                            <h3 className="text-xl font-bold">Deposit Already Pending</h3>
+                            <p className="text-muted-foreground max-w-sm mx-auto text-sm">
+                              You have a Merchant Pay deposit currently under review. You cannot place another one until it is completed or cancelled.
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setLocation("/wallet")}
+                          >
+                            View in Wallet
+                          </Button>
+                        </div>
+                      ) : (
+                      <>
                       <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 mb-6">
                         <p className="text-sm text-emerald-400">
                           <i className="fas fa-handshake mr-2"></i>
@@ -1310,9 +1335,16 @@ export default function Deposit() {
                           return;
                         }
                         setMerchantStep(2);
-                        setTimeout(() => {
+                        // Fire API call and 4-second animation in parallel.
+                        // Step 3 (bank details + email) shows only when BOTH are done.
+                        Promise.all([
+                          merchantPayDepositMutation.mutateAsync({ amount: merchantAmount.replace(/,/g, '') }),
+                          new Promise(resolve => setTimeout(resolve, 4000)),
+                        ]).then(() => {
                           setMerchantStep(3);
-                        }, 4000);
+                        }).catch(() => {
+                          // error toast + step reset handled inside mutation onError
+                        });
                       }} className="space-y-6">
                         <div className="space-y-2">
                           <Label htmlFor="merchant-amount" className="text-base">Deposit Amount (USD)</Label>
@@ -1363,6 +1395,8 @@ export default function Deposit() {
                           Find a Merchant
                         </Button>
                       </form>
+                      </>
+                    )}
                     </>
                   )}
 
@@ -1556,11 +1590,10 @@ export default function Deposit() {
                       <Button
                         className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
                         size="lg"
-                        disabled={merchantPayDepositMutation.isPending}
-                        onClick={() => merchantPayDepositMutation.mutate({ amount: merchantAmount.replace(/,/g, '') })}
+                        onClick={() => setLocation("/wallet")}
                         data-testid="button-confirm-merchant-pay"
                       >
-                        {merchantPayDepositMutation.isPending ? "Submitting..." : "I've Completed the Transfer"}
+                        Proceed with Transfer
                       </Button>
                     </>
                   )}

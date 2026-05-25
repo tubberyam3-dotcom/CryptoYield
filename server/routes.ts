@@ -4273,6 +4273,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!amount || parseFloat(amount) <= 0) {
         return res.status(400).json({ message: "Valid deposit amount is required" });
       }
+
+      // Block if user already has a pending merchant pay deposit
+      const userDeposits = await storage.getUserDeposits(userId);
+      const hasPendingMerchantPay = userDeposits.some(
+        (d: any) => d.depositMethod === 'merchant_pay' && d.status === 'pending'
+      );
+      if (hasPendingMerchantPay) {
+        return res.status(400).json({
+          message: "You already have a pending Merchant Pay deposit. Please wait for it to be reviewed before placing a new one.",
+        });
+      }
+
       const deposit = await storage.createDeposit({
         userId,
         amount: parseFloat(amount).toFixed(8),
