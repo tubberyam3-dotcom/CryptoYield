@@ -270,6 +270,64 @@ class EmailService {
     });
   }
 
+  async sendMerchantPayFailure(
+    email: string,
+    firstName: string,
+    amount: string,
+    reason: 'expired' | 'cancelled'
+  ): Promise<{ success: boolean; error?: string }> {
+    const formatAmount = parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const reasonText = reason === 'expired'
+      ? 'Your 2-day transfer window has elapsed and no payment was received.'
+      : 'Your Merchant Pay deposit was cancelled by our team.';
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1a1a1a; margin: 0 0 8px 0;">Payment Not Received</h1>
+          <p style="color: #666; margin: 0; font-size: 15px;">Your Merchant Pay deposit could not be completed</p>
+        </div>
+
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${firstName || 'there'},</p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Unfortunately, your Merchant Pay deposit of <strong>$${formatAmount}</strong> was not successfully completed. ${reasonText}
+        </p>
+
+        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fca5a5; border-radius: 10px; padding: 20px; margin: 24px 0; text-align: center;">
+          <p style="color: #991b1b; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px 0;">Deposit Amount</p>
+          <p style="color: #dc2626; font-size: 36px; font-weight: bold; margin: 0;">$${formatAmount}</p>
+          <p style="color: #991b1b; font-size: 13px; margin: 8px 0 0 0;">Status: Not Completed</p>
+        </div>
+
+        <div style="background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="color: #92400e; font-size: 14px; margin: 0;"><strong>⚠️ What happened?</strong> ${reasonText}</p>
+        </div>
+
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          No funds have been deducted from your account. You are welcome to start a new Merchant Pay deposit at any time.
+        </p>
+
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="https://refluxcapital.com/deposit" style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 15px; font-weight: bold; padding: 14px 32px; border-radius: 8px; text-decoration: none;">
+            Retry Deposit
+          </a>
+        </div>
+
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          If you believe this is an error or need assistance, please contact our support team and we'll be happy to help.
+        </p>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Action Required — Merchant Pay Deposit Not Completed | Reflux Capital`,
+      html,
+    });
+  }
+
   async sendDepositConfirmation(email: string, firstName: string, amount: string, status: string): Promise<{ success: boolean; error?: string }> {
     const enabled = await storage.getSetting('email_deposit_enabled');
     if (enabled?.settingValue !== 'true') {

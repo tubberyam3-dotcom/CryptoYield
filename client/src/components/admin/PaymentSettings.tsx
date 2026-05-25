@@ -80,6 +80,7 @@ interface PaymentConfig {
   merchant_iban?: string;
   merchant_bank_address?: string;
   merchant_instructions?: string;
+  merchant_fee_percent?: string;
   // Supported currencies
   supported_currencies?: string;
   default_currency?: string;
@@ -137,6 +138,7 @@ export function PaymentSettings() {
     merchant_iban: "",
     merchant_bank_address: "",
     merchant_instructions: "",
+    merchant_fee_percent: "0",
     supported_currencies: "USD,EUR,GBP",
     default_currency: "USD",
   });
@@ -994,6 +996,26 @@ export function PaymentSettings() {
                   className="min-h-[80px]"
                   data-testid="input-merchant-instructions"
                 />
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label>Merchant Fee (%)</Label>
+                <div className="relative max-w-[180px]">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={formData.merchant_fee_percent}
+                    onChange={(e) => updateField("merchant_fee_percent", e.target.value)}
+                    placeholder="0"
+                    data-testid="input-merchant-fee-percent"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Fee applied to each Merchant Pay deposit. Set to 0 for no fee.
+                </p>
               </div>
             </CardContent>
           </Card>

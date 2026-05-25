@@ -3668,6 +3668,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const adminId = req.user?.claims?.sub || '';
       const deposit = await storage.cancelDeposit(req.params.id, adminId);
+      // Send failure email for merchant pay deposits
+      if (deposit.depositMethod === 'merchant_pay') {
+        try {
+          const user = await storage.getUser(deposit.userId);
+          if (user?.email) {
+            const { emailService } = await import('./email');
+            await emailService.sendMerchantPayFailure(
+              user.email,
+              user.firstName || 'Investor',
+              deposit.amount,
+              'cancelled'
+            );
+          }
+        } catch (emailErr) {
+          console.error('Failed to send merchant pay cancellation email:', emailErr);
+        }
+      }
       res.json({ success: true, deposit, message: "Deposit cancelled successfully" });
     } catch (error: any) {
       console.error("Error cancelling deposit:", error);
@@ -4242,6 +4259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         iban: await storage.getSetting('merchant_iban'),
         bankAddress: await storage.getSetting('merchant_bank_address'),
         instructions: await storage.getSetting('merchant_instructions'),
+        feePercent: await storage.getSetting('merchant_fee_percent'),
       };
       res.json({
         bankName: settings.bankName?.settingValue || '',
@@ -4252,6 +4270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         iban: settings.iban?.settingValue || '',
         bankAddress: settings.bankAddress?.settingValue || '',
         instructions: settings.instructions?.settingValue || 'Please include your account email as the payment reference. Deposits are typically processed within 1-2 business days.',
+        feePercent: settings.feePercent?.settingValue || '0',
       });
     } catch (error) {
       console.error("Error fetching merchant pay settings:", error);
@@ -4360,7 +4379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Merchant Pay details
     'merchant_bank_name', 'merchant_account_name', 'merchant_account_number', 'merchant_routing_number',
     'merchant_swift_code', 'merchant_iban', 'merchant_bank_address', 'merchant_instructions',
-    'deposit_merchant_enabled',
+    'merchant_fee_percent', 'deposit_merchant_enabled',
     // Currency settings
     'supported_currencies', 'default_currency'
   ];

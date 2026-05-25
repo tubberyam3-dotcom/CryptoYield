@@ -75,6 +75,7 @@ export default function Deposit() {
     iban: string;
     bankAddress: string;
     instructions: string;
+    feePercent: string;
   }>({
     queryKey: ['/api/settings/merchant-pay'],
   });
@@ -1516,6 +1517,30 @@ export default function Deposit() {
                             </Button>
                           ))}
                         </div>
+
+                        {/* Fee breakdown — only shown when amount is entered and fee > 0 */}
+                        {merchantAmount && parseFloat(merchantAmount.replace(/,/g, '')) > 0 && parseFloat(merchantSettings?.feePercent || '0') > 0 && (() => {
+                          const raw = parseFloat(merchantAmount.replace(/,/g, ''));
+                          const feeRate = parseFloat(merchantSettings!.feePercent) / 100;
+                          const feeAmt = raw * feeRate;
+                          const total = raw + feeAmt;
+                          return (
+                            <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm border border-border">
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>Deposit amount</span>
+                                <span>${raw.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                              <div className="flex justify-between text-amber-500">
+                                <span>Merchant fee ({merchantSettings!.feePercent}%)</span>
+                                <span>+${feeAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                              <div className="flex justify-between font-bold border-t border-border pt-2">
+                                <span>Total to transfer</span>
+                                <span>${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         <Button
                           type="submit"

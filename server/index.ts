@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startInterestScheduler } from "./interestScheduler";
 import { startEmailScheduler } from "./emailScheduler";
+import { startMerchantScheduler } from "./merchantScheduler";
 
 const app = express();
 app.use(express.json());
@@ -80,5 +81,8 @@ app.use((req, res, next) => {
     
     // Start the scheduled email processor
     startEmailScheduler();
+
+    // Start the merchant pay expiry checker
+    startMerchantScheduler();
   });
 })();
