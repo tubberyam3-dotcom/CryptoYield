@@ -53,8 +53,8 @@ export default function Landing() {
   };
 
   const handleAuthSuccess = () => {
-    // Authentication successful, page will redirect automatically
-    window.location.reload();
+    // Redirect to root so the authenticated routes can take over
+    window.location.replace('/');
   };
 
   // If showing auth forms, render them instead of the landing page
