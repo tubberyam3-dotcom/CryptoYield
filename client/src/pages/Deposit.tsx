@@ -52,6 +52,19 @@ export default function Deposit() {
   const [couponCode, setCouponCode] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  // Fetch admin-configured crypto wallet addresses
+  const { data: cryptoWallets } = useQuery<{
+    BTC: string;
+    ETH: string;
+    USDT: string;
+    USDT_network: string;
+    LTC: string;
+    XRP: string;
+    SOL: string;
+  }>({
+    queryKey: ['/api/settings/crypto-wallets'],
+  });
+
   // Fetch bank transfer settings
   const { data: bankSettings } = useQuery<{
     bankName: string;
@@ -100,16 +113,16 @@ export default function Deposit() {
   };
 
   const cryptoCoins = [
-    { id: "BTC", name: "Bitcoin", icon: SiBitcoin, color: "text-orange-500", address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", priceUsd: 97842.50 },
-    { id: "ETH", name: "Ethereum", icon: SiEthereum, color: "text-blue-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", priceUsd: 3456.78 },
-    { id: "USDT", name: "Tether", icon: SiTether, color: "text-green-500", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", priceUsd: 1.00 },
-    { id: "BNB", name: "Binance Coin", icon: SiBinance, color: "text-yellow-500", address: "bnb1grpf0955h0ykzq3ar5nmum7y6gdfl6lxfn46h2", priceUsd: 623.45 },
-    { id: "SOL", name: "Solana", icon: SiSolana, color: "text-purple-500", address: "SoLEao8wTzSfqhuou8rcYsVoLjthVmiXuEjzdNPMnCz", priceUsd: 234.67 },
-    { id: "XRP", name: "Ripple", icon: SiRipple, color: "text-blue-400", address: "rN7n7otQDd6FczFgLdzmFgFgWv4NJpRkBP", priceUsd: 1.42 },
-    { id: "ADA", name: "Cardano", icon: SiCardano, color: "text-cyan-500", address: "addr1qxy3v9ackjr98vxl7k8sfykj3dcxl8f8e6vnr8xf", priceUsd: 1.05 },
-    { id: "DOGE", name: "Dogecoin", icon: SiDogecoin, color: "text-yellow-600", address: "DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L", priceUsd: 0.38 },
-    { id: "MATIC", name: "Polygon", icon: SiPolygon, color: "text-purple-600", address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", priceUsd: 0.52 },
-    { id: "LTC", name: "Litecoin", icon: SiLitecoin, color: "text-gray-500", address: "LdP8Qox1VAhCzLJNqrr74YovaWYyNBUWvL", priceUsd: 102.34 },
+    { id: "BTC", name: "Bitcoin", icon: SiBitcoin, color: "text-orange-500", address: cryptoWallets?.BTC || '', network: "Bitcoin Network", priceUsd: 97842.50 },
+    { id: "ETH", name: "Ethereum", icon: SiEthereum, color: "text-blue-500", address: cryptoWallets?.ETH || '', network: "ERC-20", priceUsd: 3456.78 },
+    { id: "USDT", name: "Tether", icon: SiTether, color: "text-green-500", address: cryptoWallets?.USDT || '', network: cryptoWallets?.USDT_network || 'ERC-20', priceUsd: 1.00 },
+    { id: "BNB", name: "Binance Coin", icon: SiBinance, color: "text-yellow-500", address: '', network: "BEP-20", priceUsd: 623.45 },
+    { id: "SOL", name: "Solana", icon: SiSolana, color: "text-purple-500", address: cryptoWallets?.SOL || '', network: "Solana Network", priceUsd: 234.67 },
+    { id: "XRP", name: "Ripple", icon: SiRipple, color: "text-blue-400", address: cryptoWallets?.XRP || '', network: "XRP Ledger", priceUsd: 1.42 },
+    { id: "ADA", name: "Cardano", icon: SiCardano, color: "text-cyan-500", address: '', network: "Cardano Network", priceUsd: 1.05 },
+    { id: "DOGE", name: "Dogecoin", icon: SiDogecoin, color: "text-yellow-600", address: '', network: "Dogecoin Network", priceUsd: 0.38 },
+    { id: "MATIC", name: "Polygon", icon: SiPolygon, color: "text-purple-600", address: '', network: "Polygon Network", priceUsd: 0.52 },
+    { id: "LTC", name: "Litecoin", icon: SiLitecoin, color: "text-gray-500", address: cryptoWallets?.LTC || '', network: "Litecoin Network", priceUsd: 102.34 },
   ];
 
   useEffect(() => {
@@ -448,7 +461,7 @@ export default function Deposit() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {cryptoCoins.map((coin) => (
+                        {cryptoCoins.filter(c => c.address).map((coin) => (
                           <Card
                             key={coin.id}
                             className={`p-4 cursor-pointer transition-all hover:scale-105 ${
@@ -465,9 +478,15 @@ export default function Deposit() {
                               <coin.icon className={`${coin.color} text-4xl`} />
                               <span className="font-semibold text-sm text-center">{coin.name}</span>
                               <span className="text-xs text-muted-foreground">{coin.id}</span>
+                              <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{coin.network}</span>
                             </div>
                           </Card>
                         ))}
+                        {cryptoCoins.filter(c => c.address).length === 0 && (
+                          <div className="col-span-2 md:col-span-3 text-center py-8 text-muted-foreground">
+                            <p className="text-sm">No crypto wallets have been configured yet. Please contact support.</p>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
@@ -576,15 +595,15 @@ export default function Deposit() {
                         </div>
                         <div>
                           <h2 className="text-lg md:text-2xl font-bold">Send Payment</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Transfer ${cryptoAmount.replace(/,/g, '')} worth of {selectedCrypto}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">{selectedCoin?.name} deposit instructions</p>
                         </div>
                       </div>
 
-                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <i className="fas fa-clock text-yellow-500"></i>
-                            <span className="text-sm font-medium">Transaction Time Remaining:</span>
+                            <span className="text-sm font-medium">Time Remaining:</span>
                           </div>
                           <span className="text-lg font-bold text-yellow-500" data-testid="text-timer">
                             {formatTime(timeRemaining)}
@@ -592,12 +611,31 @@ export default function Deposit() {
                         </div>
                       </div>
 
-                      <div className="space-y-6">
+                      {/* Bold send-amount banner */}
+                      <div className="bg-primary/10 border-2 border-primary rounded-xl p-5 mb-4 text-center">
+                        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Exact amount to send</p>
+                        <div className="flex items-center justify-center gap-3">
+                          {CoinIcon && <CoinIcon className={`${selectedCoin?.color} text-3xl`} />}
+                          <span className="text-3xl md:text-4xl font-extrabold tracking-tight" data-testid="text-send-amount">
+                            {selectedCoin && (parseFloat(cryptoAmount.replace(/,/g, '')) / selectedCoin.priceUsd).toFixed(8)}
+                          </span>
+                          <span className="text-2xl font-bold text-muted-foreground">{selectedCrypto}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">≈ ${parseFloat(cryptoAmount.replace(/,/g, '')).toLocaleString()} USD</p>
+                        {selectedCoin && (
+                          <div className="mt-2 inline-flex items-center gap-1.5 bg-background border border-border rounded-full px-3 py-1">
+                            <i className="fas fa-network-wired text-xs text-muted-foreground"></i>
+                            <span className="text-xs font-semibold">{selectedCoin.network}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
                         <div className="flex justify-center">
                           <div className="bg-white p-4 rounded-lg">
                             <QRCodeSVG 
                               value={cryptoAddress} 
-                              size={192}
+                              size={176}
                               level="H"
                               includeMargin={false}
                             />
@@ -605,7 +643,14 @@ export default function Deposit() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Deposit Address</Label>
+                          <Label className="font-semibold">
+                            Deposit Address
+                            {selectedCoin && (
+                              <span className="ml-2 text-xs font-normal bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                                {selectedCoin.network}
+                              </span>
+                            )}
+                          </Label>
                           <div className="flex items-center space-x-2">
                             <Input
                               value={cryptoAddress}
@@ -633,8 +678,7 @@ export default function Deposit() {
                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                           <p className="text-sm text-blue-400">
                             <i className="fas fa-info-circle mr-2"></i>
-                            Send exactly {selectedCoin && (parseFloat(cryptoAmount.replace(/,/g, '')) / selectedCoin.priceUsd).toFixed(8)} {selectedCrypto} to the address above. 
-                            Your deposit will be credited after payment is completed in the blockchain.
+                            Send exactly the amount shown above to the address. Only send on the <strong>{selectedCoin?.network}</strong> network. Your deposit will be credited after the transaction is confirmed on the blockchain.
                           </p>
                         </div>
 

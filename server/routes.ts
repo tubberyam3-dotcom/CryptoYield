@@ -2707,6 +2707,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User-facing endpoint: crypto wallet addresses configured by admin
+  app.get('/api/settings/crypto-wallets', async (req, res) => {
+    try {
+      const [btc, eth, usdt, usdtNetwork, ltc, xrp, sol] = await Promise.all([
+        storage.getSetting('crypto_btc_address'),
+        storage.getSetting('crypto_eth_address'),
+        storage.getSetting('crypto_usdt_address'),
+        storage.getSetting('crypto_usdt_network'),
+        storage.getSetting('crypto_ltc_address'),
+        storage.getSetting('crypto_xrp_address'),
+        storage.getSetting('crypto_sol_address'),
+      ]);
+      res.json({
+        BTC: btc?.settingValue || '',
+        ETH: eth?.settingValue || '',
+        USDT: usdt?.settingValue || '',
+        USDT_network: usdtNetwork?.settingValue || 'ERC-20',
+        LTC: ltc?.settingValue || '',
+        XRP: xrp?.settingValue || '',
+        SOL: sol?.settingValue || '',
+      });
+    } catch (error) {
+      console.error("Error fetching crypto wallet settings:", error);
+      res.status(500).json({ message: "Failed to fetch crypto wallet settings" });
+    }
+  });
+
   // Admin endpoint to update bank transfer settings
   app.put('/api/admin/settings/bank-transfer', adminAuth, async (req: any, res) => {
     try {
