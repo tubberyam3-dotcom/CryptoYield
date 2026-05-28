@@ -3538,10 +3538,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const deposit = await storage.processCryptoDeposit(userId, amount, cryptoAddress);
 
+      // Send deposit confirmation email (fire and forget)
+      try {
+        const user = await storage.getUser(userId);
+        if (user?.email) {
+          const { emailService } = await import('./email');
+          emailService.sendDepositConfirmation(user.email, user.firstName || 'there', amount, 'pending');
+        }
+      } catch (emailErr) {
+        console.error("Failed to send crypto deposit email:", emailErr);
+      }
+
       res.json({
         success: true,
         deposit,
-        message: `Crypto deposit request of $${parseFloat(amount).toFixed(2)} submitted! It will be reviewed by an admin.`,
+        message: `Deposit of $${parseFloat(amount).toFixed(2)} submitted! Your balance will be updated once the transaction is confirmed on the blockchain network.`,
       });
     } catch (error: any) {
       console.error("Error processing crypto deposit:", error);
@@ -3568,10 +3579,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bankDetails = { accountNumber, routingNumber, accountHolderName };
       const deposit = await storage.processBankTransferDeposit(userId, amount, bankDetails);
 
+      // Send deposit confirmation email (fire and forget)
+      try {
+        const user = await storage.getUser(userId);
+        if (user?.email) {
+          const { emailService } = await import('./email');
+          emailService.sendDepositConfirmation(user.email, user.firstName || 'there', amount, 'pending');
+        }
+      } catch (emailErr) {
+        console.error("Failed to send bank deposit email:", emailErr);
+      }
+
       res.json({
         success: true,
         deposit,
-        message: `Bank transfer request of $${parseFloat(amount).toFixed(2)} submitted! It will be reviewed by an admin.`,
+        message: `Bank transfer of $${parseFloat(amount).toFixed(2)} submitted! Your balance will be updated once we confirm receipt of your transfer.`,
       });
     } catch (error: any) {
       console.error("Error processing bank transfer:", error);
@@ -3597,10 +3619,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const deposit = await storage.processCardPaymentDeposit(userId, amount, stripeTransactionId);
 
+      // Send deposit confirmation email (fire and forget)
+      try {
+        const user = await storage.getUser(userId);
+        if (user?.email) {
+          const { emailService } = await import('./email');
+          emailService.sendDepositConfirmation(user.email, user.firstName || 'there', amount, 'pending');
+        }
+      } catch (emailErr) {
+        console.error("Failed to send card deposit email:", emailErr);
+      }
+
       res.json({
         success: true,
         deposit,
-        message: `Card payment request of $${parseFloat(amount).toFixed(2)} submitted! It will be reviewed by an admin.`,
+        message: `Card payment of $${parseFloat(amount).toFixed(2)} submitted! Your balance will be updated once the payment is verified.`,
       });
     } catch (error: any) {
       console.error("Error processing card payment:", error);
