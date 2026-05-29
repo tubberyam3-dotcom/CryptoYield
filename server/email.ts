@@ -909,7 +909,7 @@ class EmailService {
           </p>
 
           <div style="text-align: center; margin: 0 0 28px 0;">
-            <a href="https://refluxcapital.com/wallet" style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 15px; font-weight: bold; padding: 14px 36px; border-radius: 8px; text-decoration: none;">
+            <a href="https://app.refluxcapital.com/wallet" style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 15px; font-weight: bold; padding: 14px 36px; border-radius: 8px; text-decoration: none;">
               View My Wallet
             </a>
           </div>
