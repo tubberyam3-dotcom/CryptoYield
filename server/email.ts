@@ -908,12 +908,6 @@ class EmailService {
             These funds are now available in your wallet. You can start investing right away across our range of portfolios, bonds, and stocks.
           </p>
 
-          <div style="text-align: center; margin: 0 0 28px 0;">
-            <a href="https://app.refluxcapital.com/wallet" style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 15px; font-weight: bold; padding: 14px 36px; border-radius: 8px; text-decoration: none;">
-              View My Wallet
-            </a>
-          </div>
-
           <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0;">
             Thank you for being a valued member of Reflux Capital.<br>
             <strong>The Reflux Capital Team</strong>
