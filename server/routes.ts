@@ -3044,7 +3044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/users/:id/balance', adminAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const { amount, type, reason, date } = req.body;
+      const { amount, type, reason, date, sendNotification } = req.body;
       const adminId = req.user?.claims?.sub;
       
       if (!amount || !type) {
@@ -3108,6 +3108,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       }, customDate);
       
+      // Send credit notification email if admin opted in (only for "add" type)
+      if (type === 'add' && sendNotification === true) {
+        try {
+          const { emailService } = await import('./email');
+          emailService.sendAdminCreditNotification(
+            user.email!,
+            user.firstName || 'there',
+            numAmount.toString()
+          );
+        } catch (emailErr) {
+          console.error("Failed to send admin credit notification email:", emailErr);
+        }
+      }
+
       const updatedUser = await storage.getUser(id);
       res.json({ 
         message: `Successfully ${type === 'add' ? 'added' : 'withdrew'} $${numAmount.toFixed(2)}`,

@@ -877,6 +877,59 @@ class EmailService {
     });
   }
 
+  async sendAdminCreditNotification(email: string, firstName: string, amount: string): Promise<{ success: boolean; error?: string }> {
+    const formatAmount = parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+          <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+            <span style="font-size: 28px;">💰</span>
+          </div>
+          <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">Deposit Credited</h1>
+          <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0 0; font-size: 15px;">Your account has been funded</p>
+        </div>
+
+        <div style="padding: 36px 30px;">
+          <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            Hi ${firstName || 'there'},
+          </p>
+          <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 0 0 28px 0;">
+            Great news! A deposit has been credited to your Reflux Capital account and is ready to use.
+          </p>
+
+          <div style="background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 12px; padding: 28px; text-align: center; margin: 0 0 28px 0;">
+            <p style="color: #166534; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px 0; font-weight: 600;">Amount Credited</p>
+            <p style="color: #15803d; font-size: 42px; font-weight: 800; margin: 0; line-height: 1;">$${formatAmount}</p>
+            <p style="color: #166534; font-size: 13px; margin: 8px 0 0 0;">USD — Available immediately</p>
+          </div>
+
+          <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 28px 0;">
+            These funds are now available in your wallet. You can start investing right away across our range of portfolios, bonds, and stocks.
+          </p>
+
+          <div style="text-align: center; margin: 0 0 28px 0;">
+            <a href="https://refluxcapital.com/wallet" style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 15px; font-weight: bold; padding: 14px 36px; border-radius: 8px; text-decoration: none;">
+              View My Wallet
+            </a>
+          </div>
+
+          <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0;">
+            Thank you for being a valued member of Reflux Capital.<br>
+            <strong>The Reflux Capital Team</strong>
+          </p>
+        </div>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `$${formatAmount} Deposited to Your Account | Reflux Capital`,
+      html,
+    });
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     if (!process.env.RESEND_API_KEY) {
       return { success: false, error: 'Resend API key not configured' };

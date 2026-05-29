@@ -77,6 +77,7 @@ export function UserManagement() {
   const [balanceType, setBalanceType] = useState<"add" | "withdraw">("add");
   const [balanceReason, setBalanceReason] = useState("");
   const [balanceDate, setBalanceDate] = useState("");
+  const [balanceSendNotification, setBalanceSendNotification] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -243,8 +244,8 @@ export function UserManagement() {
   });
 
   const adjustBalanceMutation = useMutation({
-    mutationFn: async ({ userId, amount, type, reason, date }: { userId: string; amount: string; type: string; reason: string; date?: string }) => {
-      const response = await apiRequest("POST", `/api/admin/users/${userId}/balance`, { amount, type, reason, date });
+    mutationFn: async ({ userId, amount, type, reason, date, sendNotification }: { userId: string; amount: string; type: string; reason: string; date?: string; sendNotification?: boolean }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/balance`, { amount, type, reason, date, sendNotification });
       return response.json();
     },
     onSuccess: (data) => {
@@ -258,6 +259,7 @@ export function UserManagement() {
       setBalanceType("add");
       setBalanceReason("");
       setBalanceDate("");
+      setBalanceSendNotification(false);
     },
     onError: (error: any) => {
       toast({
@@ -1127,6 +1129,7 @@ export function UserManagement() {
         setBalanceType("add");
         setBalanceReason("");
         setBalanceDate("");
+        setBalanceSendNotification(false);
       }}>
         <DialogContent className="max-w-md" data-testid="dialog-adjust-balance">
           <DialogHeader>
@@ -1193,6 +1196,24 @@ export function UserManagement() {
               />
               <p className="text-xs text-muted-foreground">Leave blank to use today's date</p>
             </div>
+            {balanceType === "add" && (
+              <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                <Checkbox
+                  id="sendNotification"
+                  checked={balanceSendNotification}
+                  onCheckedChange={(v) => setBalanceSendNotification(!!v)}
+                  data-testid="checkbox-send-notification"
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="sendNotification" className="text-sm font-medium cursor-pointer">
+                    Send email notification to user
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    User will receive an email: "A deposit of ${balanceAmount || '0.00'} has been credited into your account."
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button 
@@ -1203,6 +1224,7 @@ export function UserManagement() {
                 setBalanceType("add");
                 setBalanceReason("");
                 setBalanceDate("");
+                setBalanceSendNotification(false);
               }}
               data-testid="button-cancel-balance"
             >
@@ -1214,7 +1236,8 @@ export function UserManagement() {
                 amount: balanceAmount,
                 type: balanceType,
                 reason: balanceReason,
-                date: balanceDate || undefined
+                date: balanceDate || undefined,
+                sendNotification: balanceSendNotification,
               })}
               disabled={adjustBalanceMutation.isPending || !balanceAmount || parseFloat(balanceAmount) <= 0}
               className={balanceType === "add" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
