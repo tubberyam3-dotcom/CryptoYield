@@ -924,6 +924,128 @@ class EmailService {
     });
   }
 
+  async sendJointAccountPartnerJoined(
+    primaryEmail: string,
+    primaryName: string,
+    partnerName: string,
+    accountName: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1a1a1a; margin: 0;">Your Partner Has Joined!</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${primaryName},</p>
+        <div style="background: #f0f9ff; border: 2px solid #bae6fd; border-radius: 12px; padding: 24px; text-align: center; margin: 0 0 24px 0;">
+          <p style="color: #0369a1; font-size: 18px; font-weight: 700; margin: 0 0 6px 0;">${partnerName}</p>
+          <p style="color: #0284c7; font-size: 14px; margin: 0;">has accepted your invitation and joined</p>
+          <p style="color: #0369a1; font-size: 16px; font-weight: 600; margin: 8px 0 0 0;">${accountName}</p>
+        </div>
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          Your joint account is now active. All investments made by either of you will be visible on your shared dashboard.
+        </p>
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${APP_DOMAIN}/" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            View Joint Dashboard
+          </a>
+        </div>
+        ${getEmailFooter()}
+      </div>
+    `;
+    return this.sendEmail({ to: primaryEmail, subject: `${partnerName} joined your joint account | Reflux Capital`, html });
+  }
+
+  async sendJointAccountWelcome(
+    partnerEmail: string,
+    partnerName: string,
+    primaryName: string,
+    accountName: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1a1a1a; margin: 0;">You've Joined a Joint Account!</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${partnerName},</p>
+        <div style="background: #f0f9ff; border: 2px solid #bae6fd; border-radius: 12px; padding: 24px; text-align: center; margin: 0 0 24px 0;">
+          <p style="color: #0369a1; font-size: 14px; margin: 0 0 6px 0;">You are now a partner on</p>
+          <p style="color: #0369a1; font-size: 20px; font-weight: 700; margin: 0;">${accountName}</p>
+          <p style="color: #0284c7; font-size: 14px; margin: 8px 0 0 0;">Created by ${primaryName}</p>
+        </div>
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          Your dashboard now shows a combined view of all investments made by you and ${primaryName}. Any investment either of you makes will appear on both dashboards.
+        </p>
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${APP_DOMAIN}/" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            View Joint Dashboard
+          </a>
+        </div>
+        ${getEmailFooter()}
+      </div>
+    `;
+    return this.sendEmail({ to: partnerEmail, subject: `You've joined ${accountName} | Reflux Capital`, html });
+  }
+
+  async sendJointActivityNotification(
+    email: string,
+    recipientName: string,
+    actorName: string,
+    activityType: 'portfolio' | 'bond' | 'stock',
+    assetName: string,
+    amount: string,
+    accountName: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const activityLabels: Record<string, string> = {
+      portfolio: 'invested in a portfolio',
+      bond: 'invested in a bond',
+      stock: 'purchased stock',
+    };
+    const activityLabel = activityLabels[activityType] || 'made an investment';
+    const formattedAmount = parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1a1a1a; margin: 0;">New Joint Account Activity</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${recipientName},</p>
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          Your partner <strong>${actorName}</strong> has ${activityLabel} on your joint account <strong>${accountName}</strong>.
+        </p>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 0 0 24px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="color: #6b7280; font-size: 14px; padding: 6px 0;">Activity</td>
+              <td style="color: #111827; font-size: 14px; font-weight: 600; text-align: right; padding: 6px 0; text-transform: capitalize;">${activityType}</td>
+            </tr>
+            <tr>
+              <td style="color: #6b7280; font-size: 14px; padding: 6px 0;">Asset</td>
+              <td style="color: #111827; font-size: 14px; font-weight: 600; text-align: right; padding: 6px 0;">${assetName}</td>
+            </tr>
+            <tr>
+              <td style="color: #6b7280; font-size: 14px; padding: 6px 0;">Amount</td>
+              <td style="color: #059669; font-size: 16px; font-weight: 700; text-align: right; padding: 6px 0;">$${formattedAmount}</td>
+            </tr>
+            <tr>
+              <td style="color: #6b7280; font-size: 14px; padding: 6px 0;">Made by</td>
+              <td style="color: #111827; font-size: 14px; font-weight: 600; text-align: right; padding: 6px 0;">${actorName}</td>
+            </tr>
+          </table>
+        </div>
+        <p style="color: #555; font-size: 14px; line-height: 1.6;">
+          This investment is now visible on your shared dashboard.
+        </p>
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${APP_DOMAIN}/" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            View Dashboard
+          </a>
+        </div>
+        ${getEmailFooter()}
+      </div>
+    `;
+    return this.sendEmail({ to: email, subject: `${actorName} made an investment on your joint account | Reflux Capital`, html });
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     if (!process.env.RESEND_API_KEY) {
       return { success: false, error: 'Resend API key not configured' };

@@ -1284,6 +1284,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Notify the other partner if this is a joint account investment
+      if (accountContext.isJointAccount) {
+        try {
+          const { emailService } = await import('./email');
+          const members = await storage.getJointAccountMembers(accountContext.accountId);
+          const jointAccountRecord = await storage.getJointAccount(accountContext.accountId);
+          const otherMember = members.find((m: any) => m.userId !== userId);
+          if (otherMember && jointAccountRecord) {
+            const otherUser = await storage.getUser(otherMember.userId);
+            const actorName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Your partner';
+            if (otherUser?.email) {
+              const recipientName = `${otherUser.firstName || ''} ${otherUser.lastName || ''}`.trim() || 'Partner';
+              await emailService.sendJointActivityNotification(otherUser.email, recipientName, actorName, 'portfolio', portfolio.name, actualInvestmentAmount.toString(), jointAccountRecord.name);
+            }
+          }
+        } catch (notifyError) {
+          console.error('Failed to send joint account portfolio notification:', notifyError);
+        }
+      }
+
       res.json(userPortfolio);
     } catch (error) {
       console.error("Error creating user portfolio:", error);
@@ -1666,6 +1686,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const result = await storage.joinJointAccountByCode(userId, joinCode.toUpperCase());
+
+      // Send notifications to both users
+      try {
+        const { emailService } = await import('./email');
+        const jointAccount = await storage.getJointAccountByJoinCode(joinCode.toUpperCase());
+        if (jointAccount) {
+          const members = await storage.getJointAccountMembers(jointAccount.id);
+          const partnerMember = members.find((m: any) => m.userId === userId);
+          const primaryMember = members.find((m: any) => m.role === 'primary');
+          const partnerUser = partnerMember ? await storage.getUser(userId) : null;
+          const primaryUser = primaryMember ? await storage.getUser(primaryMember.userId) : null;
+
+          const partnerName = partnerUser ? `${partnerUser.firstName || ''} ${partnerUser.lastName || ''}`.trim() || 'Your partner' : 'Your partner';
+          const primaryName = primaryUser ? `${primaryUser.firstName || ''} ${primaryUser.lastName || ''}`.trim() || 'Account owner' : 'Account owner';
+
+          if (primaryUser?.email) {
+            await emailService.sendJointAccountPartnerJoined(primaryUser.email, primaryName, partnerName, jointAccount.name);
+          }
+          if (partnerUser?.email) {
+            await emailService.sendJointAccountWelcome(partnerUser.email, partnerName, primaryName, jointAccount.name);
+          }
+        }
+      } catch (emailError) {
+        console.error('Failed to send joint account join notifications:', emailError);
+      }
+
       res.json(result);
     } catch (error: any) {
       console.error("Error joining joint account:", error);
@@ -1803,6 +1849,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const userBondRecord = await storage.createUserBond(userBondData);
+
+      // Notify the other partner if this is a joint account investment
+      const bondAccountContext = await storage.getAccountContext(userId);
+      if (bondAccountContext.isJointAccount) {
+        try {
+          const { emailService } = await import('./email');
+          const members = await storage.getJointAccountMembers(bondAccountContext.accountId);
+          const jointAccountRecord = await storage.getJointAccount(bondAccountContext.accountId);
+          const otherMember = members.find((m: any) => m.userId !== userId);
+          if (otherMember && jointAccountRecord) {
+            const actorUser = await storage.getUser(userId);
+            const otherUser = await storage.getUser(otherMember.userId);
+            const actorName = actorUser ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || 'Your partner' : 'Your partner';
+            if (otherUser?.email) {
+              const recipientName = `${otherUser.firstName || ''} ${otherUser.lastName || ''}`.trim() || 'Partner';
+              await emailService.sendJointActivityNotification(otherUser.email, recipientName, actorName, 'bond', bondProduct.name, investedAmount, jointAccountRecord.name);
+            }
+          }
+        } catch (notifyError) {
+          console.error('Failed to send joint account bond notification:', notifyError);
+        }
+      }
+
       res.json(userBondRecord);
     } catch (error) {
       console.error("Error creating user bond:", error);
@@ -2244,6 +2313,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertUserStockSchema.parse(userStockData);
       const userStockRecord = await storage.createUserStock(validatedData);
+
+      // Notify the other partner if this is a joint account investment
+      if (accountContext.isJointAccount) {
+        try {
+          const { emailService } = await import('./email');
+          const members = await storage.getJointAccountMembers(accountContext.accountId);
+          const jointAccountRecord = await storage.getJointAccount(accountContext.accountId);
+          const otherMember = members.find((m: any) => m.userId !== userId);
+          if (otherMember && jointAccountRecord) {
+            const actorUser = await storage.getUser(userId);
+            const otherUser = await storage.getUser(otherMember.userId);
+            const actorName = actorUser ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || 'Your partner' : 'Your partner';
+            if (otherUser?.email) {
+              const recipientName = `${otherUser.firstName || ''} ${otherUser.lastName || ''}`.trim() || 'Partner';
+              await emailService.sendJointActivityNotification(otherUser.email, recipientName, actorName, 'stock', stockProduct.name || stockProduct.symbol, totalInvested.toString(), jointAccountRecord.name);
+            }
+          }
+        } catch (notifyError) {
+          console.error('Failed to send joint account stock notification:', notifyError);
+        }
+      }
+
       res.json(userStockRecord);
     } catch (error) {
       console.error("Error creating user stock:", error);

@@ -13,13 +13,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Users, Plus, Copy, Check, Heart, Shield } from "lucide-react";
+import { Users, Plus, Copy, Check, Heart, Shield, Link as LinkIcon } from "lucide-react";
 
 export function JointAccountManager() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [newJointAccount, setNewJointAccount] = useState({
     name: "",
     description: ""
@@ -106,6 +107,19 @@ export function JointAccountManager() {
         description: "Share this code with your partner to invite them to your joint account.",
       });
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyInviteLink = async () => {
+    if (jointAccount?.joinCode) {
+      const link = `https://app.refluxcapital.com/join/${jointAccount.joinCode}`;
+      await navigator.clipboard.writeText(link);
+      setCopiedLink(true);
+      toast({
+        title: "Invite Link Copied!",
+        description: "Share this link with your partner so they can join with one click.",
+      });
+      setTimeout(() => setCopiedLink(false), 2000);
     }
   };
 
@@ -269,24 +283,35 @@ export function JointAccountManager() {
             )}
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <div>
-                <Label className="text-sm font-medium">Join Code</Label>
-                <p className="text-xs text-muted-foreground">Share this code with your partner</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div>
+                  <Label className="text-sm font-medium">Join Code</Label>
+                  <p className="text-xs text-muted-foreground">Manual code entry</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <code className="px-3 py-1 bg-background rounded text-lg font-mono" data-testid="text-join-code">
+                    {jointAccount.joinCode}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCopyJoinCode}
+                    data-testid="button-copy-join-code"
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <code className="px-3 py-1 bg-background rounded text-lg font-mono" data-testid="text-join-code">
-                  {jointAccount.joinCode}
-                </code>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCopyJoinCode}
-                  data-testid="button-copy-join-code"
-                >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handleCopyInviteLink}
+                data-testid="button-copy-invite-link"
+              >
+                {copiedLink ? <Check className="h-4 w-4 text-green-600" /> : <LinkIcon className="h-4 w-4" />}
+                {copiedLink ? "Link Copied!" : "Copy Invite Link"}
+              </Button>
             </div>
 
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">

@@ -51,7 +51,7 @@ export default function JoinAccount() {
         title: "Success!",
         description: "You've joined the joint account successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: (error: any) => {
       if (error.message?.includes("already")) {
@@ -100,7 +100,7 @@ export default function JoinAccount() {
   }
 
   const handleAuthSuccess = () => {
-    window.location.reload();
+    window.location.replace('/');
   };
 
   const getRelationshipLabel = (type: string | null) => {
