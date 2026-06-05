@@ -2801,22 +2801,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User-facing endpoint: which deposit methods are enabled
   app.get('/api/settings/deposit-methods', async (req, res) => {
     try {
-      const [crypto, bank, card, merchant] = await Promise.all([
+      const [crypto, bank, card, merchant, noMatch] = await Promise.all([
         storage.getSetting('deposit_crypto_enabled'),
         storage.getSetting('deposit_bank_enabled'),
         storage.getSetting('deposit_card_enabled'),
         storage.getSetting('deposit_merchant_enabled'),
+        storage.getSetting('merchant_no_match_enabled'),
       ]);
       res.json({
-        crypto:   crypto?.settingValue   !== 'false',
-        bank:     bank?.settingValue     !== 'false',
-        card:     card?.settingValue     !== 'false',
-        merchant: merchant?.settingValue !== 'false',
-        coupon:   true, // coupons are always available
+        crypto:              crypto?.settingValue   !== 'false',
+        bank:                bank?.settingValue     !== 'false',
+        card:                card?.settingValue     !== 'false',
+        merchant:            merchant?.settingValue !== 'false',
+        coupon:              true,
+        merchantNoMatch:     noMatch?.settingValue  === 'true',
       });
     } catch (error) {
       console.error("Error fetching deposit method settings:", error);
-      res.json({ crypto: true, bank: true, card: true, merchant: true, coupon: true });
+      res.json({ crypto: true, bank: true, card: true, merchant: true, coupon: true, merchantNoMatch: false });
     }
   });
 
@@ -4566,7 +4568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Merchant Pay details
     'merchant_bank_name', 'merchant_account_name', 'merchant_account_number', 'merchant_routing_number',
     'merchant_swift_code', 'merchant_iban', 'merchant_bank_address', 'merchant_instructions',
-    'merchant_fee_percent', 'deposit_merchant_enabled',
+    'merchant_fee_percent', 'deposit_merchant_enabled', 'merchant_no_match_enabled',
     // Currency settings
     'supported_currencies', 'default_currency'
   ];

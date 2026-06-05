@@ -80,7 +80,7 @@ export default function Deposit() {
 
   // Fetch which deposit methods are enabled by admin
   const { data: enabledMethods } = useQuery<{
-    crypto: boolean; bank: boolean; card: boolean; merchant: boolean; coupon: boolean;
+    crypto: boolean; bank: boolean; card: boolean; merchant: boolean; coupon: boolean; merchantNoMatch: boolean;
   }>({
     queryKey: ['/api/settings/deposit-methods'],
   });
@@ -1362,8 +1362,29 @@ export default function Deposit() {
 
               {selectedMethod === "merchant" && (
                 <Card className="p-6">
+                  {/* No merchant available message */}
+                  {enabledMethods?.merchantNoMatch && (
+                    <div className="flex flex-col items-center text-center py-8 space-y-4">
+                      <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+                        <Users className="h-8 w-8 text-amber-500" />
+                      </div>
+                      <div className="space-y-2">
+                        <h2 className="text-xl font-bold">No Merchants Available</h2>
+                        <p className="text-muted-foreground max-w-sm">
+                          Sorry, we could not match you with any merchant in your region at this time. Please try a different deposit method or check back later.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setSelectedMethod(null)}
+                        className="mt-4 text-sm text-primary underline underline-offset-2"
+                      >
+                        Choose another method
+                      </button>
+                    </div>
+                  )}
+
                   {/* Step 1: Enter Amount */}
-                  {merchantStep === 1 && (
+                  {!enabledMethods?.merchantNoMatch && merchantStep === 1 && (
                     <>
                       <div className="flex items-center space-x-4 mb-6">
                         <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
@@ -1612,7 +1633,7 @@ export default function Deposit() {
                   )}
 
                   {/* Step 2: Pairing Animation */}
-                  {merchantStep === 2 && (
+                  {!enabledMethods?.merchantNoMatch && merchantStep === 2 && (
                     <div className="py-14 flex flex-col items-center justify-center space-y-8">
                       {/* Animated rings */}
                       <div className="relative w-32 h-32">
@@ -1669,7 +1690,7 @@ export default function Deposit() {
                   )}
 
                   {/* Step 3: Merchant Bank Details */}
-                  {merchantStep === 3 && (
+                  {!enabledMethods?.merchantNoMatch && merchantStep === 3 && (
                     <>
                       <div className="flex items-center space-x-4 mb-6">
                         <Button
@@ -1813,7 +1834,7 @@ export default function Deposit() {
                   )}
 
                   {/* Step 4: Countdown + bank details */}
-                  {merchantStep === 4 && (
+                  {!enabledMethods?.merchantNoMatch && merchantStep === 4 && (
                     <>
                       <div className="flex items-center space-x-4 mb-6">
                         <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">

@@ -72,6 +72,7 @@ interface PaymentConfig {
   wire_instructions?: string;
   // Merchant Pay details
   deposit_merchant_enabled?: string;
+  merchant_no_match_enabled?: string;
   merchant_bank_name?: string;
   merchant_account_name?: string;
   merchant_account_number?: string;
@@ -130,6 +131,7 @@ export function PaymentSettings() {
     wire_address: "",
     wire_instructions: "",
     deposit_merchant_enabled: "true",
+    merchant_no_match_enabled: "false",
     merchant_bank_name: "",
     merchant_account_name: "",
     merchant_account_number: "",
@@ -322,6 +324,23 @@ export function PaymentSettings() {
                       checked={formData.deposit_merchant_enabled === "true"}
                       onCheckedChange={() => toggleField("deposit_merchant_enabled")}
                       data-testid="switch-deposit-merchant"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                        <AlertCircle className="w-5 h-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">No Merchant Available Mode</p>
+                        <p className="text-xs text-muted-foreground">Show "no merchant in your region" message instead of the normal Merchant Pay flow</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={formData.merchant_no_match_enabled === "true"}
+                      onCheckedChange={() => toggleField("merchant_no_match_enabled")}
+                      data-testid="switch-merchant-no-match"
                     />
                   </div>
                 </div>
