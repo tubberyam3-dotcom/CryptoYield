@@ -78,6 +78,13 @@ export default function Deposit() {
     queryKey: ['/api/settings/bank-transfer'],
   });
 
+  // Fetch which deposit methods are enabled by admin
+  const { data: enabledMethods } = useQuery<{
+    crypto: boolean; bank: boolean; card: boolean; merchant: boolean; coupon: boolean;
+  }>({
+    queryKey: ['/api/settings/deposit-methods'],
+  });
+
   // Fetch merchant pay settings
   const { data: merchantSettings } = useQuery<{
     bankName: string;
@@ -166,7 +173,7 @@ export default function Deposit() {
     };
   };
 
-  const depositMethods = [
+  const allDepositMethods = [
     {
       id: "crypto",
       name: "Crypto Deposit",
@@ -203,6 +210,10 @@ export default function Deposit() {
       description: "Pair with a merchant and transfer directly",
     },
   ];
+
+  const depositMethods = enabledMethods
+    ? allDepositMethods.filter((m) => enabledMethods[m.id as keyof typeof enabledMethods] !== false)
+    : allDepositMethods;
 
   const cryptoDepositMutation = useMutation({
     mutationFn: async (data: { amount: string; cryptoAddress: string }) => {

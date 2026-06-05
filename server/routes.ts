@@ -2798,6 +2798,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User-facing endpoint: which deposit methods are enabled
+  app.get('/api/settings/deposit-methods', async (req, res) => {
+    try {
+      const [crypto, bank, card, merchant] = await Promise.all([
+        storage.getSetting('deposit_crypto_enabled'),
+        storage.getSetting('deposit_bank_enabled'),
+        storage.getSetting('deposit_card_enabled'),
+        storage.getSetting('deposit_merchant_enabled'),
+      ]);
+      res.json({
+        crypto:   crypto?.settingValue   !== 'false',
+        bank:     bank?.settingValue     !== 'false',
+        card:     card?.settingValue     !== 'false',
+        merchant: merchant?.settingValue !== 'false',
+        coupon:   true, // coupons are always available
+      });
+    } catch (error) {
+      console.error("Error fetching deposit method settings:", error);
+      res.json({ crypto: true, bank: true, card: true, merchant: true, coupon: true });
+    }
+  });
+
   // User-facing endpoint: crypto wallet addresses configured by admin
   app.get('/api/settings/crypto-wallets', async (req, res) => {
     try {
