@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { Wallet, TrendingUp, Zap, Eye, EyeOff, Trophy, Gift, Activity } from "lucide-react";
+import { Wallet, TrendingUp, Zap, Eye, EyeOff, Trophy, Gift, Activity, BarChart2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ interface DashboardStats {
   activeStakes: string;
   activeChallenges: number;
   availableBalance: string;
+  stocksValue: string;
 }
 
 export function BalanceSummary() {
@@ -55,7 +56,8 @@ export function BalanceSummary() {
   const portfolioValue = parseFloat(stats?.totalPortfolioValue || '0');
   const stakingValue = parseFloat(stats?.activeStakes || '0');
   const availableBalance = parseFloat(stats?.availableBalance || '0');
-  const totalBalance = portfolioValue + stakingValue + availableBalance;
+  const stocksValue = parseFloat(stats?.stocksValue || '0');
+  const totalBalance = portfolioValue + stakingValue + availableBalance + stocksValue;
 
   return (
     <div className="space-y-3 md:space-y-4" data-testid="balance-summary">
@@ -144,6 +146,42 @@ export function BalanceSummary() {
                     </p>
                     <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
                       Across multiple assets →
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </CarouselItem>
+
+          {/* Stocks Card */}
+          <CarouselItem className="pl-2 md:pl-4 basis-[85%]">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.15 }}
+            >
+              <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="stocks-summary">
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 md:p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                        <BarChart2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-sm md:text-base">Stocks</h3>
+                        <p className="text-xs text-muted-foreground">Market holdings</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      Live
+                    </Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-lg md:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {showBalance ? `$${stocksValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "****"}
+                    </p>
+                    <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                      View stock holdings →
                     </p>
                   </div>
                 </CardContent>
@@ -327,6 +365,40 @@ export function BalanceSummary() {
                 </p>
                 <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
                   Across multiple assets →
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Stocks Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+        >
+          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="stocks-summary-desktop">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 md:p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <BarChart2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm md:text-base">Stocks</h3>
+                    <p className="text-xs text-muted-foreground">Market holdings</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  Live
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg md:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {showBalance ? `$${stocksValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "****"}
+                </p>
+                <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                  View stock holdings →
                 </p>
               </div>
             </CardContent>

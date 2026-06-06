@@ -152,34 +152,27 @@ export default function Stocks() {
     fetchAllQuotes();
   }, [stockProducts]);
 
-  // Also fetch quotes for user holdings
+  // Fetch (and periodically refresh) quotes for user holdings
   useEffect(() => {
-    const fetchHoldingQuotes = async () => {
-      if (!userStocks) return;
-      
+    if (!userStocks || userStocks.length === 0) return;
+
+    const fetchHoldingQuotes = () => {
       for (const holding of userStocks) {
         const symbol = holding.stockProduct.symbol;
-        
-        // Only fetch if we don't have a quote yet
-        setStockQuotes(prev => {
-          if (prev[symbol]) return prev; // Already have this quote
-          
-          // Fetch in the background
-          fetch(`/api/stocks/quote?symbol=${symbol}`)
-            .then(res => res.json())
-            .then(data => {
-              setStockQuotes(current => ({ ...current, [symbol]: data }));
-            })
-            .catch(error => {
-              console.error(`Failed to fetch quote for ${symbol}:`, error);
-            });
-          
-          return prev;
-        });
+        fetch(`/api/stocks/quote?symbol=${symbol}`)
+          .then(res => res.json())
+          .then(data => {
+            setStockQuotes(current => ({ ...current, [symbol]: data }));
+          })
+          .catch(error => {
+            console.error(`Failed to fetch quote for ${symbol}:`, error);
+          });
       }
     };
-    
+
     fetchHoldingQuotes();
+    const interval = setInterval(fetchHoldingQuotes, 60000);
+    return () => clearInterval(interval);
   }, [userStocks]);
 
   const handlePurchase = purchaseForm.handleSubmit((data) => {

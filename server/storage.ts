@@ -238,6 +238,7 @@ export interface IStorage {
     activeBonds: string;
     activeChallenges: number;
     availableBalance: string;
+    stocksValue: string;
   }>;
 
   // Admin Analytics operations
@@ -1443,11 +1444,45 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     const userBalance = user?.balance || '0';
 
+    // Sum totalInvested for approved/active stock holdings
+    let stocksValueResult;
+    if (accountContext.isJointAccount) {
+      stocksValueResult = await db
+        .select({ total: sum(userStocks.totalInvested) })
+        .from(userStocks)
+        .where(
+          and(
+            or(
+              eq(userStocks.userId, userId),
+              eq(userStocks.jointAccountId, accountContext.accountId)
+            ),
+            or(
+              eq(userStocks.status, 'approved'),
+              eq(userStocks.status, 'active')
+            )
+          )
+        );
+    } else {
+      stocksValueResult = await db
+        .select({ total: sum(userStocks.totalInvested) })
+        .from(userStocks)
+        .where(
+          and(
+            eq(userStocks.userId, userId),
+            or(
+              eq(userStocks.status, 'approved'),
+              eq(userStocks.status, 'active')
+            )
+          )
+        );
+    }
+
     return {
       totalPortfolioValue: portfolioValueResult[0]?.total || '0',
       activeBonds: activeBondsResult[0]?.total || '0',
       activeChallenges: activeChallengesResult[0]?.count || 0,
       availableBalance: userBalance,
+      stocksValue: stocksValueResult[0]?.total || '0',
     };
   }
 
