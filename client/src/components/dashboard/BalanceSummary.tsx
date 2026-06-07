@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Wallet, TrendingUp, Zap, Eye, EyeOff, Trophy, Gift, Activity, BarChart2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -19,12 +19,75 @@ interface DashboardStats {
   stocksValue: string;
 }
 
+interface StockHolding {
+  id: string;
+  quantity: string;
+  purchasePrice: string;
+  totalInvested: string;
+  status: string;
+  stockProduct: { symbol: string; name: string };
+}
+
+interface StockQuote {
+  symbol: string;
+  price: number;
+}
+
 export function BalanceSummary() {
   const [showBalance, setShowBalance] = useState(true);
+  const [liveQuotes, setLiveQuotes] = useState<Record<string, number>>({});
   
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
   });
+
+  const { data: userStocks } = useQuery<StockHolding[]>({
+    queryKey: ["/api/user/stocks"],
+  });
+
+  // Fetch live market prices for all approved/active holdings
+  useEffect(() => {
+    if (!userStocks || userStocks.length === 0) return;
+
+    const activeHoldings = userStocks.filter(
+      h => h.status === 'approved' || h.status === 'active'
+    );
+    if (activeHoldings.length === 0) return;
+
+    const symbols = [...new Set(activeHoldings.map(h => h.stockProduct.symbol))].join(',');
+
+    const fetchQuotes = () => {
+      fetch(`/api/stocks/quotes?symbols=${encodeURIComponent(symbols)}`)
+        .then(res => res.json())
+        .then((quotes: StockQuote[]) => {
+          const map: Record<string, number> = {};
+          quotes.forEach(q => { map[q.symbol] = q.price; });
+          setLiveQuotes(map);
+        })
+        .catch(() => {});
+    };
+
+    fetchQuotes();
+    const interval = setInterval(fetchQuotes, 60000);
+    return () => clearInterval(interval);
+  }, [userStocks]);
+
+  // Compute live total stock market value
+  const liveStocksValue = useMemo(() => {
+    if (!userStocks) return null;
+    const activeHoldings = userStocks.filter(
+      h => h.status === 'approved' || h.status === 'active'
+    );
+    if (activeHoldings.length === 0) return 0;
+    // If we have live quotes for at least one holding, use them
+    const hasAnyLiveQuote = activeHoldings.some(h => liveQuotes[h.stockProduct.symbol] !== undefined);
+    if (!hasAnyLiveQuote) return null; // still loading
+    return activeHoldings.reduce((sum, h) => {
+      const qty = parseFloat(h.quantity);
+      const price = liveQuotes[h.stockProduct.symbol] ?? parseFloat(h.purchasePrice);
+      return sum + qty * price;
+    }, 0);
+  }, [userStocks, liveQuotes]);
 
   if (isLoading) {
     return (
@@ -56,7 +119,8 @@ export function BalanceSummary() {
   const portfolioValue = parseFloat(stats?.totalPortfolioValue || '0');
   const stakingValue = parseFloat(stats?.activeStakes || '0');
   const availableBalance = parseFloat(stats?.availableBalance || '0');
-  const stocksValue = parseFloat(stats?.stocksValue || '0');
+  // Use live market value if available, fall back to purchase-price total from server
+  const stocksValue = liveStocksValue !== null ? liveStocksValue : parseFloat(stats?.stocksValue || '0');
   const totalBalance = portfolioValue + stakingValue + availableBalance + stocksValue;
 
   return (

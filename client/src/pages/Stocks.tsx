@@ -221,12 +221,13 @@ export default function Stocks() {
                 {userStocks.map((holding) => {
                   const quote = stockQuotes[holding.stockProduct.symbol];
                   const purchasePrice = parseFloat(holding.purchasePrice);
-                  const currentPrice = quote?.price || purchasePrice;
+                  const hasLivePrice = !!quote?.price;
+                  const currentPrice = hasLivePrice ? quote.price : purchasePrice;
                   const quantity = parseFloat(holding.quantity);
                   const currentValue = currentPrice * quantity;
                   const totalInvested = parseFloat(holding.totalInvested);
                   const profitLoss = currentValue - totalInvested;
-                  const profitLossPercent = (profitLoss / totalInvested) * 100;
+                  const profitLossPercent = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
 
                   const getStatusBadge = (status: string) => {
                     switch (status) {
@@ -299,17 +300,36 @@ export default function Stocks() {
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Current Price</span>
-                          <span className="font-medium">${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          {hasLivePrice ? (
+                            <span className="font-medium text-foreground">
+                              ${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {quote.changePercent !== undefined && (
+                                <span className={`ml-1 text-xs ${quote.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  ({quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%)
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground animate-pulse">Fetching live price...</span>
+                          )}
                         </div>
                         <div className="flex justify-between text-sm pt-2 border-t">
-                          <span className="text-muted-foreground">Total Value</span>
-                          <span className="font-bold">${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="text-muted-foreground">Current Value</span>
+                          {hasLivePrice ? (
+                            <span className="font-bold">${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground animate-pulse">Calculating...</span>
+                          )}
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Profit/Loss</span>
-                          <span className={`font-bold ${profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {profitLoss >= 0 ? '+' : ''}${Math.abs(profitLoss).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
+                          <span className="text-muted-foreground">Profit / Loss</span>
+                          {hasLivePrice ? (
+                            <span className={`font-bold ${profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {profitLoss >= 0 ? '+' : ''}${Math.abs(profitLoss).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground animate-pulse">Calculating...</span>
+                          )}
                         </div>
                       </div>
                     </Card>
