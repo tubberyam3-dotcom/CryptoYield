@@ -74,6 +74,8 @@ export default function Stocks() {
 
   const { data: topPerformers, isLoading: topPerformersLoading } = useQuery<StockQuote[]>({
     queryKey: ["/api/stocks/top-performers"],
+    refetchInterval: 60000,
+    staleTime: 55000,
   });
 
   const purchaseMutation = useMutation({

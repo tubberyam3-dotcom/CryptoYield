@@ -2466,9 +2466,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cache for top performers (5 minute TTL)
+  // Cache for top performers (60 second TTL)
   let topPerformersCache: { data: any[]; timestamp: number } | null = null;
-  const STOCK_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const STOCK_CACHE_TTL = 60 * 1000; // 60 seconds
 
   // Fallback stock data when Yahoo Finance API fails
   const fallbackStockData = [
@@ -2492,6 +2492,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     { symbol: 'JNJ', name: 'Johnson & Johnson', price: 162.45, change: -0.30, changePercent: -0.18, previousClose: 162.75, dayHigh: 163.80, dayLow: 161.50, volume: 6890000, marketCap: 392000000000 },
     { symbol: 'HD', name: 'The Home Depot Inc.', price: 345.20, change: 4.80, changePercent: 1.41, previousClose: 340.40, dayHigh: 348.50, dayLow: 339.10, volume: 3450000, marketCap: 345000000000 },
     { symbol: 'COST', name: 'Costco Wholesale Corporation', price: 578.90, change: 6.25, changePercent: 1.09, previousClose: 572.65, dayHigh: 582.30, dayLow: 570.80, volume: 1890000, marketCap: 258000000000 },
+    { symbol: 'ABBV', name: 'AbbVie Inc.', price: 158.30, change: 1.20, changePercent: 0.76, previousClose: 157.10, dayHigh: 159.50, dayLow: 156.80, volume: 5430000, marketCap: 279000000000 },
+    { symbol: 'MRK', name: 'Merck & Co. Inc.', price: 109.45, change: 0.85, changePercent: 0.78, previousClose: 108.60, dayHigh: 110.20, dayLow: 108.30, volume: 7890000, marketCap: 277000000000 },
+    { symbol: 'CVX', name: 'Chevron Corporation', price: 152.70, change: -1.10, changePercent: -0.71, previousClose: 153.80, dayHigh: 154.20, dayLow: 151.40, volume: 9120000, marketCap: 290000000000 },
+    { symbol: 'KO', name: 'The Coca-Cola Company', price: 61.20, change: 0.35, changePercent: 0.57, previousClose: 60.85, dayHigh: 61.60, dayLow: 60.70, volume: 14560000, marketCap: 264000000000 },
+    { symbol: 'PEP', name: 'PepsiCo Inc.', price: 168.90, change: 1.10, changePercent: 0.66, previousClose: 167.80, dayHigh: 170.20, dayLow: 167.50, volume: 4230000, marketCap: 232000000000 },
+    { symbol: 'ADBE', name: 'Adobe Inc.', price: 492.30, change: 6.80, changePercent: 1.40, previousClose: 485.50, dayHigh: 495.80, dayLow: 484.20, volume: 2340000, marketCap: 218000000000 },
+    { symbol: 'CRM', name: 'Salesforce Inc.', price: 218.50, change: 3.20, changePercent: 1.49, previousClose: 215.30, dayHigh: 221.40, dayLow: 214.80, volume: 4560000, marketCap: 212000000000 },
+    { symbol: 'AMD', name: 'Advanced Micro Devices Inc.', price: 128.70, change: 2.90, changePercent: 2.31, previousClose: 125.80, dayHigh: 130.50, dayLow: 125.20, volume: 38900000, marketCap: 207000000000 },
+    { symbol: 'ORCL', name: 'Oracle Corporation', price: 118.40, change: 1.60, changePercent: 1.37, previousClose: 116.80, dayHigh: 119.80, dayLow: 116.20, volume: 6780000, marketCap: 205000000000 },
+    { symbol: 'NFLX', name: 'Netflix Inc.', price: 445.20, change: 5.40, changePercent: 1.23, previousClose: 439.80, dayHigh: 449.60, dayLow: 438.50, volume: 5120000, marketCap: 196000000000 },
+    { symbol: 'ACN', name: 'Accenture plc', price: 332.80, change: 2.50, changePercent: 0.76, previousClose: 330.30, dayHigh: 335.20, dayLow: 329.40, volume: 1870000, marketCap: 210000000000 },
+    { symbol: 'TMO', name: 'Thermo Fisher Scientific Inc.', price: 558.90, change: 4.20, changePercent: 0.76, previousClose: 554.70, dayHigh: 562.30, dayLow: 552.80, volume: 1230000, marketCap: 215000000000 },
+    { symbol: 'MCD', name: "McDonald's Corporation", price: 289.40, change: 1.80, changePercent: 0.63, previousClose: 287.60, dayHigh: 291.20, dayLow: 287.10, volume: 2890000, marketCap: 211000000000 },
+    { symbol: 'ABT', name: 'Abbott Laboratories', price: 109.80, change: 0.90, changePercent: 0.83, previousClose: 108.90, dayHigh: 110.60, dayLow: 108.50, volume: 5670000, marketCap: 191000000000 },
+    { symbol: 'CSCO', name: 'Cisco Systems Inc.', price: 49.20, change: 0.40, changePercent: 0.82, previousClose: 48.80, dayHigh: 49.70, dayLow: 48.60, volume: 18230000, marketCap: 200000000000 },
+    { symbol: 'NKE', name: 'NIKE Inc.', price: 92.30, change: -0.70, changePercent: -0.75, previousClose: 93.00, dayHigh: 93.50, dayLow: 91.80, volume: 7890000, marketCap: 141000000000 },
+    { symbol: 'DHR', name: 'Danaher Corporation', price: 248.60, change: 2.10, changePercent: 0.85, previousClose: 246.50, dayHigh: 250.40, dayLow: 246.10, volume: 1980000, marketCap: 179000000000 },
+    { symbol: 'QCOM', name: 'QUALCOMM Incorporated', price: 152.40, change: 2.80, changePercent: 1.87, previousClose: 149.60, dayHigh: 154.20, dayLow: 149.30, volume: 9870000, marketCap: 170000000000 },
+    { symbol: 'TXN', name: 'Texas Instruments Incorporated', price: 168.90, change: 1.50, changePercent: 0.90, previousClose: 167.40, dayHigh: 170.30, dayLow: 167.00, volume: 4560000, marketCap: 154000000000 },
+    { symbol: 'LIN', name: 'Linde plc', price: 412.50, change: 3.20, changePercent: 0.78, previousClose: 409.30, dayHigh: 414.80, dayLow: 408.60, volume: 1340000, marketCap: 211000000000 },
+    { symbol: 'LOW', name: "Lowe's Companies Inc.", price: 228.70, change: 2.40, changePercent: 1.06, previousClose: 226.30, dayHigh: 230.50, dayLow: 225.80, volume: 2780000, marketCap: 131000000000 },
+    { symbol: 'INTC', name: 'Intel Corporation', price: 32.40, change: -0.30, changePercent: -0.92, previousClose: 32.70, dayHigh: 33.10, dayLow: 32.10, volume: 32450000, marketCap: 137000000000 },
+    { symbol: 'INTU', name: 'Intuit Inc.', price: 598.30, change: 7.50, changePercent: 1.27, previousClose: 590.80, dayHigh: 602.40, dayLow: 589.20, volume: 1230000, marketCap: 168000000000 },
+    { symbol: 'SPGI', name: 'S&P Global Inc.', price: 422.80, change: 3.60, changePercent: 0.86, previousClose: 419.20, dayHigh: 425.30, dayLow: 418.40, volume: 870000, marketCap: 135000000000 },
+    { symbol: 'HON', name: 'Honeywell International Inc.', price: 194.20, change: 1.20, changePercent: 0.62, previousClose: 193.00, dayHigh: 195.80, dayLow: 192.50, volume: 2340000, marketCap: 128000000000 },
+    { symbol: 'UPS', name: 'United Parcel Service Inc.', price: 145.60, change: -0.80, changePercent: -0.55, previousClose: 146.40, dayHigh: 147.20, dayLow: 144.90, volume: 3450000, marketCap: 124000000000 },
+    { symbol: 'CAT', name: 'Caterpillar Inc.', price: 312.40, change: 3.80, changePercent: 1.23, previousClose: 308.60, dayHigh: 315.20, dayLow: 307.80, volume: 2120000, marketCap: 160000000000 },
+    { symbol: 'BA', name: 'The Boeing Company', price: 198.70, change: 2.10, changePercent: 1.07, previousClose: 196.60, dayHigh: 201.30, dayLow: 195.80, volume: 5670000, marketCap: 120000000000 },
+    { symbol: 'GS', name: 'The Goldman Sachs Group Inc.', price: 398.50, change: 4.20, changePercent: 1.07, previousClose: 394.30, dayHigh: 401.80, dayLow: 393.20, volume: 1890000, marketCap: 131000000000 },
+    { symbol: 'IBM', name: 'International Business Machines Corporation', price: 162.30, change: 1.10, changePercent: 0.68, previousClose: 161.20, dayHigh: 163.80, dayLow: 160.90, volume: 3120000, marketCap: 147000000000 },
   ];
 
   app.get('/api/stocks/top-performers', async (req, res) => {
@@ -2501,10 +2531,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(topPerformersCache.data);
       }
 
-      // Curated list of top stocks
+      // Curated list of top 50 stocks
       const topStocks = [
         'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'LLY', 'AVGO',
-        'V', 'JPM', 'WMT', 'XOM', 'UNH', 'MA', 'PG', 'JNJ', 'HD', 'COST'
+        'V', 'JPM', 'WMT', 'XOM', 'UNH', 'MA', 'PG', 'JNJ', 'HD', 'COST',
+        'ABBV', 'MRK', 'CVX', 'KO', 'PEP', 'ADBE', 'CRM', 'AMD', 'ORCL', 'NFLX',
+        'ACN', 'TMO', 'MCD', 'ABT', 'CSCO', 'NKE', 'DHR', 'QCOM', 'TXN', 'LIN',
+        'LOW', 'INTC', 'INTU', 'SPGI', 'HON', 'UPS', 'CAT', 'BA', 'GS', 'IBM'
       ];
 
       // Try fetching one stock first to test if API is available
