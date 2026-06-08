@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { User } from "@shared/schema";
+import type { User, JointAccount } from "@shared/schema";
 import { 
   User as UserIcon, 
   Mail, 
@@ -41,7 +41,8 @@ import {
   DollarSign,
   Plus,
   Minus,
-  AlertTriangle
+  AlertTriangle,
+  Edit
 } from "lucide-react";
 
 interface UserStats {
@@ -80,6 +81,15 @@ export function UserManagement() {
   const [balanceSendNotification, setBalanceSendNotification] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
+  const [showEditJointHolder, setShowEditJointHolder] = useState<string | null>(null);
+  const [jointHolderName, setJointHolderName] = useState("");
+  const [jointHolderEmail, setJointHolderEmail] = useState("");
+  const [jointRelationshipType, setJointRelationshipType] = useState("");
+  const [showConvertToJoint, setShowConvertToJoint] = useState<string | null>(null);
+  const [convertJointName, setConvertJointName] = useState("");
+  const [convertPartnerName, setConvertPartnerName] = useState("");
+  const [convertPartnerEmail, setConvertPartnerEmail] = useState("");
+  const [convertRelationshipType, setConvertRelationshipType] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFirstName, setNewUserFirstName] = useState("");
   const [newUserLastName, setNewUserLastName] = useState("");
@@ -267,6 +277,41 @@ export function UserManagement() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  const updateJointHolderMutation = useMutation({
+    mutationFn: async ({ userId, name, partnerEmail, relationshipType }: { userId: string; name: string; partnerEmail: string; relationshipType: string }) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/joint-account`, { name, partnerEmail, relationshipType });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Joint Account Updated", description: "Joint holder details have been saved." });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${showEditJointHolder}`] });
+      setShowEditJointHolder(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Update", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const convertToJointMutation = useMutation({
+    mutationFn: async ({ userId, accountName, partnerName, partnerEmail, relationshipType }: { userId: string; accountName: string; partnerName: string; partnerEmail: string; relationshipType: string }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/convert-to-joint`, { accountName, partnerName, partnerEmail, relationshipType });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Account Converted", description: "Account has been switched to Joint." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${showConvertToJoint}`] });
+      setShowConvertToJoint(null);
+      setConvertJointName("");
+      setConvertPartnerName("");
+      setConvertPartnerEmail("");
+      setConvertRelationshipType("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Convert", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1062,7 +1107,78 @@ export function UserManagement() {
                     </div>
                   </div>
                 )}
+
+                {(userDetails as any).accountType !== 'joint' && !(userDetails as any).jointAccountInfo && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2 border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                    onClick={() => {
+                      setShowConvertToJoint(userDetails.id);
+                      setConvertJointName(`${userDetails.firstName || ''} ${userDetails.lastName || ''} & Partner`.trim());
+                    }}
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    Switch to Joint Account
+                  </Button>
+                )}
               </div>
+
+              {(userDetails as any).jointAccountInfo && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                        Joint Account Details
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const ja = (userDetails as any).jointAccountInfo?.jointAccount;
+                          setJointHolderName(ja?.name || '');
+                          setJointHolderEmail(ja?.partnerEmail || '');
+                          setJointRelationshipType(ja?.relationshipType || '');
+                          setShowEditJointHolder(userDetails.id);
+                        }}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Edit
+                      </Button>
+                    </div>
+                    <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account Name</span>
+                        <span className="font-medium">{(userDetails as any).jointAccountInfo?.jointAccount?.name || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Role</span>
+                        <span className="font-medium capitalize">{(userDetails as any).jointAccountInfo?.role || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Partner Email</span>
+                        <span className="font-medium">{(userDetails as any).jointAccountInfo?.jointAccount?.partnerEmail || 'Not set'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Relationship</span>
+                        <span className="font-medium capitalize">{(userDetails as any).jointAccountInfo?.jointAccount?.relationshipType?.replace('_', ' ') || 'Not set'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Join Code</span>
+                        <span className="font-mono font-bold text-purple-600 dark:text-purple-400 tracking-wider">
+                          {(userDetails as any).jointAccountInfo?.jointAccount?.joinCode || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Members</span>
+                        <span className="font-medium">{(userDetails as any).jointAccountInfo?.members?.length || 1} holder(s)</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="text-xs text-muted-foreground">
                 User ID: {userDetails.id}
@@ -1117,6 +1233,138 @@ export function UserManagement() {
                 <Trash2 className="w-4 h-4 mr-2" />
               )}
               Delete User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Joint Holder Dialog */}
+      <Dialog open={!!showEditJointHolder} onOpenChange={(open) => !open && setShowEditJointHolder(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              Edit Joint Account Details
+            </DialogTitle>
+            <DialogDescription>Update the joint account name and partner information.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Account Name</Label>
+              <Input
+                value={jointHolderName}
+                onChange={(e) => setJointHolderName(e.target.value)}
+                placeholder="e.g. John & Jane's Account"
+              />
+            </div>
+            <div>
+              <Label>Partner Email</Label>
+              <Input
+                type="email"
+                value={jointHolderEmail}
+                onChange={(e) => setJointHolderEmail(e.target.value)}
+                placeholder="partner@email.com"
+              />
+            </div>
+            <div>
+              <Label>Relationship Type</Label>
+              <Select value={jointRelationshipType} onValueChange={setJointRelationshipType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select relationship" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="married">Married</SelectItem>
+                  <SelectItem value="domestic_partners">Domestic Partners</SelectItem>
+                  <SelectItem value="family">Family</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowEditJointHolder(null)}>Cancel</Button>
+            <Button
+              onClick={() => showEditJointHolder && updateJointHolderMutation.mutate({
+                userId: showEditJointHolder,
+                name: jointHolderName,
+                partnerEmail: jointHolderEmail,
+                relationshipType: jointRelationshipType,
+              })}
+              disabled={updateJointHolderMutation.isPending}
+            >
+              {updateJointHolderMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert to Joint Account Dialog */}
+      <Dialog open={!!showConvertToJoint} onOpenChange={(open) => !open && setShowConvertToJoint(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              Switch to Joint Account
+            </DialogTitle>
+            <DialogDescription>
+              Convert this personal account to a joint account. The account holder will be the primary owner and a join code will be generated for the partner.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Account Name</Label>
+              <Input
+                value={convertJointName}
+                onChange={(e) => setConvertJointName(e.target.value)}
+                placeholder="e.g. John & Jane's Account"
+              />
+            </div>
+            <div>
+              <Label>Partner Name</Label>
+              <Input
+                value={convertPartnerName}
+                onChange={(e) => setConvertPartnerName(e.target.value)}
+                placeholder="Partner's full name"
+              />
+            </div>
+            <div>
+              <Label>Partner Email</Label>
+              <Input
+                type="email"
+                value={convertPartnerEmail}
+                onChange={(e) => setConvertPartnerEmail(e.target.value)}
+                placeholder="partner@email.com"
+              />
+            </div>
+            <div>
+              <Label>Relationship Type</Label>
+              <Select value={convertRelationshipType} onValueChange={setConvertRelationshipType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select relationship" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="married">Married</SelectItem>
+                  <SelectItem value="domestic_partners">Domestic Partners</SelectItem>
+                  <SelectItem value="family">Family</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowConvertToJoint(null)}>Cancel</Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => showConvertToJoint && convertToJointMutation.mutate({
+                userId: showConvertToJoint,
+                accountName: convertJointName,
+                partnerName: convertPartnerName,
+                partnerEmail: convertPartnerEmail,
+                relationshipType: convertRelationshipType,
+              })}
+              disabled={convertToJointMutation.isPending}
+            >
+              {convertToJointMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Users className="w-4 h-4 mr-2" />}
+              Convert to Joint
             </Button>
           </DialogFooter>
         </DialogContent>

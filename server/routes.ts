@@ -2780,11 +2780,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Remove sensitive fields but include contact/address info
       const { passwordHash, xpCode, ...userDetails } = user;
+
+      // Include joint account info if the user has one
+      const userJointAccount = await storage.getUserJointAccount(userId);
+      let jointAccountInfo = null;
+      if (userJointAccount) {
+        const jointAccount = await storage.getJointAccount(userJointAccount.jointAccountId);
+        const members = jointAccount ? await storage.getJointAccountMembers(jointAccount.id) : [];
+        jointAccountInfo = { jointAccount, role: userJointAccount.role, members };
+      }
       
-      res.json(userDetails);
+      res.json({ ...userDetails, jointAccountInfo });
     } catch (error) {
       console.error("Error fetching user details:", error);
       res.status(500).json({ message: "Failed to fetch user details" });
+    }
+  });
+
+  // Update joint holder info (name + partner email) for a user's joint account
+  app.patch('/api/admin/users/:userId/joint-account', adminAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { name, partnerEmail, relationshipType } = req.body;
+
+      const userJointAccount = await storage.getUserJointAccount(userId);
+      if (!userJointAccount) {
+        return res.status(404).json({ message: "User has no joint account" });
+      }
+
+      const updated = await storage.updateJointAccount(userJointAccount.jointAccountId, {
+        ...(name && { name }),
+        ...(partnerEmail !== undefined && { partnerEmail }),
+        ...(relationshipType && { relationshipType }),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating joint account:", error);
+      res.status(500).json({ message: "Failed to update joint account" });
+    }
+  });
+
+  // Convert a personal account to a joint account
+  app.post('/api/admin/users/:userId/convert-to-joint', adminAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { accountName, partnerName, partnerEmail, relationshipType } = req.body;
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const existing = await storage.getUserJointAccount(userId);
+      if (existing) {
+        return res.status(400).json({ message: "User already has a joint account" });
+      }
+
+      // Generate a unique join code
+      const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const name = accountName || `${user.firstName || ''} ${user.lastName || ''} & ${partnerName || 'Partner'}`.trim();
+
+      const jointAccount = await storage.createJointAccount({
+        name,
+        description: `Joint account created by admin`,
+        joinCode,
+        partnerEmail: partnerEmail || null,
+        relationshipType: relationshipType || null,
+        createdBy: userId,
+      });
+
+      await storage.joinJointAccount({ userId, jointAccountId: jointAccount.id, role: 'primary' });
+
+      // Update user accountType
+      await storage.updateUserProfile(userId, { accountType: 'joint' } as any);
+
+      res.json({ jointAccount, message: "Account converted to joint successfully" });
+    } catch (error) {
+      console.error("Error converting to joint account:", error);
+      res.status(500).json({ message: "Failed to convert account" });
     }
   });
 

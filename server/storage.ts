@@ -76,6 +76,7 @@ export interface IStorage {
   joinJointAccount(userJointAccount: InsertUserJointAccount): Promise<UserJointAccount>;
   joinJointAccountByCode(userId: string, joinCode: string): Promise<UserJointAccount>;
   getJointAccountMembers(jointAccountId: string): Promise<(UserJointAccount & { user: User })[]>;
+  updateJointAccount(id: string, data: { name?: string; partnerEmail?: string; relationshipType?: string }): Promise<JointAccount>;
   
   // Helper method to get account context (individual or joint)
   getAccountContext(userId: string): Promise<{
@@ -503,6 +504,15 @@ export class DatabaseStorage implements IStorage {
         ...row.user_joint_accounts,
         user: row.users!
       })));
+  }
+
+  async updateJointAccount(id: string, data: { name?: string; partnerEmail?: string; relationshipType?: string }): Promise<JointAccount> {
+    const [updated] = await db
+      .update(jointAccounts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(jointAccounts.id, id))
+      .returning();
+    return updated;
   }
 
   async getAccountContext(userId: string): Promise<{

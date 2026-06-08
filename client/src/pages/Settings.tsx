@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { KeyRound, Copy, Check } from "lucide-react";
+import { KeyRound, Copy, Check, Users } from "lucide-react";
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'preferences';
 type KycStep = 'intro' | 'personal' | 'address' | 'documents' | 'review';
@@ -57,7 +57,7 @@ export default function Settings() {
     loginAlerts: true,
     deviceTracking: true,
   });
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, hasJointAccount, jointAccount } = useAuth();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
@@ -788,9 +788,21 @@ export default function Settings() {
                             }
                           </h4>
                           <p className="text-sm text-muted-foreground">{user?.email}</p>
-                          <Badge className={cn("mt-1", getKycStatusColor(user?.kycStatus || 'pending'))}>
-                            KYC: {user?.kycStatus || 'pending'}
-                          </Badge>
+                          <div className="flex flex-wrap justify-center gap-2 mt-1">
+                            <Badge className={cn(getKycStatusColor(user?.kycStatus || 'pending'))}>
+                              KYC: {user?.kycStatus || 'pending'}
+                            </Badge>
+                            {hasJointAccount ? (
+                              <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                Joint Account
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground text-xs">
+                                Personal
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
@@ -1002,9 +1014,22 @@ export default function Settings() {
                         }
                       </h4>
                       <p className="text-sm text-muted-foreground" data-testid="text-user-email">{user?.email}</p>
-                      <Badge className={cn("mt-1", getKycStatusColor(user?.kycStatus || 'pending'))}>
-                        KYC: {user?.kycStatus || 'pending'}
-                      </Badge>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <Badge className={cn(getKycStatusColor(user?.kycStatus || 'pending'))}>
+                          KYC: {user?.kycStatus || 'pending'}
+                        </Badge>
+                        {hasJointAccount && (
+                          <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            Joint Account
+                          </Badge>
+                        )}
+                        {!hasJointAccount && (
+                          <Badge variant="outline" className="text-muted-foreground text-xs">
+                            Personal Account
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
@@ -1084,6 +1109,44 @@ export default function Settings() {
                     </div>
                   )}
                 </Card>
+
+                {hasJointAccount && jointAccount && (
+                  <Card className="p-4 md:p-6 border-purple-500/20 bg-purple-500/5" data-testid="card-joint-account-status">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-purple-500/10 rounded-full flex items-center justify-center">
+                        <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-purple-700 dark:text-purple-300">Joint Account</h3>
+                        <p className="text-xs text-muted-foreground">Shared account details</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account Name</span>
+                        <span className="font-medium">{jointAccount.name}</span>
+                      </div>
+                      {jointAccount.relationshipType && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Relationship</span>
+                          <span className="font-medium capitalize">{jointAccount.relationshipType.replace('_', ' ')}</span>
+                        </div>
+                      )}
+                      {jointAccount.partnerEmail && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Partner Email</span>
+                          <span className="font-medium">{jointAccount.partnerEmail}</span>
+                        </div>
+                      )}
+                      {jointAccount.joinCode && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Join Code</span>
+                          <span className="font-mono font-bold tracking-wider text-purple-600 dark:text-purple-400">{jointAccount.joinCode}</span>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
 
                 <JointAccountManager />
               </div>
