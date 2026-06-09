@@ -240,6 +240,8 @@ export interface IStorage {
     activeChallenges: number;
     availableBalance: string;
     stocksValue: string;
+    portfolioGrowthPercent: string;
+    totalProfit: string;
   }>;
 
   // Admin Analytics operations
@@ -1487,12 +1489,46 @@ export class DatabaseStorage implements IStorage {
         );
     }
 
+    // Compute real portfolio growth from accrued profit vs invested amount
+    let profitResult, investedResult;
+    if (accountContext.isJointAccount) {
+      profitResult = await db
+        .select({ total: sum(userPortfolios.totalAccruedProfit) })
+        .from(userPortfolios)
+        .where(or(
+          eq(userPortfolios.userId, userId),
+          eq(userPortfolios.jointAccountId, accountContext.accountId)
+        ));
+      investedResult = await db
+        .select({ total: sum(userPortfolios.investedAmount) })
+        .from(userPortfolios)
+        .where(or(
+          eq(userPortfolios.userId, userId),
+          eq(userPortfolios.jointAccountId, accountContext.accountId)
+        ));
+    } else {
+      profitResult = await db
+        .select({ total: sum(userPortfolios.totalAccruedProfit) })
+        .from(userPortfolios)
+        .where(eq(userPortfolios.userId, userId));
+      investedResult = await db
+        .select({ total: sum(userPortfolios.investedAmount) })
+        .from(userPortfolios)
+        .where(eq(userPortfolios.userId, userId));
+    }
+
+    const totalProfit = parseFloat(profitResult[0]?.total || '0');
+    const totalInvested = parseFloat(investedResult[0]?.total || '0');
+    const growthPercent = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+
     return {
       totalPortfolioValue: portfolioValueResult[0]?.total || '0',
       activeBonds: activeBondsResult[0]?.total || '0',
       activeChallenges: activeChallengesResult[0]?.count || 0,
       availableBalance: userBalance,
       stocksValue: stocksValueResult[0]?.total || '0',
+      portfolioGrowthPercent: growthPercent.toFixed(2),
+      totalProfit: totalProfit.toFixed(2),
     };
   }
 

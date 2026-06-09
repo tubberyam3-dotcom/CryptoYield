@@ -6,6 +6,8 @@ interface DashboardStats {
   activeStakes: string;
   activeChallenges: number;
   availableBalance: string;
+  portfolioGrowthPercent: string;
+  totalProfit: string;
 }
 
 export function StatsOverview() {
@@ -27,12 +29,20 @@ export function StatsOverview() {
     );
   }
 
+  const growthPercent = parseFloat(stats?.portfolioGrowthPercent || '0');
+  const totalProfit = parseFloat(stats?.totalProfit || '0');
+  const growthLabel = growthPercent !== 0
+    ? `${growthPercent >= 0 ? '+' : ''}${growthPercent.toFixed(2)}% all-time return`
+    : totalProfit === 0 && parseFloat(stats?.totalPortfolioValue || '0') === 0
+      ? 'No investments yet'
+      : 'Returns accruing…';
+
   const statsData = [
     {
       title: "Total Portfolio Value",
       value: `$${parseFloat(stats?.totalPortfolioValue || '0').toLocaleString()}`,
-      change: "+12.4% this month",
-      changeColor: "text-green-500",
+      change: growthLabel,
+      changeColor: growthPercent > 0 ? "text-green-500" : growthPercent < 0 ? "text-red-500" : "text-muted-foreground",
       icon: "fas fa-chart-line",
       iconBg: "bg-primary/10",
       iconColor: "text-primary",

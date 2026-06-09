@@ -17,6 +17,8 @@ interface DashboardStats {
   activeChallenges: number;
   availableBalance: string;
   stocksValue: string;
+  portfolioGrowthPercent: string;
+  totalProfit: string;
 }
 
 interface StockHolding {
@@ -160,12 +162,21 @@ export function BalanceSummary() {
                 <h2 className="text-2xl md:text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="total-balance">
                   {showBalance ? `$${totalBalance.toLocaleString()}` : "****"}
                 </h2>
-                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-                  +12.4%
-                </Badge>
+                {parseFloat(stats?.portfolioGrowthPercent || '0') !== 0 && (
+                  <Badge className={parseFloat(stats?.portfolioGrowthPercent || '0') >= 0
+                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs"
+                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs"
+                  }>
+                    {parseFloat(stats?.portfolioGrowthPercent || '0') >= 0 ? '+' : ''}
+                    {parseFloat(stats?.portfolioGrowthPercent || '0').toFixed(2)}%
+                  </Badge>
+                )}
               </div>
               <p className="text-sm text-muted-foreground">
-                Total growth this month • Last updated now
+                {parseFloat(stats?.portfolioGrowthPercent || '0') !== 0
+                  ? `+$${parseFloat(stats?.totalProfit || '0').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} portfolio returns • Last updated now`
+                  : totalBalance > 0 ? 'No portfolio returns yet • Last updated now' : 'Deposit funds to start investing • Last updated now'
+                }
               </p>
             </div>
           </CardContent>

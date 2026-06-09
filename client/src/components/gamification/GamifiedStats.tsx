@@ -10,6 +10,8 @@ interface DashboardStats {
   activeStakes: string;
   activeChallenges: number;
   availableBalance: string;
+  portfolioGrowthPercent: string;
+  totalProfit: string;
 }
 
 export function GamifiedStats() {
@@ -36,12 +38,17 @@ export function GamifiedStats() {
   const challenges = stats?.activeChallenges || 0;
   const balance = parseFloat(stats?.availableBalance || '0');
 
+  const growthPercent = parseFloat(stats?.portfolioGrowthPercent || '0');
+  const portfolioGrowthLabel = growthPercent !== 0
+    ? `${growthPercent >= 0 ? '+' : ''}${growthPercent.toFixed(2)}% all-time return`
+    : portfolioValue === 0 ? 'No investments yet' : 'Returns accruing…';
+
   const statsData = [
     {
       title: "Portfolio Power",
       value: `$${portfolioValue.toLocaleString()}`,
-      change: "+12.4% this month",
-      changeColor: "text-green-500",
+      change: portfolioGrowthLabel,
+      changeColor: growthPercent > 0 ? "text-green-500" : growthPercent < 0 ? "text-red-500" : "text-muted-foreground",
       icon: <TrendingUp className="w-4 h-4 md:w-6 md:h-6" />,
       iconBg: "bg-gradient-to-br from-green-500 to-emerald-600",
       iconColor: "text-white",
