@@ -24,7 +24,6 @@ import { InteractiveElements } from "@/components/gamification/InteractiveElemen
 import { FloatingClaimButton } from "@/components/dashboard/FloatingClaimButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { JointAccountBanner } from "@/components/dashboard/JointAccountBanner";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -54,7 +53,6 @@ export default function Dashboard() {
         <TopBar title="Dashboard" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-4 md:p-8 space-y-6 md:space-y-8 pb-24 lg:pb-8">
-          <JointAccountBanner />
           <BalanceSummary />
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
