@@ -385,10 +385,10 @@ export class DatabaseStorage implements IStorage {
   async createJointAccount(jointAccountData: InsertJointAccount): Promise<JointAccount> {
     // Generate a cryptographically secure 8-character join code
     const generateSecureJoinCode = (): string => {
-      const crypto = require('crypto');
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let result = '';
-      const bytes = crypto.randomBytes(8);
+      const bytes = new Uint8Array(8);
+      globalThis.crypto.getRandomValues(bytes);
       for (let i = 0; i < 8; i++) {
         result += chars[bytes[i] % chars.length];
       }
