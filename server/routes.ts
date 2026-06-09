@@ -1725,6 +1725,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current user's joint account members (other party details)
+  app.get('/api/joint-accounts/my/members', enhancedAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.session?.user?.id;
+      const accountContext = await storage.getAccountContext(userId);
+      if (!accountContext.isJointAccount) {
+        return res.json([]);
+      }
+      const members = await storage.getJointAccountMembers(accountContext.accountId);
+      // Return safe member info (no password hash)
+      const safeMembers = members.map(m => ({
+        userId: m.userId,
+        role: m.role,
+        joinedAt: m.joinedAt,
+        name: m.user ? `${m.user.firstName || ''} ${m.user.lastName || ''}`.trim() : null,
+        email: m.user?.email || null,
+      }));
+      res.json(safeMembers);
+    } catch (error) {
+      console.error("Error fetching joint account members:", error);
+      res.status(500).json({ message: "Failed to fetch members" });
+    }
+  });
+
   app.get('/api/joint-accounts/:id', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

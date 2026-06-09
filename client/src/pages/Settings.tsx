@@ -16,7 +16,7 @@ import { useTheme } from "@/providers/ThemeProvider";
 import { JointAccountManager } from "@/components/account/JointAccountManager";
 import { cn } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { KeyRound, Copy, Check, Users } from "lucide-react";
 
@@ -57,10 +57,16 @@ export default function Settings() {
     loginAlerts: true,
     deviceTracking: true,
   });
-  const { user, isLoading, hasJointAccount, jointAccount } = useAuth();
+  const { user, isLoading, hasJointAccount, jointAccount, userRole } = useAuth();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
+
+  interface JointMember { userId: string; role: string; name: string | null; email: string | null; joinedAt: string | null; }
+  const { data: jointMembers } = useQuery<JointMember[]>({
+    queryKey: ["/api/joint-accounts/my/members"],
+    enabled: hasJointAccount,
+  });
   const [generatedXpCode, setGeneratedXpCode] = useState<string | null>(null);
   const [xpCodeCopied, setXpCodeCopied] = useState(false);
 
@@ -1112,6 +1118,7 @@ export default function Settings() {
 
                 {hasJointAccount && jointAccount && (
                   <Card className="p-4 md:p-6 border-purple-500/20 bg-purple-500/5" data-testid="card-joint-account-status">
+                    {/* Header */}
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-8 h-8 bg-purple-500/10 rounded-full flex items-center justify-center">
                         <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
@@ -1121,10 +1128,16 @@ export default function Settings() {
                         <p className="text-xs text-muted-foreground">Shared account details</p>
                       </div>
                     </div>
-                    <div className="space-y-2 text-sm">
+
+                    {/* Account details */}
+                    <div className="space-y-2 text-sm mb-4">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Account Name</span>
                         <span className="font-medium">{jointAccount.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account ID</span>
+                        <span className="font-mono text-xs text-muted-foreground">{jointAccount.id}</span>
                       </div>
                       {jointAccount.relationshipType && (
                         <div className="flex justify-between">
@@ -1132,12 +1145,10 @@ export default function Settings() {
                           <span className="font-medium capitalize">{jointAccount.relationshipType.replace('_', ' ')}</span>
                         </div>
                       )}
-                      {jointAccount.partnerEmail && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Partner Email</span>
-                          <span className="font-medium">{jointAccount.partnerEmail}</span>
-                        </div>
-                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Your Role</span>
+                        <Badge variant="outline" className="text-xs capitalize">{userRole || 'member'}</Badge>
+                      </div>
                       {jointAccount.joinCode && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Join Code</span>
@@ -1145,6 +1156,37 @@ export default function Settings() {
                         </div>
                       )}
                     </div>
+
+                    {/* Other party details */}
+                    {(() => {
+                      const otherParty = jointMembers?.find(m => m.userId !== user?.id);
+                      return otherParty ? (
+                        <>
+                          <div className="border-t border-purple-500/20 pt-4">
+                            <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-3">Other Account Holder</p>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Name</span>
+                                <span className="font-medium">{otherParty.name || '—'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Email</span>
+                                <span className="font-medium">{otherParty.email || '—'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Role</span>
+                                <Badge variant="outline" className="text-xs capitalize">{otherParty.role}</Badge>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      ) : jointMembers && jointMembers.length <= 1 ? (
+                        <div className="border-t border-purple-500/20 pt-4">
+                          <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-2">Other Account Holder</p>
+                          <p className="text-sm text-muted-foreground">No partner has joined yet. Share the join code above with your partner.</p>
+                        </div>
+                      ) : null;
+                    })()}
                   </Card>
                 )}
 
