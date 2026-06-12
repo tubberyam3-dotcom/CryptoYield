@@ -745,14 +745,23 @@ class EmailService {
           Hi ${firstName || 'there'},
         </p>
         <p style="color: #333; font-size: 16px; line-height: 1.6;">
-          We received a request to reset your password for your Reflux Capital account. Copy and paste the link below into your browser to create a new password.
+          We received a request to reset your password for your Reflux Capital account. Click the button below to create a new password.
         </p>
-        <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-          <p style="color: #92400e; font-size: 14px; margin: 0 0 10px 0;">
-            <strong>Important:</strong> This link will expire in 1 hour. If you didn't request a password reset, you can safely ignore this email.
-          </p>
-          <p style="color: #92400e; font-size: 13px; word-break: break-all; margin: 0;">${resetUrl}</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" 
+             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            Reset Password
+          </a>
         </div>
+        <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <p style="color: #92400e; font-size: 14px; margin: 0;">
+            <strong>Important:</strong> This link will expire in 1 hour for security reasons. If you didn't request a password reset, you can safely ignore this email.
+          </p>
+        </div>
+        <p style="color: #666; font-size: 14px; line-height: 1.6;">
+          If the button doesn't work, copy and paste this link into your browser:<br>
+          <a href="${resetUrl}" style="color: #3b82f6; word-break: break-all;">${resetUrl}</a>
+        </p>
         ${getEmailFooter()}
       </div>
     `;
