@@ -2418,6 +2418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'BA': { symbol: 'BA', name: 'The Boeing Company', price: 218.40, change: 2.60, changePercent: 1.20, previousClose: 215.80, dayHigh: 221.00, dayLow: 215.20, volume: 5670000, marketCap: 133000000000 },
     'GS': { symbol: 'GS', name: 'The Goldman Sachs Group Inc.', price: 612.80, change: 5.60, changePercent: 0.92, previousClose: 607.20, dayHigh: 616.40, dayLow: 606.50, volume: 1890000, marketCap: 202000000000 },
     'IBM': { symbol: 'IBM', name: 'International Business Machines Corporation', price: 268.40, change: 2.20, changePercent: 0.83, previousClose: 266.20, dayHigh: 270.40, dayLow: 265.80, volume: 3120000, marketCap: 243000000000 },
+    'SPACEX': { symbol: 'SPACEX', name: 'Space Exploration Technologies Corp.', price: 185.00, change: 2.50, changePercent: 1.37, previousClose: 182.50, dayHigh: 186.50, dayLow: 183.20, volume: 0, marketCap: 350000000000 },
   };
 
   // Stock market data routes (using yahoo-finance2)
@@ -2576,6 +2577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     { symbol: 'BA', name: 'The Boeing Company', price: 218.40, change: 2.60, changePercent: 1.20, previousClose: 215.80, dayHigh: 221.00, dayLow: 215.20, volume: 5670000, marketCap: 133000000000 },
     { symbol: 'GS', name: 'The Goldman Sachs Group Inc.', price: 612.80, change: 5.60, changePercent: 0.92, previousClose: 607.20, dayHigh: 616.40, dayLow: 606.50, volume: 1890000, marketCap: 202000000000 },
     { symbol: 'IBM', name: 'International Business Machines Corporation', price: 268.40, change: 2.20, changePercent: 0.83, previousClose: 266.20, dayHigh: 270.40, dayLow: 265.80, volume: 3120000, marketCap: 243000000000 },
+    { symbol: 'SPACEX', name: 'Space Exploration Technologies Corp.', price: 185.00, change: 2.50, changePercent: 1.37, previousClose: 182.50, dayHigh: 186.50, dayLow: 183.20, volume: 0, marketCap: 350000000000 },
   ];
 
   app.get('/api/stocks/top-performers', async (req, res) => {
@@ -4771,6 +4773,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to save payment configuration" });
     }
   });
+
+  // Seed SpaceX as a stock product if it doesn't exist yet
+  (async () => {
+    try {
+      const existing = await storage.getStockProductBySymbol('SPACEX');
+      if (!existing) {
+        await storage.createStockProduct({
+          symbol: 'SPACEX',
+          name: 'Space Exploration Technologies Corp.',
+          description: 'Private aerospace manufacturer and space transportation company founded by Elon Musk. Known for Falcon 9, Starship, Dragon, and Starlink.',
+          sector: 'Aerospace & Defense',
+          minPurchaseQuantity: '1',
+          isActive: true,
+        });
+        console.log('[Seed] SpaceX stock product created.');
+      }
+    } catch (err) {
+      console.error('[Seed] Could not seed SpaceX stock product:', err);
+    }
+  })();
 
   const httpServer = createServer(app);
   return httpServer;
