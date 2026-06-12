@@ -168,12 +168,6 @@ class EmailService {
         <p style="color: #333; font-size: 16px; line-height: 1.6;">
           Get started by logging into your dashboard and exploring our investment options.
         </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${APP_DOMAIN}/dashboard" 
-             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            Go to Dashboard
-          </a>
-        </div>
         <p style="color: #666; font-size: 14px; line-height: 1.6;">
           If you have any questions, feel free to reach out to our support team.
         </p>
@@ -308,11 +302,7 @@ class EmailService {
           No funds have been deducted from your account. You are welcome to start a new Merchant Pay deposit at any time.
         </p>
 
-        <div style="text-align: center; margin: 32px 0;">
-          <a href="https://refluxcapital.com/deposit" style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 15px; font-weight: bold; padding: 14px 32px; border-radius: 8px; text-decoration: none;">
-            Retry Deposit
-          </a>
-        </div>
+
 
         <p style="color: #333; font-size: 15px; line-height: 1.6;">
           If you believe this is an error or need assistance, please contact our support team and we'll be happy to help.
@@ -533,12 +523,6 @@ class EmailService {
             • Earn daily rewards and XP bonuses
           </p>
         </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${APP_DOMAIN}/dashboard" 
-             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            Go to Dashboard
-          </a>
-        </div>
         <p style="color: #666; font-size: 14px; line-height: 1.6;">
           If you have any questions, our support team is here to help.
         </p>
@@ -602,12 +586,6 @@ class EmailService {
             Our team will review your investment request. You'll receive a confirmation email once it's approved and your funds are allocated.
           </p>
         </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${APP_DOMAIN}/dashboard" 
-             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            View Your Dashboard
-          </a>
-        </div>
         ${getEmailFooter()}
       </div>
     `;
@@ -665,12 +643,6 @@ class EmailService {
         <p style="color: #333; font-size: 16px; line-height: 1.6;">
           Your investment will now begin earning returns based on the portfolio's configured interest rate. You can track your investment performance anytime from your dashboard.
         </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${APP_DOMAIN}/portfolios" 
-             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            View Your Investments
-          </a>
-        </div>
         <p style="color: #666; font-size: 14px; line-height: 1.6;">
           Thank you for investing with Reflux Capital. We're excited to help you grow your wealth!
         </p>
@@ -744,12 +716,6 @@ class EmailService {
           ? `<p style="color: #333; font-size: 16px; line-height: 1.6;">Your investment is now active and will begin earning returns based on the portfolio's configured interest rate.</p>` 
           : `<p style="color: #333; font-size: 16px; line-height: 1.6;">Your investment is pending final approval. You will receive another notification once it has been fully approved.</p>`
         }
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${APP_DOMAIN}/portfolios" 
-             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            View Your Investments
-          </a>
-        </div>
         <p style="color: #666; font-size: 14px; line-height: 1.6;">
           If you have any questions about this investment, please contact our support team.
         </p>
@@ -779,23 +745,14 @@ class EmailService {
           Hi ${firstName || 'there'},
         </p>
         <p style="color: #333; font-size: 16px; line-height: 1.6;">
-          We received a request to reset your password for your Reflux Capital account. Click the button below to create a new password.
+          We received a request to reset your password for your Reflux Capital account. Copy and paste the link below into your browser to create a new password.
         </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${resetUrl}" 
-             style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            Reset Password
-          </a>
-        </div>
         <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-          <p style="color: #92400e; font-size: 14px; margin: 0;">
-            <strong>Important:</strong> This link will expire in 1 hour for security reasons. If you didn't request a password reset, you can safely ignore this email.
+          <p style="color: #92400e; font-size: 14px; margin: 0 0 10px 0;">
+            <strong>Important:</strong> This link will expire in 1 hour. If you didn't request a password reset, you can safely ignore this email.
           </p>
+          <p style="color: #92400e; font-size: 13px; word-break: break-all; margin: 0;">${resetUrl}</p>
         </div>
-        <p style="color: #666; font-size: 14px; line-height: 1.6;">
-          If the button doesn't work, copy and paste this link into your browser:<br>
-          <a href="${resetUrl}" style="color: #3b82f6; word-break: break-all;">${resetUrl}</a>
-        </p>
         ${getEmailFooter()}
       </div>
     `;
@@ -848,12 +805,6 @@ class EmailService {
           No matter where you are in your financial journey, we're here to support you every step of the way.
         </p>
         
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${APP_DOMAIN}/dashboard" 
-             style="background-color: #e4fe7b; color: #1a1a1a; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
-            👉 Log In to Your Dashboard
-          </a>
-        </div>
         
         <p style="color: #666; font-size: 14px; line-height: 1.6;">
           If you have any questions or need guidance picking the right plan, don't hesitate to reply to this email or use the live chat available 24/7 on our website.
@@ -944,11 +895,6 @@ class EmailService {
         <p style="color: #333; font-size: 15px; line-height: 1.6;">
           Your joint account is now active. All investments made by either of you will be visible on your shared dashboard.
         </p>
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${APP_DOMAIN}/" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            View Joint Dashboard
-          </a>
-        </div>
         ${getEmailFooter()}
       </div>
     `;
@@ -975,11 +921,6 @@ class EmailService {
         <p style="color: #333; font-size: 15px; line-height: 1.6;">
           Your dashboard now shows a combined view of all investments made by you and ${primaryName}. Any investment either of you makes will appear on both dashboards.
         </p>
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${APP_DOMAIN}/" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            View Joint Dashboard
-          </a>
-        </div>
         ${getEmailFooter()}
       </div>
     `;
@@ -1035,11 +976,6 @@ class EmailService {
         <p style="color: #555; font-size: 14px; line-height: 1.6;">
           This investment is now visible on your shared dashboard.
         </p>
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${APP_DOMAIN}/" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            View Dashboard
-          </a>
-        </div>
         ${getEmailFooter()}
       </div>
     `;
@@ -1088,11 +1024,6 @@ class EmailService {
           <p style="color: #92400e; font-size: 14px; margin: 0;">
             Your bond will mature in <strong>${maturityLabel}</strong>. At maturity, your principal plus accrued returns will be available in your account.
           </p>
-        </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${APP_DOMAIN}/portfolios" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            View My Investments
-          </a>
         </div>
         ${getEmailFooter()}
       </div>
@@ -1143,11 +1074,6 @@ class EmailService {
           <p style="color: #374151; font-size: 14px; margin: 0;">
             <strong>What happens next?</strong> Our team will review your purchase. Funds have been reserved from your balance and will be released back if the purchase is rejected.
           </p>
-        </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${APP_DOMAIN}/stocks" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            View My Stocks
-          </a>
         </div>
         ${getEmailFooter()}
       </div>
