@@ -769,7 +769,7 @@ export default function Deposit() {
                           <p className="text-xs text-muted-foreground">Minimum deposit: $10.00</p>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {[100, 500, 1000, 5000].map((amount) => (
                             <Button
                               key={amount}
@@ -1058,7 +1058,7 @@ export default function Deposit() {
                           <p className="text-xs text-muted-foreground">Minimum deposit: $10.00</p>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {[100, 500, 1000, 5000].map((amount) => (
                             <Button
                               key={amount}
@@ -1579,7 +1579,7 @@ export default function Deposit() {
                           <p className="text-xs text-muted-foreground">Minimum deposit: $10.00</p>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {[100, 500, 1000, 5000].map((amount) => (
                             <Button
                               key={amount}

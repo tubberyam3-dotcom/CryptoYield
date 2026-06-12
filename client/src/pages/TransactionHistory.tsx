@@ -29,6 +29,45 @@ import {
   Loader
 } from "lucide-react";
 
+function TransactionRow({ transaction, onClick, getTypeIcon, getStatusIcon, getStatusColor }: {
+  transaction: any;
+  onClick: () => void;
+  getTypeIcon: (type: string) => JSX.Element;
+  getStatusIcon: (status: string) => JSX.Element;
+  getStatusColor: (status: string) => string;
+}) {
+  return (
+    <div
+      className="flex items-start gap-3 p-3 sm:p-4 border rounded-xl hover:bg-muted/50 transition-colors cursor-pointer"
+      onClick={onClick}
+      data-testid={`transaction-${transaction.id}`}
+    >
+      <div className="p-2 bg-muted rounded-lg flex-shrink-0 mt-0.5">
+        {getTypeIcon(transaction.type)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm truncate">{transaction.title}</p>
+        <p className="text-xs text-muted-foreground truncate">{transaction.description}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {format(transaction.timestamp, 'MMM dd, yyyy • HH:mm')}
+        </p>
+      </div>
+      <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
+        <p className="font-semibold text-sm">${transaction.amount.toLocaleString()}</p>
+        {transaction.returns && (
+          <p className="text-xs text-green-600">+${transaction.returns.toLocaleString()}</p>
+        )}
+        <div className="flex items-center gap-1">
+          {getStatusIcon(transaction.status)}
+          <Badge className={`${getStatusColor(transaction.status)} text-xs py-0 px-1.5`}>
+            {transaction.status}
+          </Badge>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Mock comprehensive transaction data
 const mockTransactions = [
   {
@@ -227,9 +266,9 @@ export default function TransactionHistory() {
       <div className="ml-0 lg:ml-64 min-h-screen">
         <TopBar title="Transaction History" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
-        <main className="p-6 space-y-6">
+        <main className="p-4 sm:p-6 space-y-4 sm:space-y-6 pb-24 lg:pb-6">
           {/* Header & Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -363,120 +402,56 @@ export default function TransactionHistory() {
 
               {/* Transaction List */}
               <Tabs defaultValue="all" className="w-full">
-                <TabsList className="grid w-full grid-cols-6">
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="investment">Investments</TabsTrigger>
-                  <TabsTrigger value="staking">Staking</TabsTrigger>
-                  <TabsTrigger value="challenge">Challenges</TabsTrigger>
-                  <TabsTrigger value="deposit">Deposits</TabsTrigger>
-                  <TabsTrigger value="withdrawal">Withdrawals</TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto -mx-1 px-1 pb-1">
+                  <TabsList className="inline-flex w-max min-w-full sm:grid sm:w-full sm:grid-cols-6 gap-0">
+                    <TabsTrigger value="all" className="text-xs sm:text-sm px-2 sm:px-3">All</TabsTrigger>
+                    <TabsTrigger value="investment" className="text-xs sm:text-sm px-2 sm:px-3">Investments</TabsTrigger>
+                    <TabsTrigger value="staking" className="text-xs sm:text-sm px-2 sm:px-3">Staking</TabsTrigger>
+                    <TabsTrigger value="challenge" className="text-xs sm:text-sm px-2 sm:px-3">Challenges</TabsTrigger>
+                    <TabsTrigger value="deposit" className="text-xs sm:text-sm px-2 sm:px-3">Deposits</TabsTrigger>
+                    <TabsTrigger value="withdrawal" className="text-xs sm:text-sm px-2 sm:px-3">Withdrawals</TabsTrigger>
+                  </TabsList>
+                </div>
 
-                <TabsContent value="all" className="space-y-4 mt-6">
+                <TabsContent value="all" className="space-y-4 mt-4">
                   {filteredTransactions.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="w-16 h-16 bg-muted rounded-full mx-auto mb-4 flex items-center justify-center">
                         <Search className="w-8 h-8 text-muted-foreground" />
                       </div>
                       <h3 className="text-lg font-semibold mb-2">No transactions found</h3>
-                      <p className="text-muted-foreground">Try adjusting your search or filters</p>
+                      <p className="text-muted-foreground text-sm">Try adjusting your search or filters</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {filteredTransactions.map((transaction) => (
-                        <div
+                        <TransactionRow
                           key={transaction.id}
-                          className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                          transaction={transaction}
                           onClick={() => setSelectedTransaction(transaction)}
-                          data-testid={`transaction-${transaction.id}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-muted rounded-lg">
-                              {getTypeIcon(transaction.type)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{transaction.title}</p>
-                              <p className="text-sm text-muted-foreground truncate">
-                                {transaction.description}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(transaction.timestamp, 'MMM dd, yyyy • HH:mm')}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-medium">
-                                ${transaction.amount.toLocaleString()}
-                              </p>
-                              {transaction.returns && (
-                                <p className="text-xs text-green-600">
-                                  +${transaction.returns.toLocaleString()} ({transaction.returnPercentage}%)
-                                </p>
-                              )}
-                              {transaction.fee && transaction.fee > 0 && (
-                                <p className="text-xs text-muted-foreground">
-                                  Fee: ${transaction.fee}
-                                </p>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(transaction.status)}
-                              <Badge className={getStatusColor(transaction.status)}>
-                                {transaction.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
+                          getTypeIcon={getTypeIcon}
+                          getStatusIcon={getStatusIcon}
+                          getStatusColor={getStatusColor}
+                        />
                       ))}
                     </div>
                   )}
                 </TabsContent>
 
-                {/* Type-specific tabs would filter transactions */}
                 {['investment', 'staking', 'challenge', 'deposit', 'withdrawal'].map(type => (
-                  <TabsContent key={type} value={type} className="space-y-4 mt-6">
-                    <div className="space-y-3">
-                      {filteredTransactions.filter(tx => tx.type === type).map((transaction) => (
-                        <div
+                  <TabsContent key={type} value={type} className="space-y-4 mt-4">
+                    <div className="space-y-2 sm:space-y-3">
+                      {filteredTransactions.filter(tx => tx.type === type).length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground text-sm">No {type} transactions found</div>
+                      ) : filteredTransactions.filter(tx => tx.type === type).map((transaction) => (
+                        <TransactionRow
                           key={transaction.id}
-                          className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                          transaction={transaction}
                           onClick={() => setSelectedTransaction(transaction)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-muted rounded-lg">
-                              {getTypeIcon(transaction.type)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{transaction.title}</p>
-                              <p className="text-sm text-muted-foreground truncate">
-                                {transaction.description}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(transaction.timestamp, 'MMM dd, yyyy • HH:mm')}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-medium">
-                                ${transaction.amount.toLocaleString()}
-                              </p>
-                              {transaction.returns && (
-                                <p className="text-xs text-green-600">
-                                  +${transaction.returns.toLocaleString()}
-                                </p>
-                              )}
-                            </div>
-
-                            <Badge className={getStatusColor(transaction.status)}>
-                              {transaction.status}
-                            </Badge>
-                          </div>
-                        </div>
+                          getTypeIcon={getTypeIcon}
+                          getStatusIcon={getStatusIcon}
+                          getStatusColor={getStatusColor}
+                        />
                       ))}
                     </div>
                   </TabsContent>

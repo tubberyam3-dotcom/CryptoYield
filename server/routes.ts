@@ -1874,6 +1874,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userBondRecord = await storage.createUserBond(userBondData);
 
+      // Send bond purchase confirmation email to the investor
+      try {
+        const { emailService } = await import('./email');
+        const userRecord = await storage.getUser(userId);
+        if (userRecord?.email) {
+          await emailService.sendBondPurchaseEmail(
+            userRecord.email,
+            userRecord.firstName || 'there',
+            bondProduct.name,
+            investedAmount,
+            bondProduct.yield.toString(),
+            bondProduct.maturityMonths,
+          );
+        }
+      } catch (emailErr) {
+        console.error('Failed to send bond purchase email:', emailErr);
+      }
+
       // Notify the other partner if this is a joint account investment
       const bondAccountContext = await storage.getAccountContext(userId);
       if (bondAccountContext.isJointAccount) {
@@ -2337,6 +2355,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertUserStockSchema.parse(userStockData);
       const userStockRecord = await storage.createUserStock(validatedData);
+
+      // Send stock purchase confirmation email to the investor
+      try {
+        const { emailService } = await import('./email');
+        const investorRecord = await storage.getUser(userId);
+        if (investorRecord?.email) {
+          await emailService.sendStockPurchaseEmail(
+            investorRecord.email,
+            investorRecord.firstName || 'there',
+            stockProduct.symbol,
+            stockProduct.name || stockProduct.symbol,
+            quantity,
+            purchasePrice,
+            totalInvested.toString(),
+          );
+        }
+      } catch (emailErr) {
+        console.error('Failed to send stock purchase email:', emailErr);
+      }
 
       // Notify the other partner if this is a joint account investment
       if (accountContext.isJointAccount) {

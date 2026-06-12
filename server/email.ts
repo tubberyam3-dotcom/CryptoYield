@@ -1046,6 +1046,120 @@ class EmailService {
     return this.sendEmail({ to: email, subject: `${actorName} made an investment on your joint account | Reflux Capital`, html });
   }
 
+  async sendBondPurchaseEmail(
+    email: string,
+    firstName: string,
+    bondName: string,
+    investedAmount: string,
+    yieldPercent: string,
+    maturityMonths: number,
+  ): Promise<{ success: boolean; error?: string }> {
+    const enabled = await storage.getSetting('email_welcome_enabled');
+    if (enabled?.settingValue !== 'true') return { success: true };
+
+    const maturityLabel = maturityMonths >= 12
+      ? `${Math.round(maturityMonths / 12)} year${Math.round(maturityMonths / 12) !== 1 ? 's' : ''}`
+      : `${maturityMonths} month${maturityMonths !== 1 ? 's' : ''}`;
+    const expectedReturn = (parseFloat(investedAmount) * parseFloat(yieldPercent) / 100).toFixed(2);
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="width: 80px; height: 80px; background-color: #dbeafe; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">🏦</span>
+          </div>
+          <h1 style="color: #1a1a1a; margin: 0;">Bond Investment Submitted</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${firstName || 'there'},</p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Your bond investment has been submitted and is now <strong>active</strong>.
+        </p>
+        <div style="background-color: #dbeafe; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+          <h3 style="color: #1e3a5f; margin: 0 0 15px 0;">Bond Investment Details</h3>
+          <table style="width: 100%; font-size: 14px;">
+            <tr><td style="color: #1e40af; padding: 5px 0;">Bond:</td><td style="color: #1e3a5f; font-weight: bold; text-align: right;">${bondName}</td></tr>
+            <tr><td style="color: #1e40af; padding: 5px 0;">Invested:</td><td style="color: #1e3a5f; font-weight: bold; text-align: right;">$${parseFloat(investedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>
+            <tr><td style="color: #1e40af; padding: 5px 0;">Yield Rate:</td><td style="color: #1e3a5f; font-weight: bold; text-align: right;">${yieldPercent}% p.a.</td></tr>
+            <tr><td style="color: #1e40af; padding: 5px 0;">Maturity:</td><td style="color: #1e3a5f; font-weight: bold; text-align: right;">${maturityLabel}</td></tr>
+            <tr><td style="color: #1e40af; padding: 5px 0;">Expected Return:</td><td style="color: #1e3a5f; font-weight: bold; text-align: right;">$${parseFloat(expectedReturn).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>
+          </table>
+        </div>
+        <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <p style="color: #92400e; font-size: 14px; margin: 0;">
+            Your bond will mature in <strong>${maturityLabel}</strong>. At maturity, your principal plus accrued returns will be available in your account.
+          </p>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${APP_DOMAIN}/portfolios" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            View My Investments
+          </a>
+        </div>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Bond Investment Confirmed — ${bondName}`,
+      html,
+    });
+  }
+
+  async sendStockPurchaseEmail(
+    email: string,
+    firstName: string,
+    symbol: string,
+    stockName: string,
+    quantity: string,
+    purchasePrice: string,
+    totalAmount: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const enabled = await storage.getSetting('email_welcome_enabled');
+    if (enabled?.settingValue !== 'true') return { success: true };
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="width: 80px; height: 80px; background-color: #fef3c7; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">📈</span>
+          </div>
+          <h1 style="color: #1a1a1a; margin: 0;">Stock Purchase Submitted</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${firstName || 'there'},</p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Your stock purchase is <strong>pending admin approval</strong>. You'll be notified once it's confirmed.
+        </p>
+        <div style="background-color: #fef9e7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <h3 style="color: #92400e; margin: 0 0 15px 0;">Purchase Details</h3>
+          <table style="width: 100%; font-size: 14px;">
+            <tr><td style="color: #92400e; padding: 5px 0;">Stock:</td><td style="color: #78350f; font-weight: bold; text-align: right;">${symbol} — ${stockName}</td></tr>
+            <tr><td style="color: #92400e; padding: 5px 0;">Shares:</td><td style="color: #78350f; font-weight: bold; text-align: right;">${quantity}</td></tr>
+            <tr><td style="color: #92400e; padding: 5px 0;">Price per Share:</td><td style="color: #78350f; font-weight: bold; text-align: right;">$${parseFloat(purchasePrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>
+            <tr><td style="color: #92400e; padding: 5px 0;">Total Invested:</td><td style="color: #78350f; font-weight: bold; text-align: right;">$${parseFloat(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>
+            <tr><td style="color: #92400e; padding: 5px 0;">Status:</td><td style="color: #d97706; font-weight: bold; text-align: right;">Pending Approval</td></tr>
+          </table>
+        </div>
+        <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="color: #374151; font-size: 14px; margin: 0;">
+            <strong>What happens next?</strong> Our team will review your purchase. Funds have been reserved from your balance and will be released back if the purchase is rejected.
+          </p>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${APP_DOMAIN}/stocks" style="background-color: #e4fe7b; color: #1a1a1a; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            View My Stocks
+          </a>
+        </div>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Stock Purchase Submitted — ${symbol}`,
+      html,
+    });
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     if (!process.env.RESEND_API_KEY) {
       return { success: false, error: 'Resend API key not configured' };
