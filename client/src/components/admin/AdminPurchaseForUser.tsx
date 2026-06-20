@@ -44,7 +44,7 @@ export function AdminPurchaseForUser() {
   const [investmentAmount, setInvestmentAmount] = useState("");
   const [autoApproveInvestment, setAutoApproveInvestment] = useState(true);
   
-  const [selectedStock, setSelectedStock] = useState<string>("");
+  const [selectedStock, setSelectedStock] = useState<string>("custom");
   const [stockSymbol, setStockSymbol] = useState("");
   const [stockName, setStockName] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
@@ -118,7 +118,7 @@ export function AdminPurchaseForUser() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stock-purchases"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      setSelectedStock("");
+      setSelectedStock("custom");
       setStockSymbol("");
       setStockName("");
       setStockQuantity("");
@@ -170,7 +170,7 @@ export function AdminPurchaseForUser() {
       return;
     }
 
-    if (!selectedStock && (!stockSymbol || !stockName)) {
+    if (selectedStock === "custom" && (!stockSymbol || !stockName)) {
       toast({
         title: "Missing Information",
         description: "Please select a stock or enter symbol and name",
@@ -181,7 +181,7 @@ export function AdminPurchaseForUser() {
 
     buyStockMutation.mutate({
       userId: selectedUser.id,
-      stockProductId: selectedStock || undefined,
+      stockProductId: selectedStock !== "custom" ? selectedStock : undefined,
       symbol: stockSymbol || undefined,
       name: stockName || undefined,
       quantity: stockQuantity,
@@ -191,7 +191,7 @@ export function AdminPurchaseForUser() {
   };
 
   const selectedPortfolioDetails = portfolios?.find(p => p.id === selectedPortfolio);
-  const selectedStockDetails = stockProducts?.find(s => s.id === selectedStock);
+  const selectedStockDetails = selectedStock !== "custom" ? stockProducts?.find(s => s.id === selectedStock) : undefined;
 
   return (
     <div className="space-y-6">
@@ -349,7 +349,7 @@ export function AdminPurchaseForUser() {
                           <SelectValue placeholder="Choose a stock or enter custom below" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Custom Stock</SelectItem>
+                          <SelectItem value="custom">Custom Stock</SelectItem>
                           {stockProducts?.map((stock) => (
                             <SelectItem key={stock.id} value={stock.id}>
                               {stock.symbol} - {stock.name}
@@ -359,7 +359,7 @@ export function AdminPurchaseForUser() {
                       </Select>
                     </div>
 
-                    {!selectedStock && (
+                    {selectedStock === "custom" && (
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Stock Symbol</Label>
