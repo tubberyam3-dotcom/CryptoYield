@@ -395,7 +395,7 @@ export default function Deposit() {
       <div className="ml-0 lg:ml-64 min-h-screen">
         <TopBar title="Deposit Funds" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
-        <main className="p-6 space-y-6 pb-20 lg:pb-6">
+        <main className="p-3 sm:p-6 space-y-6 pb-20 lg:pb-6">
           {!selectedMethod && (
             <div className="flex justify-end mb-4">
               <Button variant="outline" onClick={() => setLocation("/wallet")} data-testid="button-back">
@@ -459,16 +459,16 @@ export default function Deposit() {
                 const CoinIcon = selectedCoin?.icon;
                 
                 return (
-                <Card className="p-6">
+                <Card className="p-4 md:p-6">
                   {cryptoStep === 1 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                          <i className="fab fa-bitcoin text-white text-xl"></i>
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <i className="fab fa-bitcoin text-white text-lg md:text-xl"></i>
                         </div>
-                        <div>
-                          <h2 className="text-lg md:text-2xl font-bold">Select Cryptocurrency</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Choose which crypto you want to deposit</p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Select Cryptocurrency</h2>
+                          <p className="text-xs text-muted-foreground">Choose which crypto to deposit</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -504,25 +504,16 @@ export default function Deposit() {
 
                   {cryptoStep === 2 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setCryptoStep(1)}
-                          data-testid="button-back-to-coins"
-                        >
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <Button variant="ghost" size="icon" onClick={() => setCryptoStep(1)} data-testid="button-back-to-coins" className="flex-shrink-0">
                           <i className="fas fa-arrow-left"></i>
                         </Button>
-                        <div className={`w-12 h-12 ${CoinIcon ? 'bg-white' : 'bg-orange-500'} rounded-lg flex items-center justify-center`}>
-                          {CoinIcon ? (
-                            <CoinIcon className={`${selectedCoin?.color} text-2xl`} />
-                          ) : (
-                            <i className="fab fa-bitcoin text-white text-xl"></i>
-                          )}
+                        <div className={`w-10 h-10 md:w-12 md:h-12 ${CoinIcon ? 'bg-white' : 'bg-orange-500'} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                          {CoinIcon ? <CoinIcon className={`${selectedCoin?.color} text-xl md:text-2xl`} /> : <i className="fab fa-bitcoin text-white text-lg md:text-xl"></i>}
                         </div>
-                        <div>
-                          <h2 className="text-lg md:text-2xl font-bold">Enter Amount</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">How much USD would you like to deposit?</p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Enter Amount</h2>
+                          <p className="text-xs text-muted-foreground">How much USD to deposit?</p>
                         </div>
                       </div>
                       <form onSubmit={(e) => {
@@ -588,25 +579,16 @@ export default function Deposit() {
 
                   {cryptoStep === 3 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setCryptoStep(2)}
-                          data-testid="button-back-to-amount"
-                        >
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <Button variant="ghost" size="icon" onClick={() => setCryptoStep(2)} data-testid="button-back-to-amount" className="flex-shrink-0">
                           <i className="fas fa-arrow-left"></i>
                         </Button>
-                        <div className={`w-12 h-12 ${CoinIcon ? 'bg-white' : 'bg-orange-500'} rounded-lg flex items-center justify-center`}>
-                          {CoinIcon ? (
-                            <CoinIcon className={`${selectedCoin?.color} text-2xl`} />
-                          ) : (
-                            <i className="fab fa-bitcoin text-white text-xl"></i>
-                          )}
+                        <div className={`w-10 h-10 md:w-12 md:h-12 ${CoinIcon ? 'bg-white' : 'bg-orange-500'} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                          {CoinIcon ? <CoinIcon className={`${selectedCoin?.color} text-xl md:text-2xl`} /> : <i className="fab fa-bitcoin text-white text-lg md:text-xl"></i>}
                         </div>
-                        <div>
-                          <h2 className="text-lg md:text-2xl font-bold">Send Payment</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">{selectedCoin?.name} deposit instructions</p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Send Payment</h2>
+                          <p className="text-xs text-muted-foreground truncate">{selectedCoin?.name} deposit instructions</p>
                         </div>
                       </div>
 
@@ -715,17 +697,17 @@ export default function Deposit() {
               })()}
 
               {selectedMethod === "bank" && (
-                <Card className="p-6">
+                <Card className="p-4 md:p-6">
                   {/* Step 1: Enter Amount */}
                   {bankStep === 1 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                          <Building2 className="text-white h-6 w-6" />
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Building2 className="text-white h-5 w-5 md:h-6 md:w-6" />
                         </div>
-                        <div>
-                          <h2 className="text-xl md:text-2xl font-bold">Bank Transfer</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Enter the amount you want to deposit</p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Bank Transfer</h2>
+                          <p className="text-xs text-muted-foreground">Enter the amount to deposit</p>
                         </div>
                       </div>
 
@@ -839,21 +821,16 @@ export default function Deposit() {
                   {/* Step 3: Bank Account Details */}
                   {bankStep === 3 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setBankStep(1)}
-                          data-testid="button-back-to-amount"
-                        >
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <Button variant="ghost" size="icon" onClick={() => setBankStep(1)} data-testid="button-back-to-amount" className="flex-shrink-0">
                           <i className="fas fa-arrow-left"></i>
                         </Button>
-                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                          <Check className="text-white h-6 w-6" />
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Check className="text-white h-5 w-5 md:h-6 md:w-6" />
                         </div>
-                        <div>
-                          <h2 className="text-lg md:text-2xl font-bold">Merchant Paired!</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Transfer ${parseFloat(bankAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to complete your deposit</p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Merchant Paired!</h2>
+                          <p className="text-xs text-muted-foreground">Transfer ${parseFloat(bankAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to complete</p>
                         </div>
                       </div>
 
@@ -1007,17 +984,17 @@ export default function Deposit() {
               )}
 
               {selectedMethod === "card" && (
-                <Card className="p-6">
+                <Card className="p-4 md:p-6">
                   {/* Step 1: Enter Amount */}
                   {cardStep === 1 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                          <CreditCard className="text-white h-6 w-6" />
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <CreditCard className="text-white h-5 w-5 md:h-6 md:w-6" />
                         </div>
-                        <div>
-                          <h2 className="text-xl md:text-2xl font-bold">Card Payment</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Enter the amount you want to deposit</p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Card Payment</h2>
+                          <p className="text-xs text-muted-foreground">Enter the amount to deposit</p>
                         </div>
                       </div>
 
@@ -1088,21 +1065,16 @@ export default function Deposit() {
                   {/* Step 2: Card Form */}
                   {cardStep === 2 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setCardStep(1)}
-                          data-testid="button-back-to-card-amount"
-                        >
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <Button variant="ghost" size="icon" onClick={() => setCardStep(1)} data-testid="button-back-to-card-amount" className="flex-shrink-0">
                           <i className="fas fa-arrow-left"></i>
                         </Button>
-                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                          <CreditCard className="text-white h-6 w-6" />
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <CreditCard className="text-white h-5 w-5 md:h-6 md:w-6" />
                         </div>
-                        <div>
-                          <h2 className="text-lg md:text-2xl font-bold">Enter Card Details</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Deposit ${parseFloat(cardAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Enter Card Details</h2>
+                          <p className="text-xs text-muted-foreground">Deposit ${parseFloat(cardAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                       </div>
 
@@ -1116,25 +1088,25 @@ export default function Deposit() {
                       </div>
 
                       {/* Card Form */}
-                      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 mb-6 text-white">
-                        <div className="flex justify-between items-start mb-8">
-                          <div className="w-12 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded"></div>
+                      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 md:p-6 mb-6 text-white">
+                        <div className="flex justify-between items-start mb-5 md:mb-8">
+                          <div className="w-10 h-6 md:w-12 md:h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded"></div>
                           <div className="flex gap-1">
-                            <div className="w-6 h-6 bg-red-500 rounded-full opacity-80"></div>
-                            <div className="w-6 h-6 bg-orange-400 rounded-full opacity-80 -ml-3"></div>
+                            <div className="w-5 h-5 md:w-6 md:h-6 bg-red-500 rounded-full opacity-80"></div>
+                            <div className="w-5 h-5 md:w-6 md:h-6 bg-orange-400 rounded-full opacity-80 -ml-2 md:-ml-3"></div>
                           </div>
                         </div>
-                        <div className="font-mono text-xl tracking-widest mb-6">
+                        <div className="font-mono text-base md:text-xl tracking-wider md:tracking-widest mb-4 md:mb-6">
                           {cardNumber ? cardNumber.replace(/(\d{4})(?=\d)/g, '$1 ').trim() : '**** **** **** ****'}
                         </div>
                         <div className="flex justify-between text-sm">
                           <div>
                             <p className="text-slate-400 text-xs uppercase">Card Holder</p>
-                            <p className="font-medium">{cardName || 'YOUR NAME'}</p>
+                            <p className="font-medium text-sm truncate max-w-[120px] md:max-w-none">{cardName || 'YOUR NAME'}</p>
                           </div>
                           <div>
                             <p className="text-slate-400 text-xs uppercase">Expires</p>
-                            <p className="font-medium">{cardExpiry || 'MM/YY'}</p>
+                            <p className="font-medium text-sm">{cardExpiry || 'MM/YY'}</p>
                           </div>
                         </div>
                       </div>
@@ -1319,7 +1291,7 @@ export default function Deposit() {
               )}
 
               {selectedMethod === "coupon" && (
-                <Card className="p-6">
+                <Card className="p-4 md:p-6">
                   <div className="flex items-center space-x-4 mb-6">
                     <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                       <i className="fas fa-gift text-white text-xl"></i>
@@ -1361,7 +1333,7 @@ export default function Deposit() {
               )}
 
               {selectedMethod === "merchant" && (
-                <Card className="p-6">
+                <Card className="p-4 md:p-6">
                   {/* No merchant available message */}
                   {enabledMethods?.merchantNoMatch && (
                     <div className="flex flex-col items-center text-center py-8 space-y-4">
@@ -1386,13 +1358,13 @@ export default function Deposit() {
                   {/* Step 1: Enter Amount */}
                   {!enabledMethods?.merchantNoMatch && merchantStep === 1 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
-                          <Users className="text-white h-6 w-6" />
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Users className="text-white h-5 w-5 md:h-6 md:w-6" />
                         </div>
-                        <div>
-                          <h2 className="text-xl md:text-2xl font-bold">Merchant Pay</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Enter the amount you want to deposit</p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Merchant Pay</h2>
+                          <p className="text-xs text-muted-foreground">Enter the amount to deposit</p>
                         </div>
                       </div>
 
@@ -1692,23 +1664,16 @@ export default function Deposit() {
                   {/* Step 3: Merchant Bank Details */}
                   {!enabledMethods?.merchantNoMatch && merchantStep === 3 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setMerchantStep(1)}
-                          data-testid="button-merchant-back-to-amount"
-                        >
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <Button variant="ghost" size="icon" onClick={() => setMerchantStep(1)} data-testid="button-merchant-back-to-amount" className="flex-shrink-0">
                           <i className="fas fa-arrow-left"></i>
                         </Button>
-                        <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
-                          <Check className="text-white h-6 w-6" />
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Check className="text-white h-5 w-5 md:h-6 md:w-6" />
                         </div>
-                        <div>
-                          <h2 className="text-lg md:text-2xl font-bold">Merchant Paired!</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">
-                            Transfer ${parseFloat(merchantAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to complete your deposit
-                          </p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Merchant Paired!</h2>
+                          <p className="text-xs text-muted-foreground">Transfer ${parseFloat(merchantAmount.replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to complete</p>
                         </div>
                       </div>
 
@@ -1836,13 +1801,13 @@ export default function Deposit() {
                   {/* Step 4: Countdown + bank details */}
                   {!enabledMethods?.merchantNoMatch && merchantStep === 4 && (
                     <>
-                      <div className="flex items-center space-x-4 mb-6">
-                        <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
-                          <i className="fas fa-university text-white text-lg"></i>
+                      <div className="flex items-center gap-3 mb-4 md:mb-6">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <i className="fas fa-university text-white text-base md:text-lg"></i>
                         </div>
-                        <div>
-                          <h2 className="text-lg md:text-2xl font-bold">Complete Your Transfer</h2>
-                          <p className="text-xs md:text-sm text-muted-foreground">Send your payment within the window below</p>
+                        <div className="min-w-0">
+                          <h2 className="text-base md:text-2xl font-bold leading-tight">Complete Your Transfer</h2>
+                          <p className="text-xs text-muted-foreground">Send payment within the window below</p>
                         </div>
                       </div>
 
