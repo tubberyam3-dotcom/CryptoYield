@@ -19,11 +19,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { StockProduct, UserStock, InsertUserStock } from "@shared/schema";
 import { insertUserStockSchema } from "@shared/schema";
-import { TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, Activity, ShoppingCart, Lock } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, Activity, ShoppingCart } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { StockIcon } from "@/components/StockIcon";
-
-const PRIVATE_STOCKS = new Set(['SPACEX']);
 
 interface StockQuote {
   symbol: string;
@@ -368,24 +366,13 @@ export default function Stocks() {
                           <div>
                             <div className="flex items-center gap-2">
                               <h3 className="font-bold text-xl">{stock.symbol}</h3>
-                              {PRIVATE_STOCKS.has(stock.symbol) && (
-                                <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20 text-xs">
-                                  <Lock className="w-3 h-3 mr-1" />
-                                  Private
-                                </Badge>
-                              )}
                             </div>
                             <p className="text-sm text-muted-foreground">{stock.sector}</p>
                           </div>
                         </div>
-                        {quote && !PRIVATE_STOCKS.has(stock.symbol) && (
+                        {quote && (
                           <Badge className={quote.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
                             {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
-                          </Badge>
-                        )}
-                        {quote && PRIVATE_STOCKS.has(stock.symbol) && (
-                          <Badge className="bg-green-500/10 text-green-500">
-                            +{quote.changePercent.toFixed(2)}%
                           </Badge>
                         )}
                       </div>
@@ -400,15 +387,10 @@ export default function Stocks() {
                           <div>
                             <div className="flex items-baseline gap-2">
                               <span className="text-2xl font-bold">${quote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              {!PRIVATE_STOCKS.has(stock.symbol) && (
-                                <span className={`text-sm ${quote.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  {quote.change >= 0 ? '+' : ''}{quote.change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              )}
+                              <span className={`text-sm ${quote.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {quote.change >= 0 ? '+' : ''}{quote.change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
                             </div>
-                            {PRIVATE_STOCKS.has(stock.symbol) && (
-                              <p className="text-xs text-muted-foreground mt-1">Secondary market price · Not publicly listed</p>
-                            )}
                           </div>
                         ) : (
                           <div className="text-sm text-muted-foreground">Loading price...</div>
