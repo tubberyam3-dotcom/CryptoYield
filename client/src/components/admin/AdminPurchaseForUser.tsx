@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Search, DollarSign, TrendingUp, ShoppingCart, User, Briefcase } from "lucide-react";
+import { Search, DollarSign, TrendingUp, ShoppingCart, User, Briefcase, RefreshCw } from "lucide-react";
 
 interface User {
   id: string;
@@ -33,7 +34,15 @@ interface StockProduct {
   id: string;
   symbol: string;
   name: string;
-  currentPrice: string;
+  description: string | null;
+  sector: string | null;
+  isActive: boolean;
+}
+
+interface StockQuote {
+  price: number;
+  change: number;
+  changePercent: number;
 }
 
 export function AdminPurchaseForUser() {
@@ -50,6 +59,8 @@ export function AdminPurchaseForUser() {
   const [stockQuantity, setStockQuantity] = useState("");
   const [stockPrice, setStockPrice] = useState("");
   const [autoApproveStock, setAutoApproveStock] = useState(true);
+  const [liveQuote, setLiveQuote] = useState<StockQuote | null>(null);
+  const [fetchingQuote, setFetchingQuote] = useState(false);
 
   const { data: users } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -62,6 +73,39 @@ export function AdminPurchaseForUser() {
   const { data: stockProducts } = useQuery<StockProduct[]>({
     queryKey: ["/api/stocks/products"],
   });
+
+  const fetchLivePrice = async (symbol: string) => {
+    setFetchingQuote(true);
+    setLiveQuote(null);
+    try {
+      const res = await fetch(`/api/stocks/quote?symbol=${encodeURIComponent(symbol)}`);
+      if (res.ok) {
+        const quote: StockQuote = await res.json();
+        setLiveQuote(quote);
+        setStockPrice(quote.price.toFixed(2));
+      }
+    } catch {
+      // silently fail — admin can type the price manually
+    } finally {
+      setFetchingQuote(false);
+    }
+  };
+
+  const handleStockSelect = (value: string) => {
+    setSelectedStock(value);
+    setLiveQuote(null);
+    setStockPrice("");
+
+    if (value !== "custom") {
+      const stock = stockProducts?.find(s => s.id === value);
+      if (stock) {
+        fetchLivePrice(stock.symbol);
+      }
+    } else {
+      setStockSymbol("");
+      setStockName("");
+    }
+  };
 
   const investMutation = useMutation({
     mutationFn: async (data: { userId: string; portfolioId: string; investedAmount: string; autoApprove: boolean }) => {
@@ -123,6 +167,7 @@ export function AdminPurchaseForUser() {
       setStockName("");
       setStockQuantity("");
       setStockPrice("");
+      setLiveQuote(null);
     },
     onError: (error: any) => {
       toast({
@@ -337,27 +382,56 @@ export function AdminPurchaseForUser() {
 
                   <TabsContent value="stock" className="space-y-4 mt-4">
                     <div className="space-y-2">
-                      <Label>Select Existing Stock (Optional)</Label>
-                      <Select value={selectedStock} onValueChange={(value) => {
-                        setSelectedStock(value);
-                        const stock = stockProducts?.find(s => s.id === value);
-                        if (stock) {
-                          setStockPrice(stock.currentPrice);
-                        }
-                      }}>
+                      <Label>Select Stock</Label>
+                      <Select value={selectedStock} onValueChange={handleStockSelect}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Choose a stock or enter custom below" />
+                          <SelectValue placeholder="Choose a stock from the available list" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="custom">Custom Stock</SelectItem>
-                          {stockProducts?.map((stock) => (
+                        <SelectContent className="max-h-72">
+                          <SelectItem value="custom">Custom Stock (enter manually)</SelectItem>
+                          {stockProducts?.filter(s => s.isActive).map((stock) => (
                             <SelectItem key={stock.id} value={stock.id}>
-                              {stock.symbol} - {stock.name}
+                              <span className="font-semibold">{stock.symbol}</span>
+                              {" — "}{stock.name}
+                              {stock.sector ? ` (${stock.sector})` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {stockProducts && (
+                        <p className="text-xs text-muted-foreground">
+                          {stockProducts.filter(s => s.isActive).length} stocks available
+                        </p>
+                      )}
                     </div>
+
+                    {selectedStockDetails && (
+                      <div className="p-3 bg-muted/30 rounded-lg text-sm space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-base">{selectedStockDetails.symbol}</span>
+                          {liveQuote && (
+                            <Badge className={liveQuote.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
+                              {liveQuote.changePercent >= 0 ? '+' : ''}{liveQuote.changePercent.toFixed(2)}%
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground">{selectedStockDetails.name}</p>
+                        {selectedStockDetails.sector && (
+                          <p className="text-muted-foreground">Sector: {selectedStockDetails.sector}</p>
+                        )}
+                        {fetchingQuote && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>Fetching live price...</span>
+                          </div>
+                        )}
+                        {liveQuote && !fetchingQuote && (
+                          <p className="text-green-600 font-medium">
+                            Live Price: ${liveQuote.price.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     {selectedStock === "custom" && (
                       <div className="grid grid-cols-2 gap-4">
@@ -382,7 +456,7 @@ export function AdminPurchaseForUser() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Quantity</Label>
+                        <Label>Quantity (Shares)</Label>
                         <Input
                           type="number"
                           placeholder="Number of shares"
@@ -392,19 +466,24 @@ export function AdminPurchaseForUser() {
                       </div>
                       <div className="space-y-2">
                         <Label>Price per Share ($)</Label>
-                        <Input
-                          type="number"
-                          placeholder="Price"
-                          value={stockPrice}
-                          onChange={(e) => setStockPrice(e.target.value)}
-                        />
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            placeholder="Price"
+                            value={stockPrice}
+                            onChange={(e) => setStockPrice(e.target.value)}
+                          />
+                          {fetchingQuote && (
+                            <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     {stockQuantity && stockPrice && (
                       <div className="p-3 bg-muted/30 rounded-lg">
                         <p className="font-medium">
-                          Total: ${(parseFloat(stockQuantity || '0') * parseFloat(stockPrice || '0')).toLocaleString()}
+                          Total Cost: ${(parseFloat(stockQuantity || '0') * parseFloat(stockPrice || '0')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     )}
@@ -420,7 +499,7 @@ export function AdminPurchaseForUser() {
                     <Button 
                       onClick={handleStockSubmit} 
                       className="w-full"
-                      disabled={buyStockMutation.isPending}
+                      disabled={buyStockMutation.isPending || fetchingQuote}
                     >
                       {buyStockMutation.isPending ? "Processing..." : "Create Stock Purchase"}
                     </Button>
