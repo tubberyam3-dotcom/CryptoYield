@@ -10,9 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Search, DollarSign, TrendingUp, ShoppingCart, User, Briefcase, RefreshCw } from "lucide-react";
+import { Search, DollarSign, TrendingUp, ShoppingCart, User, Briefcase, RefreshCw, X, TrendingDown } from "lucide-react";
+import { StockIcon } from "@/components/StockIcon";
 
-interface User {
+interface UserType {
   id: string;
   firstName: string;
   lastName: string;
@@ -30,13 +31,12 @@ interface Portfolio {
   riskLevel: string;
 }
 
-interface StockProduct {
-  id: string;
+interface MarketStock {
   symbol: string;
   name: string;
-  description: string | null;
-  sector: string | null;
-  isActive: boolean;
+  price: number;
+  change: number;
+  changePercent: number;
 }
 
 interface StockQuote {
@@ -47,22 +47,27 @@ interface StockQuote {
 
 export function AdminPurchaseForUser() {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  // User selection
+  const [userSearch, setUserSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
+
+  // Portfolio
   const [selectedPortfolio, setSelectedPortfolio] = useState<string>("");
   const [investmentAmount, setInvestmentAmount] = useState("");
   const [autoApproveInvestment, setAutoApproveInvestment] = useState(true);
-  
-  const [selectedStock, setSelectedStock] = useState<string>("custom");
-  const [stockSymbol, setStockSymbol] = useState("");
-  const [stockName, setStockName] = useState("");
+
+  // Stock selection
+  const [stockSearch, setStockSearch] = useState("");
+  const [selectedMarketStock, setSelectedMarketStock] = useState<MarketStock | null>(null);
+  const [stockPickerOpen, setStockPickerOpen] = useState(false);
   const [stockQuantity, setStockQuantity] = useState("");
   const [stockPrice, setStockPrice] = useState("");
   const [autoApproveStock, setAutoApproveStock] = useState(true);
   const [liveQuote, setLiveQuote] = useState<StockQuote | null>(null);
   const [fetchingQuote, setFetchingQuote] = useState(false);
 
-  const { data: users } = useQuery<User[]>({
+  const { data: users } = useQuery<UserType[]>({
     queryKey: ["/api/admin/users"],
   });
 
@@ -70,9 +75,14 @@ export function AdminPurchaseForUser() {
     queryKey: ["/api/portfolios"],
   });
 
-  const { data: stockProducts } = useQuery<StockProduct[]>({
-    queryKey: ["/api/stocks/products"],
+  const { data: marketStocks, isLoading: loadingMarket } = useQuery<MarketStock[]>({
+    queryKey: ["/api/stocks/top-performers"],
   });
+
+  const filteredMarket = marketStocks?.filter(s => {
+    const q = stockSearch.toLowerCase();
+    return !q || s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q);
+  }) ?? [];
 
   const fetchLivePrice = async (symbol: string) => {
     setFetchingQuote(true);
@@ -85,26 +95,26 @@ export function AdminPurchaseForUser() {
         setStockPrice(quote.price.toFixed(2));
       }
     } catch {
-      // silently fail — admin can type the price manually
+      // admin can type price manually
     } finally {
       setFetchingQuote(false);
     }
   };
 
-  const handleStockSelect = (value: string) => {
-    setSelectedStock(value);
+  const handlePickStock = (stock: MarketStock) => {
+    setSelectedMarketStock(stock);
+    setStockPickerOpen(false);
+    setStockSearch("");
     setLiveQuote(null);
     setStockPrice("");
+    fetchLivePrice(stock.symbol);
+  };
 
-    if (value !== "custom") {
-      const stock = stockProducts?.find(s => s.id === value);
-      if (stock) {
-        fetchLivePrice(stock.symbol);
-      }
-    } else {
-      setStockSymbol("");
-      setStockName("");
-    }
+  const clearSelectedStock = () => {
+    setSelectedMarketStock(null);
+    setLiveQuote(null);
+    setStockPrice("");
+    setStockQuantity("");
   };
 
   const investMutation = useMutation({
@@ -117,36 +127,27 @@ export function AdminPurchaseForUser() {
       return res.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Investment Created",
-        description: data.message,
-      });
+      toast({ title: "Investment Created", description: data.message });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-investments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setSelectedPortfolio("");
       setInvestmentAmount("");
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create investment",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to create investment", variant: "destructive" });
     },
   });
 
   const buyStockMutation = useMutation({
-    mutationFn: async (data: { 
-      userId: string; 
-      stockProductId?: string;
-      symbol?: string;
-      name?: string;
-      quantity: string; 
+    mutationFn: async (data: {
+      userId: string;
+      symbol: string;
+      name: string;
+      quantity: string;
       purchasePrice: string;
       autoApprove: boolean;
     }) => {
       const res = await apiRequest("POST", `/api/admin/users/${data.userId}/buy-stock`, {
-        stockProductId: data.stockProductId,
         symbol: data.symbol,
         name: data.name,
         quantity: data.quantity,
@@ -156,30 +157,18 @@ export function AdminPurchaseForUser() {
       return res.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Stock Purchase Created",
-        description: data.message,
-      });
+      toast({ title: "Stock Purchase Created", description: data.message });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stock-purchases"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      setSelectedStock("custom");
-      setStockSymbol("");
-      setStockName("");
-      setStockQuantity("");
-      setStockPrice("");
-      setLiveQuote(null);
+      clearSelectedStock();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create stock purchase",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to create stock purchase", variant: "destructive" });
     },
   });
 
   const filteredUsers = users?.filter(user => {
-    const search = searchTerm.toLowerCase();
+    const search = userSearch.toLowerCase();
     return (
       user.firstName?.toLowerCase().includes(search) ||
       user.lastName?.toLowerCase().includes(search) ||
@@ -189,46 +178,21 @@ export function AdminPurchaseForUser() {
 
   const handleInvestSubmit = () => {
     if (!selectedUser || !selectedPortfolio || !investmentAmount) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a user, portfolio, and enter an investment amount",
-        variant: "destructive",
-      });
+      toast({ title: "Missing Information", description: "Please select a user, portfolio, and enter an investment amount", variant: "destructive" });
       return;
     }
-
-    investMutation.mutate({
-      userId: selectedUser.id,
-      portfolioId: selectedPortfolio,
-      investedAmount: investmentAmount,
-      autoApprove: autoApproveInvestment,
-    });
+    investMutation.mutate({ userId: selectedUser.id, portfolioId: selectedPortfolio, investedAmount: investmentAmount, autoApprove: autoApproveInvestment });
   };
 
   const handleStockSubmit = () => {
-    if (!selectedUser || !stockQuantity || !stockPrice) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a user, enter quantity, and price",
-        variant: "destructive",
-      });
+    if (!selectedUser || !selectedMarketStock || !stockQuantity || !stockPrice) {
+      toast({ title: "Missing Information", description: "Please select a user, a stock, quantity, and price", variant: "destructive" });
       return;
     }
-
-    if (selectedStock === "custom" && (!stockSymbol || !stockName)) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a stock or enter symbol and name",
-        variant: "destructive",
-      });
-      return;
-    }
-
     buyStockMutation.mutate({
       userId: selectedUser.id,
-      stockProductId: selectedStock !== "custom" ? selectedStock : undefined,
-      symbol: stockSymbol || undefined,
-      name: stockName || undefined,
+      symbol: selectedMarketStock.symbol,
+      name: selectedMarketStock.name,
       quantity: stockQuantity,
       purchasePrice: stockPrice,
       autoApprove: autoApproveStock,
@@ -236,7 +200,6 @@ export function AdminPurchaseForUser() {
   };
 
   const selectedPortfolioDetails = portfolios?.find(p => p.id === selectedPortfolio);
-  const selectedStockDetails = selectedStock !== "custom" ? stockProducts?.find(s => s.id === selectedStock) : undefined;
 
   return (
     <div className="space-y-6">
@@ -246,6 +209,7 @@ export function AdminPurchaseForUser() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* User picker */}
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -258,20 +222,20 @@ export function AdminPurchaseForUser() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
                 className="pl-10"
               />
             </div>
-            
+
             <div className="max-h-[400px] overflow-y-auto space-y-2">
               {filteredUsers.slice(0, 20).map((user) => (
                 <div
                   key={user.id}
                   onClick={() => setSelectedUser(user)}
                   className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedUser?.id === user.id 
-                      ? 'border-primary bg-primary/10' 
+                    selectedUser?.id === user.id
+                      ? 'border-primary bg-primary/10'
                       : 'hover:bg-muted/50'
                   }`}
                 >
@@ -289,6 +253,7 @@ export function AdminPurchaseForUser() {
           </CardContent>
         </Card>
 
+        {/* Purchase panel */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -305,152 +270,115 @@ export function AdminPurchaseForUser() {
             ) : (
               <div className="space-y-4">
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="font-medium">Selected User: {selectedUser.firstName} {selectedUser.lastName}</p>
+                  <p className="font-medium">Selected: {selectedUser.firstName} {selectedUser.lastName}</p>
                   <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                   <p className="text-sm text-green-500 font-medium">
-                    Available Balance: ${parseFloat(selectedUser.balance || '0').toLocaleString()}
+                    Balance: ${parseFloat(selectedUser.balance || '0').toLocaleString()}
                   </p>
                 </div>
 
-                <Tabs defaultValue="portfolio" className="w-full">
+                <Tabs defaultValue="stock" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="portfolio" className="flex items-center gap-2">
-                      <Briefcase className="w-4 h-4" />
-                      Portfolio Investment
-                    </TabsTrigger>
                     <TabsTrigger value="stock" className="flex items-center gap-2">
                       <TrendingUp className="w-4 h-4" />
                       Stock Purchase
                     </TabsTrigger>
+                    <TabsTrigger value="portfolio" className="flex items-center gap-2">
+                      <Briefcase className="w-4 h-4" />
+                      Portfolio Investment
+                    </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="portfolio" className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Select Portfolio</Label>
-                      <Select value={selectedPortfolio} onValueChange={setSelectedPortfolio}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose a portfolio" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {portfolios?.map((portfolio) => (
-                            <SelectItem key={portfolio.id} value={portfolio.id}>
-                              {portfolio.name} - Min: ${parseFloat(portfolio.minInvestment || '0').toLocaleString()}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {selectedPortfolioDetails && (
-                      <div className="p-3 bg-muted/30 rounded-lg text-sm">
-                        <p><strong>Unit Price:</strong> ${parseFloat(selectedPortfolioDetails.unitPrice || '100').toLocaleString()}</p>
-                        <p><strong>Interest Rate:</strong> {(parseFloat(selectedPortfolioDetails.interestRate || '0') * 100).toFixed(2)}%</p>
-                        <p><strong>Risk Level:</strong> {selectedPortfolioDetails.riskLevel}</p>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <Label>Investment Amount ($)</Label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                        <Input
-                          type="number"
-                          placeholder="Enter amount"
-                          value={investmentAmount}
-                          onChange={(e) => setInvestmentAmount(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <Label>Auto-approve investment</Label>
-                      <Switch
-                        checked={autoApproveInvestment}
-                        onCheckedChange={setAutoApproveInvestment}
-                      />
-                    </div>
-
-                    <Button 
-                      onClick={handleInvestSubmit} 
-                      className="w-full"
-                      disabled={investMutation.isPending}
-                    >
-                      {investMutation.isPending ? "Processing..." : "Create Investment"}
-                    </Button>
-                  </TabsContent>
-
+                  {/* ── STOCK TAB ── */}
                   <TabsContent value="stock" className="space-y-4 mt-4">
                     <div className="space-y-2">
-                      <Label>Select Stock</Label>
-                      <Select value={selectedStock} onValueChange={handleStockSelect}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose a stock from the available list" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-72">
-                          <SelectItem value="custom">Custom Stock (enter manually)</SelectItem>
-                          {stockProducts?.filter(s => s.isActive).map((stock) => (
-                            <SelectItem key={stock.id} value={stock.id}>
-                              <span className="font-semibold">{stock.symbol}</span>
-                              {" — "}{stock.name}
-                              {stock.sector ? ` (${stock.sector})` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {stockProducts && (
-                        <p className="text-xs text-muted-foreground">
-                          {stockProducts.filter(s => s.isActive).length} stocks available
-                        </p>
+                      <Label>Select Stock ({marketStocks?.length ?? 0} available)</Label>
+
+                      {selectedMarketStock ? (
+                        <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <StockIcon symbol={selectedMarketStock.symbol} size="sm" />
+                            <div>
+                              <p className="font-semibold">{selectedMarketStock.symbol}</p>
+                              <p className="text-sm text-muted-foreground">{selectedMarketStock.name}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={clearSelectedStock}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="border rounded-lg overflow-hidden">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <Input
+                              placeholder="Search 150 stocks by symbol or name…"
+                              value={stockSearch}
+                              onChange={(e) => { setStockSearch(e.target.value); setStockPickerOpen(true); }}
+                              onFocus={() => setStockPickerOpen(true)}
+                              className="pl-10 border-0 rounded-none focus-visible:ring-0"
+                            />
+                          </div>
+
+                          <div className="max-h-56 overflow-y-auto border-t divide-y">
+                            {loadingMarket ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">Loading stocks…</div>
+                            ) : filteredMarket.length === 0 ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">No stocks match your search</div>
+                            ) : (
+                              filteredMarket.map((stock) => (
+                                <button
+                                  key={stock.symbol}
+                                  type="button"
+                                  onClick={() => handlePickStock(stock)}
+                                  className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-muted/60 transition-colors text-left"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <StockIcon symbol={stock.symbol} size="sm" />
+                                    <div>
+                                      <span className="font-semibold text-sm">{stock.symbol}</span>
+                                      <span className="text-muted-foreground text-sm ml-2">{stock.name}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right flex-shrink-0 ml-2">
+                                    <p className="text-sm font-medium">
+                                      ${stock.price?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                    <span className={`text-xs ${stock.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                      {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent?.toFixed(2)}%
+                                    </span>
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
 
-                    {selectedStockDetails && (
+                    {selectedMarketStock && (
                       <div className="p-3 bg-muted/30 rounded-lg text-sm space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold text-base">{selectedStockDetails.symbol}</span>
+                          <span className="font-semibold">{selectedMarketStock.symbol} — {selectedMarketStock.name}</span>
                           {liveQuote && (
                             <Badge className={liveQuote.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
+                              {liveQuote.changePercent >= 0 ? <TrendingUp className="inline w-3 h-3 mr-1" /> : <TrendingDown className="inline w-3 h-3 mr-1" />}
                               {liveQuote.changePercent >= 0 ? '+' : ''}{liveQuote.changePercent.toFixed(2)}%
                             </Badge>
                           )}
                         </div>
-                        <p className="text-muted-foreground">{selectedStockDetails.name}</p>
-                        {selectedStockDetails.sector && (
-                          <p className="text-muted-foreground">Sector: {selectedStockDetails.sector}</p>
-                        )}
                         {fetchingQuote && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <RefreshCw className="w-3 h-3 animate-spin" />
-                            <span>Fetching live price...</span>
+                            <span>Fetching live price…</span>
                           </div>
                         )}
                         {liveQuote && !fetchingQuote && (
-                          <p className="text-green-600 font-medium">
-                            Live Price: ${liveQuote.price.toFixed(2)}
-                          </p>
+                          <p className="text-green-600 font-medium">Live Price: ${liveQuote.price.toFixed(2)}</p>
                         )}
-                      </div>
-                    )}
-
-                    {selectedStock === "custom" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Stock Symbol</Label>
-                          <Input
-                            placeholder="e.g., AAPL"
-                            value={stockSymbol}
-                            onChange={(e) => setStockSymbol(e.target.value.toUpperCase())}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Stock Name</Label>
-                          <Input
-                            placeholder="e.g., Apple Inc."
-                            value={stockName}
-                            onChange={(e) => setStockName(e.target.value)}
-                          />
-                        </div>
                       </div>
                     )}
 
@@ -490,18 +418,69 @@ export function AdminPurchaseForUser() {
 
                     <div className="flex items-center justify-between">
                       <Label>Auto-approve purchase</Label>
-                      <Switch
-                        checked={autoApproveStock}
-                        onCheckedChange={setAutoApproveStock}
-                      />
+                      <Switch checked={autoApproveStock} onCheckedChange={setAutoApproveStock} />
                     </div>
 
-                    <Button 
-                      onClick={handleStockSubmit} 
+                    <Button
+                      onClick={handleStockSubmit}
                       className="w-full"
                       disabled={buyStockMutation.isPending || fetchingQuote}
                     >
-                      {buyStockMutation.isPending ? "Processing..." : "Create Stock Purchase"}
+                      {buyStockMutation.isPending ? "Processing…" : "Create Stock Purchase"}
+                    </Button>
+                  </TabsContent>
+
+                  {/* ── PORTFOLIO TAB ── */}
+                  <TabsContent value="portfolio" className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Select Portfolio</Label>
+                      <Select value={selectedPortfolio} onValueChange={setSelectedPortfolio}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a portfolio" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {portfolios?.map((portfolio) => (
+                            <SelectItem key={portfolio.id} value={portfolio.id}>
+                              {portfolio.name} — Min: ${parseFloat(portfolio.minInvestment || '0').toLocaleString()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedPortfolioDetails && (
+                      <div className="p-3 bg-muted/30 rounded-lg text-sm">
+                        <p><strong>Unit Price:</strong> ${parseFloat(selectedPortfolioDetails.unitPrice || '100').toLocaleString()}</p>
+                        <p><strong>Interest Rate:</strong> {(parseFloat(selectedPortfolioDetails.interestRate || '0') * 100).toFixed(2)}%</p>
+                        <p><strong>Risk Level:</strong> {selectedPortfolioDetails.riskLevel}</p>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label>Investment Amount ($)</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                        <Input
+                          type="number"
+                          placeholder="Enter amount"
+                          value={investmentAmount}
+                          onChange={(e) => setInvestmentAmount(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label>Auto-approve investment</Label>
+                      <Switch checked={autoApproveInvestment} onCheckedChange={setAutoApproveInvestment} />
+                    </div>
+
+                    <Button
+                      onClick={handleInvestSubmit}
+                      className="w-full"
+                      disabled={investMutation.isPending}
+                    >
+                      {investMutation.isPending ? "Processing…" : "Create Investment"}
                     </Button>
                   </TabsContent>
                 </Tabs>
