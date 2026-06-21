@@ -2557,6 +2557,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'PLD': { symbol: 'PLD', name: 'Prologis Inc.', price: 108.60, change: 1.00, changePercent: 0.93, previousClose: 107.60, dayHigh: 109.80, dayLow: 107.20, volume: 4560000, marketCap: 100000000000 },
   };
 
+  // ── NASDAQ public quote API (no API key needed, works from server) ──
+  async function fetchNasdaqQuote(symbol: string): Promise<any | null> {
+    // SPACEX and other non-NASDAQ symbols — skip to avoid 404
+    const nonNasdaq = new Set(['SPACEX', 'BRK-B']);
+    if (nonNasdaq.has(symbol.toUpperCase())) return null;
+
+    try {
+      const url = `https://api.nasdaq.com/api/quote/${encodeURIComponent(symbol)}/info?assetclass=stocks`;
+      const resp = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!resp.ok) return null;
+      const json: any = await resp.json();
+      const d = json?.data;
+      const pd = d?.primaryData;
+      if (!pd?.lastSalePrice) return null;
+
+      const price = parseFloat(pd.lastSalePrice.replace(/[^0-9.-]/g, ''));
+      const change = parseFloat((pd.netChange || '0').replace(/[^0-9.-]/g, '')) * (pd.deltaIndicator === 'down' ? -1 : 1);
+      const changePct = parseFloat((pd.percentageChange || '0').replace(/[^0-9.-]/g, '')) * (pd.deltaIndicator === 'down' ? -1 : 1);
+
+      if (!price || isNaN(price)) return null;
+
+      // Use fallback extras (volume, marketCap) from our map if available
+      const fb = extendedFallbackStocks[symbol.toUpperCase()];
+
+      return {
+        symbol: d.symbol || symbol,
+        name: d.companyName || fb?.name || symbol,
+        price,
+        change,
+        changePercent: changePct,
+        previousClose: price - change,
+        dayHigh: fb ? fb.dayHigh : price * 1.01,
+        dayLow: fb ? fb.dayLow : price * 0.99,
+        volume: fb?.volume ?? 0,
+        marketCap: fb?.marketCap ?? 0,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  // ── Primary quote helper: tries NASDAQ → yahoo-finance2 → null ──
+  async function getLiveQuote(symbol: string): Promise<any | null> {
+    const upper = symbol.toUpperCase();
+
+    // 1. NASDAQ public API (most reliable from this server)
+    const nasdaqQuote = await fetchNasdaqQuote(upper);
+    if (nasdaqQuote) return nasdaqQuote;
+
+    // 2. yahoo-finance2 library (may fail due to crumb issues)
+    try {
+      const quote: any = await yahooFinance.quote(upper);
+      if (quote?.regularMarketPrice) {
+        return {
+          symbol: quote.symbol,
+          name: quote.longName || quote.shortName || upper,
+          price: quote.regularMarketPrice,
+          change: quote.regularMarketChange,
+          changePercent: quote.regularMarketChangePercent,
+          previousClose: quote.regularMarketPreviousClose,
+          dayHigh: quote.regularMarketDayHigh,
+          dayLow: quote.regularMarketDayLow,
+          volume: quote.regularMarketVolume,
+          marketCap: quote.marketCap,
+        };
+      }
+    } catch { /* fall through */ }
+
+    return null;
+  }
+
   // Stock market data routes (using yahoo-finance2)
   app.get('/api/stocks/quote', async (req, res) => {
     try {
@@ -2568,50 +2646,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const upperSymbol = symbol.toUpperCase();
       
-      try {
-        const quote: any = await yahooFinance.quote(upperSymbol);
-        
-        res.json({
-          symbol: quote.symbol,
-          name: quote.longName || quote.shortName || symbol,
-          price: quote.regularMarketPrice,
-          change: quote.regularMarketChange,
-          changePercent: quote.regularMarketChangePercent,
-          previousClose: quote.regularMarketPreviousClose,
-          dayHigh: quote.regularMarketDayHigh,
-          dayLow: quote.regularMarketDayLow,
-          volume: quote.regularMarketVolume,
-          marketCap: quote.marketCap,
-        });
-      } catch (apiError) {
-        // Use fallback data if Yahoo Finance API fails
-        const fallback = extendedFallbackStocks[upperSymbol];
-        if (fallback) {
-          // Add slight randomization to simulate real-time changes
-          res.json({
-            ...fallback,
-            price: fallback.price * (1 + (Math.random() - 0.5) * 0.01),
-            change: fallback.change * (1 + (Math.random() - 0.5) * 0.2),
-            changePercent: fallback.changePercent * (1 + (Math.random() - 0.5) * 0.2),
-          });
-        } else {
-          // Generate generic fallback for unknown symbols
-          const basePrice = 100 + Math.random() * 200;
-          const change = (Math.random() - 0.5) * 10;
-          res.json({
-            symbol: upperSymbol,
-            name: `${upperSymbol} Inc.`,
-            price: basePrice,
-            change: change,
-            changePercent: (change / basePrice) * 100,
-            previousClose: basePrice - change,
-            dayHigh: basePrice * 1.02,
-            dayLow: basePrice * 0.98,
-            volume: Math.floor(Math.random() * 10000000),
-            marketCap: Math.floor(Math.random() * 500000000000),
-          });
-        }
+      const live = await getLiveQuote(upperSymbol);
+      if (live) {
+        return res.json(live);
       }
+
+      // Last-resort: hardcoded fallback with small jitter
+      const fallback = extendedFallbackStocks[upperSymbol];
+      if (fallback) {
+        return res.json({
+          ...fallback,
+          price: fallback.price * (1 + (Math.random() - 0.5) * 0.01),
+          change: fallback.change * (1 + (Math.random() - 0.5) * 0.2),
+          changePercent: fallback.changePercent * (1 + (Math.random() - 0.5) * 0.2),
+        });
+      }
+
+      // Unknown symbol generic fallback
+      const basePrice = 100 + Math.random() * 200;
+      const change = (Math.random() - 0.5) * 10;
+      return res.json({
+        symbol: upperSymbol,
+        name: `${upperSymbol} Inc.`,
+        price: basePrice,
+        change,
+        changePercent: (change / basePrice) * 100,
+        previousClose: basePrice - change,
+        dayHigh: basePrice * 1.02,
+        dayLow: basePrice * 0.98,
+        volume: Math.floor(Math.random() * 10000000),
+        marketCap: Math.floor(Math.random() * 500000000000),
+      });
     } catch (error) {
       console.error("Error fetching stock quote:", error);
       res.status(500).json({ message: "Failed to fetch stock quote" });
@@ -2657,9 +2722,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cache for top performers (60 second TTL)
+  // Cache for top performers (5 minute TTL — NASDAQ data is 15-min delayed anyway)
   let topPerformersCache: { data: any[]; timestamp: number } | null = null;
-  const STOCK_CACHE_TTL = 60 * 1000; // 60 seconds
+  const STOCK_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   // Fallback stock data when Yahoo Finance API fails
   const fallbackStockData = [
@@ -2841,74 +2906,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'UBER', 'ABNB', 'SNAP', 'T', 'VZ', 'TMUS', 'CMCSA', 'NEE', 'AMT', 'PLD'
       ];
 
-      // Try fetching one stock first to test if API is available
-      let apiAvailable = false;
-      try {
-        const testQuote: any = await yahooFinance.quote('AAPL');
-        if (testQuote && testQuote.regularMarketPrice) {
-          apiAvailable = true;
-        }
-      } catch {
-        apiAvailable = false;
+      // ── Batch-fetch from NASDAQ API in parallel (20 concurrent max) ──
+      const liveMap = new Map<string, any>();
+      const CONCURRENCY = 20;
+      const nasdaqEligible = topStocks.filter(s => !['SPACEX', 'BRK-B'].includes(s));
+      const nonNasdaqSymbols = topStocks.filter(s => ['SPACEX', 'BRK-B'].includes(s));
+
+      for (let i = 0; i < nasdaqEligible.length; i += CONCURRENCY) {
+        const batch = nasdaqEligible.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(batch.map(sym => fetchNasdaqQuote(sym)));
+        results.forEach((q, idx) => {
+          if (q) liveMap.set(batch[idx], q);
+        });
       }
 
-      // If API is rate limited, use fallback data with slight randomization
-      if (!apiAvailable) {
-        const data = fallbackStockData.map(stock => ({
-          ...stock,
-          // Add small random variation to simulate real-time changes
-          price: stock.price * (1 + (Math.random() - 0.5) * 0.01),
-          change: stock.change * (1 + (Math.random() - 0.5) * 0.2),
-          changePercent: stock.changePercent * (1 + (Math.random() - 0.5) * 0.2),
-        }));
-        topPerformersCache = { data, timestamp: Date.now() };
-        return res.json(data);
+      // For non-NASDAQ symbols, try yahoo-finance2 as backup
+      for (const sym of nonNasdaqSymbols) {
+        try {
+          const quote: any = await yahooFinance.quote(sym);
+          if (quote?.regularMarketPrice) {
+            liveMap.set(sym, {
+              symbol: quote.symbol,
+              name: quote.longName || quote.shortName || sym,
+              price: quote.regularMarketPrice,
+              change: quote.regularMarketChange,
+              changePercent: quote.regularMarketChangePercent,
+              previousClose: quote.regularMarketPreviousClose,
+              dayHigh: quote.regularMarketDayHigh,
+              dayLow: quote.regularMarketDayLow,
+              volume: quote.regularMarketVolume,
+              marketCap: quote.marketCap,
+            });
+          }
+        } catch { /* use fallback */ }
       }
 
-      // Fetch remaining stocks in smaller batches with delay
-      const batchSize = 3;
-      const allQuotes: any[] = [];
-      
-      for (let i = 0; i < topStocks.length; i += batchSize) {
-        const batch = topStocks.slice(i, i + batchSize);
-        const batchQuotes = await Promise.all(
-          batch.map(async (symbol) => {
-            try {
-              const quote: any = await yahooFinance.quote(symbol);
-              return {
-                symbol: quote.symbol,
-                name: quote.longName || quote.shortName || symbol,
-                price: quote.regularMarketPrice,
-                change: quote.regularMarketChange,
-                changePercent: quote.regularMarketChangePercent,
-                previousClose: quote.regularMarketPreviousClose,
-                dayHigh: quote.regularMarketDayHigh,
-                dayLow: quote.regularMarketDayLow,
-                volume: quote.regularMarketVolume,
-                marketCap: quote.marketCap,
-              };
-            } catch (error) {
-              // Return fallback data for this symbol if individual fetch fails
-              const fallback = fallbackStockData.find(s => s.symbol === symbol);
-              return fallback || null;
-            }
-          })
-        );
-        allQuotes.push(...batchQuotes.filter(q => q !== null));
-        
-        // Add delay between batches
-        if (i + batchSize < topStocks.length) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
+      // Build final list — live data preferred, stale fallback fills gaps
+      const allQuotes = topStocks.map(sym => {
+        if (liveMap.has(sym)) return liveMap.get(sym);
+        const fallback = fallbackStockData.find(s => s.symbol === sym);
+        if (fallback) return { ...fallback };
+        return null;
+      }).filter(Boolean);
+
+      console.log(`[Stocks] NASDAQ live: ${liveMap.size}/${topStocks.length}, fallback used for ${topStocks.length - liveMap.size}`);
 
       // Cache the results
       topPerformersCache = { data: allQuotes, timestamp: Date.now() };
-      
       res.json(allQuotes);
     } catch (error) {
       console.error("Error fetching top performers:", error);
-      // Return fallback data on error
       res.json(fallbackStockData);
     }
   });
