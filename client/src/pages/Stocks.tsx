@@ -13,14 +13,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { StockProduct, UserStock, InsertUserStock } from "@shared/schema";
 import { insertUserStockSchema } from "@shared/schema";
-import { TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, Activity, ShoppingCart } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import {
+  TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, Activity,
+  ShoppingCart, ChevronRight, Calendar, BarChart2, DollarSign, Percent, X
+} from "lucide-react";
 import { StockIcon } from "@/components/StockIcon";
 
 interface StockQuote {
@@ -36,6 +39,8 @@ interface StockQuote {
   marketCap?: number;
 }
 
+type HoldingWithProduct = UserStock & { stockProduct: StockProduct };
+
 const purchaseFormSchema = z.object({
   quantity: z.number().min(1, "Quantity must be at least 1"),
   stockProductId: z.string(),
@@ -44,31 +49,61 @@ const purchaseFormSchema = z.object({
 
 type PurchaseFormData = z.infer<typeof purchaseFormSchema>;
 
+function statusBadge(status: string, id: string) {
+  switch (status) {
+    case 'pending':
+      return (
+        <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 text-xs" data-testid={`badge-status-pending-${id}`}>
+          <Clock className="w-3 h-3 mr-1" />Pending
+        </Badge>
+      );
+    case 'approved':
+      return (
+        <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs" data-testid={`badge-status-approved-${id}`}>
+          <CheckCircle className="w-3 h-3 mr-1" />Approved
+        </Badge>
+      );
+    case 'rejected':
+      return (
+        <Badge className="bg-red-500/10 text-red-500 border-red-500/20 text-xs" data-testid={`badge-status-rejected-${id}`}>
+          <XCircle className="w-3 h-3 mr-1" />Rejected
+        </Badge>
+      );
+    case 'active':
+      return (
+        <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs" data-testid={`badge-status-active-${id}`}>
+          <Activity className="w-3 h-3 mr-1" />Active
+        </Badge>
+      );
+    case 'sold':
+      return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20 text-xs">Sold</Badge>;
+    default:
+      return null;
+  }
+}
+
 export default function Stocks() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockProduct | null>(null);
   const [selectedTopStock, setSelectedTopStock] = useState<StockQuote | null>(null);
+  const [selectedHolding, setSelectedHolding] = useState<HoldingWithProduct | null>(null);
   const [stockQuotes, setStockQuotes] = useState<{ [symbol: string]: StockQuote }>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [, setLocation] = useLocation();
-  const { user, isLoading} = useAuth();
+  const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const purchaseForm = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseFormSchema),
-    defaultValues: {
-      quantity: 1,
-      stockProductId: "",
-      purchasePrice: 0,
-    },
+    defaultValues: { quantity: 1, stockProductId: "", purchasePrice: 0 },
   });
 
   const { data: stockProducts, isLoading: productsLoading } = useQuery<StockProduct[]>({
     queryKey: ["/api/stocks/products"],
   });
 
-  const { data: userStocks } = useQuery<(UserStock & { stockProduct: StockProduct })[]>({
+  const { data: userStocks } = useQuery<HoldingWithProduct[]>({
     queryKey: ["/api/user/stocks"],
   });
 
@@ -84,24 +119,20 @@ export default function Stocks() {
         quantity: data.quantity.toString(),
         purchasePrice: data.purchasePrice.toString(),
       };
-      
-      // If stockProductId is provided, it's an admin offering
       if (data.stockProductId) {
         payload.stockProductId = data.stockProductId;
       } else {
-        // Otherwise, it's a Top 50 stock purchase
         payload.symbol = data.symbol;
         payload.name = data.name;
         payload.sector = data.sector;
       }
-      
       const response = await apiRequest("POST", "/api/user/stocks", payload);
       return response.json();
     },
     onSuccess: (_, variables) => {
       toast({
         title: "Purchase Submitted",
-        description: `Your purchase of ${variables.quantity} shares is pending admin approval. You'll be refunded if rejected.`,
+        description: `Your purchase of ${variables.quantity} shares is pending admin approval.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/stocks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -111,84 +142,50 @@ export default function Stocks() {
     },
     onError: (error: any) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "Please log in to continue",
-          variant: "destructive",
-        });
+        toast({ title: "Unauthorized", description: "Please log in to continue", variant: "destructive" });
         return;
       }
-      toast({
-        title: "Purchase Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
     },
   });
 
-  // Fetch quotes for all visible stocks in useEffect instead of during render
   useEffect(() => {
-    const fetchAllQuotes = async () => {
-      if (!stockProducts) return;
-      
-      for (const stock of stockProducts) {
-        // Only fetch if we don't have a quote yet
-        setStockQuotes(prev => {
-          if (prev[stock.symbol]) return prev; // Already have this quote
-          
-          // Fetch in the background
-          fetch(`/api/stocks/quote?symbol=${stock.symbol}`)
-            .then(res => res.json())
-            .then(data => {
-              setStockQuotes(current => ({ ...current, [stock.symbol]: data }));
-            })
-            .catch(error => {
-              console.error(`Failed to fetch quote for ${stock.symbol}:`, error);
-            });
-          
-          return prev;
-        });
-      }
-    };
-    
-    fetchAllQuotes();
+    if (!stockProducts) return;
+    for (const stock of stockProducts) {
+      setStockQuotes(prev => {
+        if (prev[stock.symbol]) return prev;
+        fetch(`/api/stocks/quote?symbol=${stock.symbol}`)
+          .then(res => res.json())
+          .then(data => setStockQuotes(cur => ({ ...cur, [stock.symbol]: data })))
+          .catch(() => {});
+        return prev;
+      });
+    }
   }, [stockProducts]);
 
-  // Fetch (and periodically refresh) quotes for user holdings
   useEffect(() => {
     if (!userStocks || userStocks.length === 0) return;
-
     const fetchHoldingQuotes = () => {
-      for (const holding of userStocks) {
-        const symbol = holding.stockProduct.symbol;
-        fetch(`/api/stocks/quote?symbol=${symbol}`)
+      for (const h of userStocks) {
+        const sym = h.stockProduct?.symbol;
+        if (!sym) continue;
+        fetch(`/api/stocks/quote?symbol=${sym}`)
           .then(res => res.json())
-          .then(data => {
-            setStockQuotes(current => ({ ...current, [symbol]: data }));
-          })
-          .catch(error => {
-            console.error(`Failed to fetch quote for ${symbol}:`, error);
-          });
+          .then(data => setStockQuotes(cur => ({ ...cur, [sym]: data })))
+          .catch(() => {});
       }
     };
-
     fetchHoldingQuotes();
     const interval = setInterval(fetchHoldingQuotes, 60000);
     return () => clearInterval(interval);
   }, [userStocks]);
 
   const handlePurchase = purchaseForm.handleSubmit((data) => {
-    const minQuantity = selectedStock?.minPurchaseQuantity ? parseInt(selectedStock.minPurchaseQuantity.toString()) : 1;
-    
-    if (data.quantity < minQuantity) {
-      toast({
-        title: "Quantity Too Low",
-        description: `Minimum purchase quantity is ${minQuantity} shares`,
-        variant: "destructive",
-      });
+    const minQty = selectedStock?.minPurchaseQuantity ? parseInt(selectedStock.minPurchaseQuantity.toString()) : 1;
+    if (data.quantity < minQty) {
+      toast({ title: "Quantity Too Low", description: `Minimum is ${minQty} shares`, variant: "destructive" });
       return;
     }
-
     purchaseMutation.mutate(data);
   });
 
@@ -196,305 +193,228 @@ export default function Stocks() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
   }
 
+  const activeHoldings = userStocks?.filter(h => h.status !== 'rejected') ?? [];
+  const totalPortfolioValue = activeHoldings.reduce((sum, h) => {
+    const quote = stockQuotes[h.stockProduct?.symbol];
+    const price = quote?.price ?? parseFloat(h.purchasePrice);
+    return sum + price * parseFloat(h.quantity);
+  }, 0);
+  const totalInvestedAll = activeHoldings.reduce((sum, h) => sum + parseFloat(h.totalInvested), 0);
+  const totalPL = totalPortfolioValue - totalInvestedAll;
+
   return (
     <div className="min-h-screen bg-background text-foreground" data-testid="stocks-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+
       <div className="ml-0 lg:ml-64 min-h-screen">
         <TopBar title="Stocks" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
-        
-        <main className="p-6 space-y-6 pb-20 lg:pb-6">
-          
-          {/* My Stock Holdings */}
-          {userStocks && userStocks.length > 0 && (
-            <div className="space-y-4">
-              <div className="pb-2 border-b border-border">
-                <h2 className="text-2xl font-bold">My Stock Holdings</h2>
-                <p className="text-sm text-muted-foreground">Track your investment performance in real-time</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {userStocks.map((holding) => {
-                  const quote = stockQuotes[holding.stockProduct.symbol];
-                  const purchasePrice = parseFloat(holding.purchasePrice);
-                  const hasLivePrice = !!quote?.price;
-                  const currentPrice = hasLivePrice ? quote.price : purchasePrice;
-                  const quantity = parseFloat(holding.quantity);
-                  const currentValue = currentPrice * quantity;
-                  const totalInvested = parseFloat(holding.totalInvested);
-                  const profitLoss = currentValue - totalInvested;
-                  const profitLossPercent = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
 
-                  const getStatusBadge = (status: string) => {
-                    switch (status) {
-                      case 'pending':
-                        return (
-                          <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20" data-testid={`badge-status-pending-${holding.id}`}>
-                            <Clock className="w-3 h-3 mr-1" />
-                            Pending Approval
-                          </Badge>
-                        );
-                      case 'approved':
-                        return (
-                          <Badge className="bg-green-500/10 text-green-500 border-green-500/20" data-testid={`badge-status-approved-${holding.id}`}>
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Approved
-                          </Badge>
-                        );
-                      case 'rejected':
-                        return (
-                          <Badge className="bg-red-500/10 text-red-500 border-red-500/20" data-testid={`badge-status-rejected-${holding.id}`}>
-                            <XCircle className="w-3 h-3 mr-1" />
-                            Rejected
-                          </Badge>
-                        );
-                      case 'active':
-                        return (
-                          <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20" data-testid={`badge-status-active-${holding.id}`}>
-                            <Activity className="w-3 h-3 mr-1" />
-                            Active
-                          </Badge>
-                        );
-                      case 'sold':
-                        return (
-                          <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20" data-testid={`badge-status-sold-${holding.id}`}>
-                            Sold
-                          </Badge>
-                        );
-                      default:
-                        return null;
-                    }
-                  };
+        <main className="p-4 sm:p-6 space-y-8 pb-24 lg:pb-6">
+
+          {/* ── MY HOLDINGS ── */}
+          {activeHoldings.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 pb-2 border-b border-border">
+                <div>
+                  <h2 className="text-2xl font-bold">My Holdings</h2>
+                  <p className="text-sm text-muted-foreground">Tap any position to see full details</p>
+                </div>
+                {totalInvestedAll > 0 && (
+                  <div className="flex gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Portfolio Value</p>
+                      <p className="font-bold">${totalPortfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Total P&amp;L</p>
+                      <p className={`font-bold ${totalPL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {totalPL >= 0 ? '+' : ''}${Math.abs(totalPL).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Card className="divide-y divide-border overflow-hidden">
+                {activeHoldings.map((holding) => {
+                  const quote = stockQuotes[holding.stockProduct?.symbol];
+                  const qty = parseFloat(holding.quantity);
+                  const purchasePrice = parseFloat(holding.purchasePrice);
+                  const currentPrice = quote?.price ?? purchasePrice;
+                  const currentValue = currentPrice * qty;
+                  const totalInvested = parseFloat(holding.totalInvested);
+                  const pl = currentValue - totalInvested;
+                  const plPct = totalInvested > 0 ? (pl / totalInvested) * 100 : 0;
+                  const hasLive = !!quote?.price;
+                  const canShowPL = holding.status !== 'pending' && holding.status !== 'rejected' && hasLive;
 
                   return (
-                    <Card key={holding.id} className="p-6" data-testid={`card-stock-holding-${holding.id}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-lg" data-testid={`text-stock-symbol-${holding.stockProduct.symbol}`}>
-                          {holding.stockProduct.symbol}
-                        </h3>
-                        {holding.status !== 'pending' && holding.status !== 'rejected' && (
-                          <Badge className={profitLoss >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
-                            {profitLoss >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-                            {profitLoss >= 0 ? '+' : ''}{profitLossPercent.toFixed(2)}%
-                          </Badge>
+                    <button
+                      key={holding.id}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 active:bg-muted/60 transition-colors text-left"
+                      onClick={() => setSelectedHolding(holding)}
+                      data-testid={`card-stock-holding-${holding.id}`}
+                    >
+                      <StockIcon symbol={holding.stockProduct?.symbol} size="md" />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-base" data-testid={`text-stock-symbol-${holding.stockProduct?.symbol}`}>
+                            {holding.stockProduct?.symbol}
+                          </span>
+                          {statusBadge(holding.status ?? '', holding.id)}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{holding.stockProduct?.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{qty.toLocaleString()} shares</p>
+                      </div>
+
+                      <div className="text-right flex-shrink-0">
+                        {hasLive ? (
+                          <>
+                            <p className="font-semibold text-sm">${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            {canShowPL && (
+                              <p className={`text-xs font-medium ${pl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {pl >= 0 ? '+' : ''}{plPct.toFixed(2)}%
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground animate-pulse">Loading…</p>
                         )}
                       </div>
-                      
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-sm text-muted-foreground">{holding.stockProduct.name}</p>
-                        {holding.status && getStatusBadge(holding.status)}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Shares</span>
-                          <span className="font-medium">{quantity.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Purchase Price</span>
-                          <span className="font-medium">${purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Current Price</span>
-                          {hasLivePrice ? (
-                            <span className="font-medium text-foreground">
-                              ${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              {quote.changePercent !== undefined && (
-                                <span className={`ml-1 text-xs ${quote.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  ({quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%)
-                                </span>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground animate-pulse">Fetching live price...</span>
-                          )}
-                        </div>
-                        <div className="flex justify-between text-sm pt-2 border-t">
-                          <span className="text-muted-foreground">Current Value</span>
-                          {hasLivePrice ? (
-                            <span className="font-bold">${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground animate-pulse">Calculating...</span>
-                          )}
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Profit / Loss</span>
-                          {hasLivePrice ? (
-                            <span className={`font-bold ${profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {profitLoss >= 0 ? '+' : ''}${Math.abs(profitLoss).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground animate-pulse">Calculating...</span>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
+
+                      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    </button>
                   );
                 })}
-              </div>
-            </div>
+              </Card>
+            </section>
           )}
 
-          {/* Available Stocks */}
-          <div className="space-y-4">
-            <div className="pb-2 border-b border-border">
-              <h2 className="text-2xl font-bold">Available Stocks</h2>
-              <p className="text-sm text-muted-foreground">Curated stock offerings selected by our team</p>
-            </div>
-            
-            {productsLoading ? (
-              <div className="text-center py-8">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">Loading stocks...</p>
+          {/* ── AVAILABLE STOCKS (platform-seeded) ── */}
+          {stockProducts && stockProducts.length > 0 && (
+            <section className="space-y-4">
+              <div className="pb-2 border-b border-border">
+                <h2 className="text-2xl font-bold">Available Stocks</h2>
+                <p className="text-sm text-muted-foreground">Curated stock offerings selected by our team</p>
               </div>
-            ) : stockProducts && stockProducts.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {stockProducts.map((stock) => {
-                  const quote = stockQuotes[stock.symbol];
 
-                  return (
-                    <Card key={stock.id} className="p-6 hover:shadow-lg transition-shadow" data-testid={`card-available-stock-${stock.id}`}>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <StockIcon symbol={stock.symbol} size="md" />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-xl">{stock.symbol}</h3>
+              {productsLoading ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {stockProducts.map((stock) => {
+                    const quote = stockQuotes[stock.symbol];
+                    return (
+                      <Card key={stock.id} className="p-5 hover:shadow-lg transition-shadow" data-testid={`card-available-stock-${stock.id}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <StockIcon symbol={stock.symbol} size="md" />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-lg">{stock.symbol}</h3>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{stock.sector}</p>
                             </div>
-                            <p className="text-sm text-muted-foreground">{stock.sector}</p>
                           </div>
+                          {quote && (
+                            <Badge className={quote.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
+                              {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
+                            </Badge>
+                          )}
                         </div>
-                        {quote && (
-                          <Badge className={quote.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
-                            {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
-                          </Badge>
+
+                        <p className="text-sm font-medium mb-1">{stock.name}</p>
+                        {stock.description && (
+                          <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{stock.description}</p>
                         )}
-                      </div>
-                      
-                      <p className="text-sm font-medium mb-2">{stock.name}</p>
-                      {stock.description && (
-                        <p className="text-xs text-muted-foreground mb-4 line-clamp-2">{stock.description}</p>
-                      )}
-                      
-                      <div className="mb-4">
-                        {quote ? (
-                          <div>
+
+                        <div className="mb-4">
+                          {quote ? (
                             <div className="flex items-baseline gap-2">
                               <span className="text-2xl font-bold">${quote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               <span className={`text-sm ${quote.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                 {quote.change >= 0 ? '+' : ''}{quote.change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">Loading price...</div>
-                        )}
-                      </div>
-                      
-                      <Dialog 
-                        open={selectedStock?.id === stock.id}
-                        onOpenChange={(open) => !open && setSelectedStock(null)}
-                      >
-                        <DialogTrigger asChild>
-                          <Button 
-                            className="w-full"
-                            onClick={() => setSelectedStock(stock)}
-                            data-testid={`button-buy-stock-${stock.id}`}
-                          >
-                            Buy Shares
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent data-testid={`dialog-buy-stock-${stock.id}`}>
-                          <DialogHeader>
-                            <DialogTitle>Purchase {stock.symbol} Shares</DialogTitle>
-                          </DialogHeader>
-                          <form onSubmit={(e) => {
-                            e.preventDefault();
-                            if (quote) {
-                              purchaseForm.setValue('stockProductId', stock.id);
-                              purchaseForm.setValue('purchasePrice', quote.price);
-                              handlePurchase();
-                            }
-                          }} className="space-y-4">
-                            <div>
-                              <p className="text-sm font-medium mb-2">{stock.name}</p>
-                              {quote && (
-                                <p className="text-2xl font-bold">${quote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per share</p>
-                              )}
-                            </div>
-                            
-                            <div>
-                              <Label htmlFor="quantity">Number of Shares</Label>
-                              <Input
-                                id="quantity"
-                                type="number"
-                                placeholder={`Min. ${stock.minPurchaseQuantity}`}
-                                {...purchaseForm.register("quantity", {
-                                  setValueAs: (value) => parseInt(value) || 1,
-                                })}
-                                data-testid="input-stock-quantity"
-                              />
-                              {purchaseForm.formState.errors.quantity && (
-                                <p className="text-sm text-red-500 mt-1">{purchaseForm.formState.errors.quantity.message}</p>
-                              )}
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Minimum: {stock.minPurchaseQuantity} shares
-                              </p>
-                            </div>
-                            
-                            {purchaseForm.watch('quantity') > 0 && quote && (
-                              <div className="p-4 bg-muted rounded-lg">
-                                <div className="flex justify-between">
-                                  <span className="text-sm text-muted-foreground">Total Cost</span>
-                                  <span className="font-bold">
-                                    ${(purchaseForm.watch('quantity') * quote.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                            
-                            <Button
-                              type="submit"
-                              className="w-full"
-                              disabled={purchaseMutation.isPending || !quote}
-                              data-testid="button-confirm-purchase"
-                            >
-                              {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
-                            </Button>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <Card className="p-12 text-center bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                <div className="max-w-md mx-auto space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-                    <TrendingUp className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold">Start Your Investment Journey</h3>
-                  <p className="text-muted-foreground">
-                    Browse our curated selection of top-performing stocks below and start building your wealth today. Every successful investor started with their first purchase!
-                  </p>
-                </div>
-              </Card>
-            )}
-          </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground animate-pulse">Loading price…</div>
+                          )}
+                        </div>
 
-          {/* Top 50 Performing Stocks */}
-          <div className="space-y-4">
+                        <Dialog open={selectedStock?.id === stock.id} onOpenChange={(open) => !open && setSelectedStock(null)}>
+                          <DialogTrigger asChild>
+                            <Button className="w-full" onClick={() => setSelectedStock(stock)} data-testid={`button-buy-stock-${stock.id}`}>
+                              Buy Shares
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent data-testid={`dialog-buy-stock-${stock.id}`}>
+                            <DialogHeader>
+                              <DialogTitle>Purchase {stock.symbol} Shares</DialogTitle>
+                            </DialogHeader>
+                            <form onSubmit={(e) => {
+                              e.preventDefault();
+                              if (quote) {
+                                purchaseForm.setValue('stockProductId', stock.id);
+                                purchaseForm.setValue('purchasePrice', quote.price);
+                                handlePurchase();
+                              }
+                            }} className="space-y-4">
+                              <div>
+                                <p className="text-sm font-medium mb-1">{stock.name}</p>
+                                {quote && <p className="text-2xl font-bold">${quote.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per share</p>}
+                              </div>
+                              <div>
+                                <Label htmlFor="quantity">Number of Shares</Label>
+                                <Input
+                                  id="quantity"
+                                  type="number"
+                                  placeholder={`Min. ${stock.minPurchaseQuantity}`}
+                                  {...purchaseForm.register("quantity", { setValueAs: (v) => parseInt(v) || 1 })}
+                                  data-testid="input-stock-quantity"
+                                />
+                                {purchaseForm.formState.errors.quantity && (
+                                  <p className="text-sm text-red-500 mt-1">{purchaseForm.formState.errors.quantity.message}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-1">Minimum: {stock.minPurchaseQuantity} shares</p>
+                              </div>
+                              {purchaseForm.watch('quantity') > 0 && quote && (
+                                <div className="p-4 bg-muted rounded-lg">
+                                  <div className="flex justify-between">
+                                    <span className="text-sm text-muted-foreground">Total Cost</span>
+                                    <span className="font-bold">${(purchaseForm.watch('quantity') * quote.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                </div>
+                              )}
+                              <Button type="submit" className="w-full" disabled={purchaseMutation.isPending || !quote} data-testid="button-confirm-purchase">
+                                {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
+                              </Button>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ── MARKET / TOP 150 ── */}
+          <section className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-border">
               <div>
-                <h2 className="text-2xl font-bold">Top 50 Performing Stocks</h2>
-                <p className="text-sm text-muted-foreground">Real-time market data from leading companies</p>
+                <h2 className="text-2xl font-bold">Stock Market</h2>
+                <p className="text-sm text-muted-foreground">Real-time prices from leading companies</p>
               </div>
               <div className="relative w-full sm:w-80">
                 <Input
@@ -504,36 +424,23 @@ export default function Stocks() {
                   className="w-full pl-10"
                   data-testid="input-search-stocks"
                 />
-                <svg
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
             </div>
-            
+
             {topPerformersLoading ? (
               <div className="text-center py-12">
-                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-sm text-muted-foreground">Loading top performers...</p>
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">Loading market data…</p>
               </div>
             ) : topPerformers && topPerformers.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                 {topPerformers
-                  .filter(stock => 
-                    searchQuery === "" || 
-                    stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    stock.name.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
+                  .filter(s => !searchQuery || s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || s.name.toLowerCase().includes(searchQuery.toLowerCase()))
                   .map((stock) => (
-                    <Card 
-                      key={stock.symbol} 
-                      className="p-3 md:p-4 hover:shadow-xl hover:border-primary/30 transition-all duration-200 relative" 
-                      data-testid={`card-top-stock-${stock.symbol}`}
-                    >
+                    <Card key={stock.symbol} className="p-3 md:p-4 hover:shadow-xl hover:border-primary/30 transition-all duration-200" data-testid={`card-top-stock-${stock.symbol}`}>
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => setLocation(`/stocks/${stock.symbol}`)}>
                           <StockIcon symbol={stock.symbol} size="sm" className="flex-shrink-0" />
@@ -547,7 +454,7 @@ export default function Stocks() {
                           {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(1)}%
                         </Badge>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div className="flex items-baseline gap-1.5 pb-2 border-b border-border/50 cursor-pointer" onClick={() => setLocation(`/stocks/${stock.symbol}`)}>
                           <span className="text-xl md:text-2xl font-bold tracking-tight">${stock.price.toFixed(2)}</span>
@@ -555,7 +462,7 @@ export default function Stocks() {
                             {stock.change >= 0 ? '+' : ''}${stock.change.toFixed(2)}
                           </span>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-2 text-[10px] md:text-xs cursor-pointer" onClick={() => setLocation(`/stocks/${stock.symbol}`)}>
                           <div className="flex flex-col">
                             <span className="text-muted-foreground mb-0.5">High</span>
@@ -571,14 +478,12 @@ export default function Stocks() {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-muted-foreground mb-0.5">MCap</span>
-                            <span className="font-semibold">
-                              {stock.marketCap ? '$' + (stock.marketCap / 1000000000).toFixed(1) + 'B' : 'N/A'}
-                            </span>
+                            <span className="font-semibold">{stock.marketCap ? '$' + (stock.marketCap / 1000000000).toFixed(1) + 'B' : 'N/A'}</span>
                           </div>
                         </div>
-                        
-                        <Button 
-                          className="w-full mt-2 text-xs md:text-sm" 
+
+                        <Button
+                          className="w-full mt-2 text-xs md:text-sm"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -593,11 +498,7 @@ export default function Stocks() {
                       </div>
                     </Card>
                   ))}
-                {topPerformers.filter(stock => 
-                  searchQuery === "" || 
-                  stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  stock.name.toLowerCase().includes(searchQuery.toLowerCase())
-                ).length === 0 && (
+                {topPerformers.filter(s => !searchQuery || s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
                   <Card className="col-span-full p-8 text-center">
                     <p className="text-muted-foreground">No stocks match your search.</p>
                   </Card>
@@ -605,14 +506,121 @@ export default function Stocks() {
               </div>
             ) : (
               <Card className="p-8 text-center">
-                <p className="text-muted-foreground">Unable to load top performers. Please try again later.</p>
+                <p className="text-muted-foreground">Unable to load market data. Please try again later.</p>
               </Card>
             )}
-          </div>
+          </section>
         </main>
       </div>
-      
-      {/* Purchase Dialog for Top 50 Stocks */}
+
+      {/* ── HOLDING DETAIL DIALOG ── */}
+      <Dialog open={!!selectedHolding} onOpenChange={(open) => !open && setSelectedHolding(null)}>
+        <DialogContent className="max-w-md">
+          {selectedHolding && (() => {
+            const h = selectedHolding;
+            const sym = h.stockProduct?.symbol;
+            const quote = stockQuotes[sym];
+            const qty = parseFloat(h.quantity);
+            const purchasePrice = parseFloat(h.purchasePrice);
+            const currentPrice = quote?.price ?? purchasePrice;
+            const totalInvested = parseFloat(h.totalInvested);
+            const currentValue = currentPrice * qty;
+            const pl = currentValue - totalInvested;
+            const plPct = totalInvested > 0 ? (pl / totalInvested) * 100 : 0;
+            const hasLive = !!quote?.price;
+            const canShowPL = h.status !== 'pending' && h.status !== 'rejected' && hasLive;
+            const purchaseDate = h.createdAt ? new Date(h.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center gap-3">
+                    <StockIcon symbol={sym} size="lg" />
+                    <div>
+                      <DialogTitle className="text-xl">{sym}</DialogTitle>
+                      <p className="text-sm text-muted-foreground">{h.stockProduct?.name}</p>
+                    </div>
+                    <div className="ml-auto">{statusBadge(h.status ?? '', h.id)}</div>
+                  </div>
+                </DialogHeader>
+
+                {/* Live price strip */}
+                {hasLive && (
+                  <div className={`rounded-xl p-4 ${pl >= 0 ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Current Price</p>
+                        <p className="text-3xl font-bold">${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      </div>
+                      {quote && (
+                        <Badge className={`text-sm px-3 py-1.5 ${quote.changePercent >= 0 ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'}`}>
+                          {quote.changePercent >= 0 ? <TrendingUp className="w-3.5 h-3.5 mr-1" /> : <TrendingDown className="w-3.5 h-3.5 mr-1" />}
+                          {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Detail rows */}
+                <div className="space-y-1">
+                  <DetailRow icon={<Calendar className="w-4 h-4 text-muted-foreground" />} label="Purchase Date" value={purchaseDate} />
+                  <Separator />
+                  <DetailRow icon={<BarChart2 className="w-4 h-4 text-muted-foreground" />} label="Shares Held" value={qty.toLocaleString()} />
+                  <Separator />
+                  <DetailRow icon={<DollarSign className="w-4 h-4 text-muted-foreground" />} label="Purchase Price / Share" value={`$${purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                  <Separator />
+                  <DetailRow icon={<DollarSign className="w-4 h-4 text-muted-foreground" />} label="Total Invested" value={`$${totalInvested.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                  {hasLive && (
+                    <>
+                      <Separator />
+                      <DetailRow
+                        icon={<DollarSign className="w-4 h-4 text-muted-foreground" />}
+                        label="Current Value"
+                        value={`$${currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        bold
+                      />
+                    </>
+                  )}
+                  {canShowPL && (
+                    <>
+                      <Separator />
+                      <div className="flex items-center gap-3 py-2">
+                        <Percent className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground flex-1">Profit / Loss</span>
+                        <div className="text-right">
+                          <p className={`font-bold ${pl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {pl >= 0 ? '+' : ''}${Math.abs(pl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className={`text-xs ${pl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {pl >= 0 ? '+' : ''}{plPct.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {h.stockProduct?.sector && (
+                    <>
+                      <Separator />
+                      <DetailRow icon={<Activity className="w-4 h-4 text-muted-foreground" />} label="Sector" value={h.stockProduct.sector} />
+                    </>
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => { setSelectedHolding(null); setLocation(`/stocks/${sym}`); }}
+                >
+                  View Full Stock Page
+                </Button>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Purchase Dialog for Market Stocks */}
       <Dialog open={!!selectedTopStock} onOpenChange={(open) => !open && setSelectedTopStock(null)}>
         <DialogContent className="max-w-[90vw] sm:max-w-lg rounded-2xl" data-testid={`dialog-buy-top-stock-${selectedTopStock?.symbol || ''}`}>
           <DialogHeader className="space-y-3">
@@ -629,24 +637,23 @@ export default function Stocks() {
               purchaseMutation.mutate({
                 symbol: selectedTopStock.symbol,
                 name: selectedTopStock.name,
-                sector: 'Technology', // Default sector
+                sector: 'Equity',
                 quantity: purchaseForm.watch('quantity'),
                 purchasePrice: purchaseForm.watch('purchasePrice'),
-                stockProductId: '', // Not an admin offering
+                stockProductId: '',
               });
             }
           }} className="space-y-4 sm:space-y-5">
             {selectedTopStock && (
               <>
-                {/* Stock Info Card */}
-                <Card className="p-4 sm:p-5 bg-gradient-to-br from-blue-500/10 via-primary/10 to-purple-500/10 border-primary/20 shadow-lg rounded-xl">
+                <Card className="p-4 sm:p-5 bg-gradient-to-br from-blue-500/10 via-primary/10 to-purple-500/10 border-primary/20 rounded-xl">
                   <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1">
                         <h3 className="font-bold text-xl sm:text-2xl tracking-tight">{selectedTopStock.symbol}</h3>
                         <p className="text-xs sm:text-sm text-muted-foreground font-medium">{selectedTopStock.name}</p>
                       </div>
-                      <Badge className={selectedTopStock.changePercent >= 0 ? 'bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 px-2 sm:px-3 py-1 text-xs sm:text-sm' : 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 px-2 sm:px-3 py-1 text-xs sm:text-sm'}>
+                      <Badge className={selectedTopStock.changePercent >= 0 ? 'bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 px-2 sm:px-3 py-1' : 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 px-2 sm:px-3 py-1'}>
                         {selectedTopStock.changePercent >= 0 ? <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" /> : <TrendingDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />}
                         {selectedTopStock.changePercent >= 0 ? '+' : ''}{selectedTopStock.changePercent.toFixed(2)}%
                       </Badge>
@@ -659,8 +666,7 @@ export default function Stocks() {
                     </div>
                   </div>
                 </Card>
-                
-                {/* Quantity Input */}
+
                 <div className="space-y-2">
                   <Label htmlFor="top-stock-quantity" className="text-sm font-semibold">Number of Shares</Label>
                   <Input
@@ -670,80 +676,59 @@ export default function Stocks() {
                     min="1"
                     className="text-lg h-12 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     onWheel={(e) => e.currentTarget.blur()}
-                    {...purchaseForm.register("quantity", {
-                      setValueAs: (value) => parseInt(value) || 1,
-                    })}
+                    {...purchaseForm.register("quantity", { setValueAs: (v) => parseInt(v) || 1 })}
                     data-testid="input-top-stock-quantity"
                   />
                   {purchaseForm.formState.errors.quantity && (
                     <p className="text-sm text-red-500 mt-1">{purchaseForm.formState.errors.quantity.message}</p>
                   )}
                 </div>
-                
-                {/* Cost Summary Card */}
+
                 {purchaseForm.watch('quantity') > 0 && (
                   <Card className="p-4 sm:p-5 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-200 dark:border-slate-700 rounded-xl">
                     <div className="space-y-2 sm:space-y-3">
                       <div className="flex justify-between text-xs sm:text-sm">
                         <span className="text-muted-foreground font-medium">Price per share</span>
-                        <span className="font-bold text-foreground">${selectedTopStock.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="font-bold">${selectedTopStock.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between text-xs sm:text-sm">
-                        <span className="text-muted-foreground font-medium">Quantity</span>
-                        <span className="font-bold text-foreground">{purchaseForm.watch('quantity')} {purchaseForm.watch('quantity') === 1 ? 'share' : 'shares'}</span>
+                        <span className="text-muted-foreground font-medium">Shares</span>
+                        <span className="font-bold">{purchaseForm.watch('quantity').toLocaleString()}</span>
                       </div>
-                      <Separator className="my-1 sm:my-2" />
-                      <div className="flex justify-between items-center pt-1 sm:pt-2">
-                        <span className="font-bold text-sm sm:text-base">Total Investment</span>
-                        <span className="text-2xl sm:text-3xl font-bold text-primary">
-                          ${(purchaseForm.watch('quantity') * selectedTopStock.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
+                      <Separator />
+                      <div className="flex justify-between text-sm sm:text-base">
+                        <span className="font-semibold">Total Cost</span>
+                        <span className="font-bold text-primary">${(purchaseForm.watch('quantity') * selectedTopStock.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </div>
                   </Card>
                 )}
-                
-                {/* Approval Notice */}
-                <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/30 rounded-xl p-3 sm:p-4">
-                  <div className="flex gap-2 sm:gap-3">
-                    <div className="p-1 sm:p-1.5 rounded-lg bg-orange-500/20 h-fit">
-                      <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-600 dark:text-orange-400" />
-                    </div>
-                    <div className="space-y-0.5 sm:space-y-1">
-                      <p className="text-xs sm:text-sm font-semibold text-orange-700 dark:text-orange-300">Approval Required</p>
-                      <p className="text-[10px] sm:text-xs text-orange-600 dark:text-orange-400 leading-relaxed">
-                        This purchase requires admin approval. Funds will be deducted immediately and refunded if rejected.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Submit Button */}
+
                 <Button
                   type="submit"
-                  className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold shadow-lg"
-                  disabled={purchaseMutation.isPending || purchaseForm.watch('quantity') < 1}
+                  className="w-full h-12 text-base font-semibold rounded-xl"
+                  disabled={purchaseMutation.isPending}
                   data-testid="button-confirm-top-stock-purchase"
                 >
-                  {purchaseMutation.isPending ? (
-                    <>
-                      <Activity className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                      Confirm - {purchaseForm.watch('quantity')} {purchaseForm.watch('quantity') === 1 ? 'Share' : 'Shares'}
-                    </>
-                  )}
+                  {purchaseMutation.isPending ? "Processing..." : `Buy ${purchaseForm.watch('quantity') || 1} Share${(purchaseForm.watch('quantity') || 1) !== 1 ? 's' : ''}`}
                 </Button>
               </>
             )}
           </form>
         </DialogContent>
       </Dialog>
-      
+
       <MobileNav />
+    </div>
+  );
+}
+
+function DetailRow({ icon, label, value, bold }: { icon: React.ReactNode; label: string; value: string; bold?: boolean }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <span className="flex-shrink-0">{icon}</span>
+      <span className="text-sm text-muted-foreground flex-1">{label}</span>
+      <span className={`text-sm text-right ${bold ? 'font-bold' : 'font-medium'}`}>{value}</span>
     </div>
   );
 }
