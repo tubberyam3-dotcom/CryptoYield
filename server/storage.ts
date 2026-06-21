@@ -617,7 +617,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: string): Promise<void> {
-    // Delete related records first (cascade manually)
+    // 1. Null out nullable FK columns that reference this user (so they don't block deletion)
+    await db.update(systemSettings).set({ updatedBy: null }).where(eq(systemSettings.updatedBy, userId));
+    await db.update(portfolios).set({ createdBy: null }).where(eq(portfolios.createdBy, userId));
+    await db.update(communityChallenges).set({ createdBy: null }).where(eq(communityChallenges.createdBy, userId));
+
+    // 2. Delete scheduled emails and login history (not in original list — FK violation)
+    await db.delete(scheduledEmails).where(eq(scheduledEmails.userId, userId));
+    await db.delete(loginHistory).where(eq(loginHistory.userId, userId));
+
+    // 3. Delete joint accounts this user created (and all their dependents first)
+    const ownedJointAccounts = await db
+      .select({ id: jointAccounts.id })
+      .from(jointAccounts)
+      .where(eq(jointAccounts.createdBy, userId));
+    for (const ja of ownedJointAccounts) {
+      await db.delete(userJointAccounts).where(eq(userJointAccounts.jointAccountId, ja.id));
+      await db.delete(userPortfolios).where(eq(userPortfolios.jointAccountId, ja.id));
+      await db.delete(userBonds).where(eq(userBonds.jointAccountId, ja.id));
+      await db.delete(userStocks).where(eq(userStocks.jointAccountId, ja.id));
+      await db.delete(challengeMembers).where(eq(challengeMembers.jointAccountId, ja.id));
+      await db.delete(jointAccounts).where(eq(jointAccounts.id, ja.id));
+    }
+
+    // 4. Delete all user-owned records
     await db.delete(userPortfolios).where(eq(userPortfolios.userId, userId));
     await db.delete(userBonds).where(eq(userBonds.userId, userId));
     await db.delete(userStocks).where(eq(userStocks.userId, userId));
@@ -628,8 +651,8 @@ export class DatabaseStorage implements IStorage {
     await db.delete(dailyBonuses).where(eq(dailyBonuses.userId, userId));
     await db.delete(xpClaims).where(eq(xpClaims.userId, userId));
     await db.delete(couponRedemptions).where(eq(couponRedemptions.userId, userId));
-    // Sessions table uses a different structure (jsonb) and will expire naturally
-    // Finally delete the user
+
+    // 5. Finally delete the user (sessions expire naturally via TTL)
     await db.delete(users).where(eq(users.id, userId));
   }
 
