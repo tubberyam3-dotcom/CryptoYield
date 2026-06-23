@@ -2559,8 +2559,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── NASDAQ public quote API (no API key needed, works from server) ──
   async function fetchNasdaqQuote(symbol: string): Promise<any | null> {
-    // SPACEX and other non-NASDAQ symbols — skip to avoid 404
-    const nonNasdaq = new Set(['SPACEX', 'BRK-B']);
+    // BRK-B uses a different format on NASDAQ — skip to avoid 404
+    const nonNasdaq = new Set(['BRK-B']);
     if (nonNasdaq.has(symbol.toUpperCase())) return null;
 
     try {
@@ -2605,15 +2605,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Symbols that are not exchange-listed — skip all live feeds, use hardcoded data only
-  const HARDCODED_ONLY = new Set(['SPACEX']);
-
   // ── Primary quote helper: tries NASDAQ → yahoo-finance2 → null ──
   async function getLiveQuote(symbol: string): Promise<any | null> {
     const upper = symbol.toUpperCase();
-
-    // Private/unlisted symbols: skip all live feeds entirely
-    if (HARDCODED_ONLY.has(upper)) return null;
 
     // 1. NASDAQ public API (most reliable from this server)
     const nasdaqQuote = await fetchNasdaqQuote(upper);
