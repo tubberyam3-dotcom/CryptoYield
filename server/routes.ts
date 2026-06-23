@@ -2605,20 +2605,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Display symbol → exchange ticker overrides (e.g. platform uses SPACEX but NASDAQ lists it as SPCX)
+  const SYMBOL_OVERRIDES: Record<string, string> = {
+    'SPACEX': 'SPCX',
+  };
+
   // ── Primary quote helper: tries NASDAQ → yahoo-finance2 → null ──
   async function getLiveQuote(symbol: string): Promise<any | null> {
     const upper = symbol.toUpperCase();
+    // Resolve exchange ticker (may differ from platform display symbol)
+    const fetchSymbol = SYMBOL_OVERRIDES[upper] ?? upper;
 
     // 1. NASDAQ public API (most reliable from this server)
-    const nasdaqQuote = await fetchNasdaqQuote(upper);
-    if (nasdaqQuote) return nasdaqQuote;
+    const nasdaqQuote = await fetchNasdaqQuote(fetchSymbol);
+    // Re-stamp with the platform display symbol so the UI sees SPACEX, not SPCX
+    if (nasdaqQuote) return { ...nasdaqQuote, symbol: upper };
 
     // 2. yahoo-finance2 library (may fail due to crumb issues)
     try {
-      const quote: any = await yahooFinance.quote(upper);
+      const quote: any = await yahooFinance.quote(fetchSymbol);
       if (quote?.regularMarketPrice) {
         return {
-          symbol: quote.symbol,
+          symbol: upper,
           name: quote.longName || quote.shortName || upper,
           price: quote.regularMarketPrice,
           change: quote.regularMarketChange,
