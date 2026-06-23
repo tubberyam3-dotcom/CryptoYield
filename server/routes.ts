@@ -2605,9 +2605,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Symbols that are not exchange-listed — skip all live feeds, use hardcoded data only
+  const HARDCODED_ONLY = new Set(['SPACEX']);
+
   // ── Primary quote helper: tries NASDAQ → yahoo-finance2 → null ──
   async function getLiveQuote(symbol: string): Promise<any | null> {
     const upper = symbol.toUpperCase();
+
+    // Private/unlisted symbols: skip all live feeds entirely
+    if (HARDCODED_ONLY.has(upper)) return null;
 
     // 1. NASDAQ public API (most reliable from this server)
     const nasdaqQuote = await fetchNasdaqQuote(upper);
@@ -2635,48 +2641,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return null;
   }
 
-  // Stock market data routes (using yahoo-finance2)
+  // Per-symbol quote cache (5-min TTL) — keeps prices consistent across all page sections
+  const quoteCache = new Map<string, { data: any; ts: number }>();
+  const QUOTE_CACHE_TTL = 5 * 60 * 1000;
+
   app.get('/api/stocks/quote', async (req, res) => {
     try {
       const { symbol } = req.query;
-      
       if (!symbol || typeof symbol !== 'string') {
         return res.status(400).json({ message: "Symbol parameter is required" });
       }
 
       const upperSymbol = symbol.toUpperCase();
-      
+
+      // Return cached quote if still fresh
+      const cached = quoteCache.get(upperSymbol);
+      if (cached && Date.now() - cached.ts < QUOTE_CACHE_TTL) {
+        return res.json(cached.data);
+      }
+
       const live = await getLiveQuote(upperSymbol);
       if (live) {
+        quoteCache.set(upperSymbol, { data: live, ts: Date.now() });
         return res.json(live);
       }
 
-      // Last-resort: hardcoded fallback with small jitter
+      // Last-resort: hardcoded fallback — NO jitter so price is stable across all calls
       const fallback = extendedFallbackStocks[upperSymbol];
       if (fallback) {
-        return res.json({
-          ...fallback,
-          price: fallback.price * (1 + (Math.random() - 0.5) * 0.01),
-          change: fallback.change * (1 + (Math.random() - 0.5) * 0.2),
-          changePercent: fallback.changePercent * (1 + (Math.random() - 0.5) * 0.2),
-        });
+        quoteCache.set(upperSymbol, { data: fallback, ts: Date.now() });
+        return res.json(fallback);
       }
 
-      // Unknown symbol generic fallback
-      const basePrice = 100 + Math.random() * 200;
-      const change = (Math.random() - 0.5) * 10;
-      return res.json({
-        symbol: upperSymbol,
-        name: `${upperSymbol} Inc.`,
-        price: basePrice,
-        change,
-        changePercent: (change / basePrice) * 100,
-        previousClose: basePrice - change,
-        dayHigh: basePrice * 1.02,
-        dayLow: basePrice * 0.98,
-        volume: Math.floor(Math.random() * 10000000),
-        marketCap: Math.floor(Math.random() * 500000000000),
-      });
+      return res.status(404).json({ message: `No price data available for ${upperSymbol}` });
     } catch (error) {
       console.error("Error fetching stock quote:", error);
       res.status(500).json({ message: "Failed to fetch stock quote" });
