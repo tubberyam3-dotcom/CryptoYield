@@ -20,18 +20,10 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
-  Zap,
-  BarChart2,
-  Layers,
-  CircleDollarSign,
 } from "lucide-react";
 
 interface DashboardStats {
   availableBalance: string;
-  totalPortfolioValue: string;
-  activeBonds: string;
-  activeStakes: string;
-  stocksValue: string;
 }
 
 const fmt = (v: number) =>
@@ -78,11 +70,6 @@ export default function Wallet() {
   });
 
   const availableBalance = parseFloat(stats?.availableBalance || "0");
-  const portfolioValue   = parseFloat(stats?.totalPortfolioValue || "0");
-  const bondsValue       = parseFloat(stats?.activeBonds || "0");
-  const stakingValue     = parseFloat(stats?.activeStakes || "0");
-  const stocksValue      = parseFloat(stats?.stocksValue || "0");
-  const totalAssets      = availableBalance + portfolioValue + bondsValue + stakingValue + stocksValue;
 
   const pendingWithdrawals = withdrawals
     .filter(w => w.status === "pending" || w.status === "approved")
@@ -127,10 +114,11 @@ export default function Wallet() {
 
         <main className="p-4 sm:p-6 space-y-4 sm:space-y-6 pb-24 lg:pb-6">
 
-          {/* ── Total Assets hero ───────────────────────────────── */}
+          {/* ── Available Balance hero ─────────────────────────── */}
           <Card className="overflow-hidden" data-testid="card-balance-summary">
             <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-5 sm:p-6">
-              {/* header row */}
+
+              {/* header */}
               <div className="flex items-start justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-primary/15">
@@ -138,10 +126,10 @@ export default function Wallet() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
-                      Total Balance
+                      Available Balance
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      All your assets combined
+                      Uninvested funds ready to use
                     </p>
                   </div>
                 </div>
@@ -157,18 +145,27 @@ export default function Wallet() {
                 </div>
               </div>
 
-              {/* big total */}
+              {/* balance figure */}
               <div className="mb-5">
                 {isLoading ? (
                   <div className="h-12 w-48 bg-muted/50 animate-pulse rounded-lg" />
                 ) : (
-                  <p className="text-4xl sm:text-5xl font-bold text-primary tracking-tight" data-testid="text-wallet-balance">
-                    {showBalance ? `$${fmt(totalAssets)}` : "••••••"}
+                  <p
+                    className="text-4xl sm:text-5xl font-bold text-primary tracking-tight"
+                    data-testid="text-wallet-balance"
+                  >
+                    {showBalance ? `$${fmt(availableBalance)}` : "••••••"}
+                  </p>
+                )}
+                {pendingWithdrawals > 0 && (
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-2">
+                    <Lock className="w-3 h-3" />
+                    ${fmt(pendingWithdrawals)} pending withdrawal
                   </p>
                 )}
               </div>
 
-              {/* actions */}
+              {/* action buttons */}
               <div className="flex gap-3">
                 <Button onClick={() => setLocation("/deposit")} data-testid="button-deposit"
                   className="flex-1 h-11 text-sm font-semibold">
@@ -188,126 +185,24 @@ export default function Wallet() {
               </div>
             </div>
 
-            {/* summary strip */}
-            <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
+            {/* stats strip */}
+            <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
               <div className="p-3 sm:p-4 text-center">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">Deposited</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">Total Deposited</p>
                 <p className="font-semibold text-green-500 text-sm">
                   {showBalance ? `+$${fmt(totalDeposited)}` : "••••"}
                 </p>
               </div>
               <div className="p-3 sm:p-4 text-center">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">Withdrawn</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">Total Withdrawn</p>
                 <p className="font-semibold text-orange-500 text-sm">
                   {showBalance ? `-$${fmt(totalWithdrawn)}` : "••••"}
-                </p>
-              </div>
-              <div className="p-3 sm:p-4 text-center">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">Invested</p>
-                <p className="font-semibold text-blue-500 text-sm">
-                  {showBalance ? `$${fmt(portfolioValue + bondsValue + stakingValue + stocksValue)}` : "••••"}
                 </p>
               </div>
             </div>
           </Card>
 
-          {/* ── Asset breakdown ─────────────────────────────────── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Available (cash) */}
-            <Card className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 bg-green-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <CircleDollarSign className="w-4 h-4 text-green-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Available Cash</p>
-                  <p className="text-xs text-muted-foreground">Ready to withdraw or invest</p>
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-available-balance">
-                {showBalance ? `$${fmt(availableBalance)}` : "••••••"}
-              </p>
-              {pendingWithdrawals > 0 && (
-                <p className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-1">
-                  <Lock className="w-3 h-3" />
-                  ${fmt(pendingWithdrawals)} pending withdrawal
-                </p>
-              )}
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => setLocation("/withdrawal")}>
-                  Withdraw
-                </Button>
-                <Button size="sm" className="flex-1 text-xs" onClick={() => setLocation("/portfolios")}>
-                  Invest
-                </Button>
-              </div>
-            </Card>
-
-            {/* Portfolio */}
-            <Card className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="w-4 h-4 text-blue-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Portfolio</p>
-                  <p className="text-xs text-muted-foreground">Active investments</p>
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {showBalance ? `$${fmt(portfolioValue)}` : "••••••"}
-              </p>
-              <Button size="sm" variant="ghost" className="mt-3 text-xs w-full" onClick={() => setLocation("/portfolios")}>
-                View portfolios →
-              </Button>
-            </Card>
-
-            {/* Stocks */}
-            <Card className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <BarChart2 className="w-4 h-4 text-purple-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Stocks</p>
-                  <p className="text-xs text-muted-foreground">Market holdings (live)</p>
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {showBalance ? `$${fmt(stocksValue)}` : "••••••"}
-              </p>
-              <Button size="sm" variant="ghost" className="mt-3 text-xs w-full" onClick={() => setLocation("/stocks")}>
-                View stocks →
-              </Button>
-            </Card>
-
-            {/* Bonds + Staking */}
-            <Card className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 bg-orange-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Layers className="w-4 h-4 text-orange-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Bonds & Staking</p>
-                  <p className="text-xs text-muted-foreground">Fixed income &amp; rewards</p>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Bonds</span>
-                  <span className="font-semibold">{showBalance ? `$${fmt(bondsValue)}` : "••••"}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Zap className="w-3 h-3 text-yellow-500" /> Staking
-                  </span>
-                  <span className="font-semibold">{showBalance ? `$${fmt(stakingValue)}` : "••••"}</span>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* ── Transaction history tabs ─────────────────────────── */}
+          {/* ── Transaction history ──────────────────────────────── */}
           <Tabs defaultValue="deposits" className="space-y-4">
             <TabsList className="grid grid-cols-3 w-full">
               <TabsTrigger value="deposits" data-testid="tab-deposits">Deposits</TabsTrigger>
