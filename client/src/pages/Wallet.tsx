@@ -37,6 +37,16 @@ const fmtDate = (d: string) =>
     minute: "2-digit",
   });
 
+const depositLabel = (deposit: Deposit): string => {
+  if (deposit.depositMethod !== 'admin_adjustment') {
+    return deposit.depositMethod.replace(/_/g, ' ');
+  }
+  const meta = deposit.metadata as Record<string, any> | null;
+  const reason = meta?.reason?.trim();
+  if (reason) return reason;
+  return meta?.type === 'withdraw' ? 'System Withdrawal' : 'System Deposit';
+};
+
 const StatusBadge = ({ status }: { status: string }) => {
   const cls =
     status === "completed"
@@ -236,7 +246,7 @@ export default function Wallet() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center flex-wrap gap-1.5 mb-0.5">
                             <span className="font-medium text-sm capitalize" data-testid={`text-deposit-method-${deposit.id}`}>
-                              {deposit.depositMethod.replace(/_/g, " ")}
+                              {depositLabel(deposit)}
                             </span>
                             <StatusBadge status={deposit.status} />
                           </div>
@@ -342,7 +352,7 @@ export default function Wallet() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center flex-wrap gap-1.5 mb-0.5">
                               <span className="font-medium text-sm capitalize">
-                                {isDeposit ? "Deposit" : "Withdrawal"} — {method.replace(/_/g, " ")}
+                                {isDeposit ? "Deposit" : "Withdrawal"} — {isDeposit ? depositLabel(d) : method.replace(/_/g, " ")}
                               </span>
                               <StatusBadge status={status} />
                             </div>
