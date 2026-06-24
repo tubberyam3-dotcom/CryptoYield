@@ -4488,6 +4488,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const isAdminAdj = d.depositMethod === 'admin_adjustment';
           const isDebit = isAdminAdj && meta?.type === 'withdraw';
           const refId = d.transactionId || `Deposit-Trx${d.id.slice(-7)}`;
+          const adminReason = meta?.reason?.trim() || null;
+          const adminMethodLabel = adminReason
+            ? adminReason
+            : isDebit ? 'System Withdrawal' : 'System Deposit';
           return {
             id: `dep-${d.id}`,
             rawId: d.id,
@@ -4496,9 +4500,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             amount: Math.abs(parseFloat(d.amount)),
             status: d.status || 'completed',
             method: isAdminAdj ? 'bank_transfer' : d.depositMethod,
-            methodLabel: METHOD_LABELS[d.depositMethod] ?? d.depositMethod.replace(/_/g, ' '),
+            methodLabel: isAdminAdj ? adminMethodLabel : (METHOD_LABELS[d.depositMethod] ?? d.depositMethod.replace(/_/g, ' ')),
             date: d.createdAt,
-            reason: isAdminAdj ? (meta?.reason || null) : null,
+            reason: adminReason,
             isAdminAdjustment: isAdminAdj,
           };
         }),
