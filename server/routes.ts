@@ -3660,18 +3660,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create a deposit record for tracking
-      const { nanoid } = await import('nanoid');
       const customDate = date ? new Date(date) : undefined;
+      const trxRef = Math.floor(100000 + Math.random() * 9000000);
+      const trxLabel = type === 'add' ? `Deposit-Trx${trxRef}` : `Withdrawal-Trx${trxRef}`;
       await storage.createDeposit({
         userId: id,
         amount: type === 'add' ? numAmount.toString() : `-${numAmount}`,
         depositMethod: 'admin_adjustment',
         status: 'completed',
-        transactionId: `ADMIN-${Date.now()}`,
+        transactionId: trxLabel,
         metadata: { 
           adjustedBy: adminId, 
           type, 
-          reason: reason || 'Admin adjustment' 
+          reason: reason || 'Admin adjustment',
+          trxRef: trxLabel,
         },
       }, customDate);
       
@@ -4455,6 +4457,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error processing withdrawal:", error);
       res.status(400).json({ message: error.message || "Failed to process withdrawal" });
+    }
+  });
+
+  // Unified transactions endpoint for users
+  app.get("/api/transactions", enhancedAuth, async (req, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Authentication required" });
+      const userId = req.user?.claims?.sub || (req as any).session?.user?.id;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+
+      const [deposits, withdrawals] = await Promise.all([
+        storage.getUserDeposits(userId),
+        storage.getUserWithdrawals(userId),
+      ]);
+
+      const METHOD_LABELS: Record<string, string> = {
+        crypto: 'Crypto',
+        bank_transfer: 'Bank Transfer',
+        card_payment: 'Card Payment',
+        deposit_coupon: 'Coupon',
+        wire_transfer: 'Wire Transfer',
+        merchant_pay: 'Merchant Pay',
+        admin_adjustment: 'Bank Transfer',
+      };
+
+      const unified = [
+        ...deposits.map((d) => {
+          const meta = d.metadata as Record<string, any> | null;
+          const isAdminAdj = d.depositMethod === 'admin_adjustment';
+          const isDebit = isAdminAdj && meta?.type === 'withdraw';
+          const refId = d.transactionId || `Deposit-Trx${d.id.slice(-7)}`;
+          return {
+            id: `dep-${d.id}`,
+            rawId: d.id,
+            refId,
+            type: isDebit ? 'withdrawal' : 'deposit',
+            amount: Math.abs(parseFloat(d.amount)),
+            status: d.status || 'completed',
+            method: isAdminAdj ? 'bank_transfer' : d.depositMethod,
+            methodLabel: METHOD_LABELS[d.depositMethod] ?? d.depositMethod.replace(/_/g, ' '),
+            date: d.createdAt,
+            reason: isAdminAdj ? (meta?.reason || null) : null,
+            isAdminAdjustment: isAdminAdj,
+          };
+        }),
+        ...withdrawals.map((w) => {
+          const refId = `Withdrawal-Trx${w.id.slice(-7)}`;
+          return {
+            id: `wdl-${w.id}`,
+            rawId: w.id,
+            refId,
+            type: 'withdrawal',
+            amount: Math.abs(parseFloat(w.amount)),
+            status: w.status || 'pending',
+            method: w.withdrawMethod,
+            methodLabel: METHOD_LABELS[w.withdrawMethod] ?? w.withdrawMethod.replace(/_/g, ' '),
+            date: w.createdAt,
+            destination: w.destinationAddress,
+            processedAt: w.processedAt,
+            isAdminAdjustment: false,
+          };
+        }),
+      ].sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime());
+
+      res.json(unified);
+    } catch (err: any) {
+      console.error("Error fetching transactions:", err);
+      res.status(500).json({ message: "Failed to fetch transactions" });
     }
   });
 
