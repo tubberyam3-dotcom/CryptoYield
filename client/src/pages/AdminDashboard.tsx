@@ -23,6 +23,7 @@ import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { RewardsManagement } from "@/components/admin/RewardsManagement";
 import { EmailSettings } from "@/components/admin/EmailSettings";
 import { TransactionManagement } from "@/components/admin/TransactionManagement";
+import { WithdrawalManagement } from "@/components/admin/WithdrawalManagement";
 import { PortfolioManagement } from "@/components/admin/PortfolioManagement";
 import { InvestmentHistory } from "@/components/admin/InvestmentHistory";
 import { AdminPurchaseForUser } from "@/components/admin/AdminPurchaseForUser";
@@ -44,6 +45,7 @@ import {
   LogOut,
   Mail,
   ArrowLeftRight,
+  ArrowUpFromLine,
   History,
   TrendingUp,
   ShoppingCart
@@ -82,6 +84,7 @@ const navItems = [
   { id: "purchase-for-user", label: "Purchase for User", icon: ShoppingCart },
   { id: "investments", label: "Investment History", icon: TrendingUp },
   { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
+  { id: "withdrawals", label: "Withdrawals", icon: ArrowUpFromLine },
   { id: "rewards", label: "Rewards", icon: Gift },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "users", label: "Users", icon: Users },
@@ -351,6 +354,9 @@ export default function AdminDashboard() {
             <TransactionManagement />
           </div>
         );
+
+      case "withdrawals":
+        return <WithdrawalManagement />;
 
       case "purchase-for-user":
         return <AdminPurchaseForUser />;

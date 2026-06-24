@@ -1095,6 +1095,57 @@ class EmailService {
     });
   }
 
+  async sendWithdrawalStatusEmail(
+    email: string,
+    firstName: string,
+    amount: string,
+    method: string,
+    status: string,
+    destination?: string | null
+  ): Promise<{ success: boolean; error?: string }> {
+    const statusMap: Record<string, { color: string; label: string; message: string }> = {
+      approved:  { color: '#f59e0b', label: 'Approved',  message: 'Your withdrawal request has been approved and is now being processed.' },
+      completed: { color: '#22c55e', label: 'Completed', message: 'Your withdrawal has been completed successfully. Funds should arrive shortly.' },
+      rejected:  { color: '#ef4444', label: 'Rejected',  message: 'Your withdrawal request has been rejected. The funds have been returned to your wallet.' },
+      cancelled: { color: '#6b7280', label: 'Cancelled', message: 'Your withdrawal request has been cancelled. The funds have been returned to your wallet.' },
+    };
+    const info = statusMap[status] ?? { color: '#6b7280', label: status, message: 'Your withdrawal status has been updated.' };
+    const methodLabel: Record<string, string> = { crypto: 'Crypto', wire_transfer: 'Wire Transfer', merchant_pay: 'Merchant Pay' };
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1a1a1a; margin: 0;">Withdrawal ${info.label}</h1>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${firstName || 'there'},</p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">${info.message}</p>
+        <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="color: #666;">Amount:</span>
+            <span style="color: #1a1a1a; font-weight: bold;">$${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="color: #666;">Method:</span>
+            <span style="color: #1a1a1a; font-weight: bold;">${methodLabel[method] ?? method}</span>
+          </div>
+          ${destination ? `<div style="display: flex; justify-content: space-between; margin-bottom: 10px;"><span style="color: #666;">Destination:</span><span style="color: #1a1a1a; font-weight: bold; word-break: break-all;">${destination}</span></div>` : ''}
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #666;">Status:</span>
+            <span style="color: ${info.color}; font-weight: bold;">${info.label}</span>
+          </div>
+        </div>
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">If you have any questions, please contact our support team.</p>
+        ${getEmailFooter()}
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Withdrawal ${info.label} - Reflux Capital`,
+      html,
+    });
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     if (!process.env.RESEND_API_KEY) {
       return { success: false, error: 'Resend API key not configured' };

@@ -4348,6 +4348,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const adminId = req.user?.claims?.sub || '';
       const withdrawal = await storage.approveWithdrawal(req.params.id, adminId);
+      // Email notification
+      try {
+        const user = await storage.getUser(withdrawal.userId);
+        if (user?.email) {
+          const { emailService } = await import('./email');
+          await emailService.sendWithdrawalStatusEmail(user.email, user.firstName || 'User', withdrawal.amount, withdrawal.withdrawMethod, 'approved', withdrawal.destinationAddress);
+        }
+      } catch (emailErr) { console.error('Withdrawal approve email error:', emailErr); }
       res.json({ success: true, withdrawal, message: "Withdrawal approved successfully" });
     } catch (error: any) {
       console.error("Error approving withdrawal:", error);
@@ -4355,10 +4363,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/withdrawals/:id/complete", adminAuth, async (req, res) => {
+    try {
+      const adminId = req.user?.claims?.sub || '';
+      const withdrawal = await storage.completeWithdrawal(req.params.id, adminId);
+      // Email notification
+      try {
+        const user = await storage.getUser(withdrawal.userId);
+        if (user?.email) {
+          const { emailService } = await import('./email');
+          await emailService.sendWithdrawalStatusEmail(user.email, user.firstName || 'User', withdrawal.amount, withdrawal.withdrawMethod, 'completed', withdrawal.destinationAddress);
+        }
+      } catch (emailErr) { console.error('Withdrawal complete email error:', emailErr); }
+      res.json({ success: true, withdrawal, message: "Withdrawal marked as completed" });
+    } catch (error: any) {
+      console.error("Error completing withdrawal:", error);
+      res.status(400).json({ message: error.message || "Failed to complete withdrawal" });
+    }
+  });
+
   app.post("/api/admin/withdrawals/:id/reject", adminAuth, async (req, res) => {
     try {
       const adminId = req.user?.claims?.sub || '';
       const withdrawal = await storage.rejectWithdrawal(req.params.id, adminId);
+      // Email notification
+      try {
+        const user = await storage.getUser(withdrawal.userId);
+        if (user?.email) {
+          const { emailService } = await import('./email');
+          await emailService.sendWithdrawalStatusEmail(user.email, user.firstName || 'User', withdrawal.amount, withdrawal.withdrawMethod, 'rejected', withdrawal.destinationAddress);
+        }
+      } catch (emailErr) { console.error('Withdrawal reject email error:', emailErr); }
       res.json({ success: true, withdrawal, message: "Withdrawal rejected successfully" });
     } catch (error: any) {
       console.error("Error rejecting withdrawal:", error);
@@ -4370,6 +4405,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const adminId = req.user?.claims?.sub || '';
       const withdrawal = await storage.cancelWithdrawal(req.params.id, adminId);
+      // Email notification
+      try {
+        const user = await storage.getUser(withdrawal.userId);
+        if (user?.email) {
+          const { emailService } = await import('./email');
+          await emailService.sendWithdrawalStatusEmail(user.email, user.firstName || 'User', withdrawal.amount, withdrawal.withdrawMethod, 'cancelled', withdrawal.destinationAddress);
+        }
+      } catch (emailErr) { console.error('Withdrawal cancel email error:', emailErr); }
       res.json({ success: true, withdrawal, message: "Withdrawal cancelled successfully" });
     } catch (error: any) {
       console.error("Error cancelling withdrawal:", error);

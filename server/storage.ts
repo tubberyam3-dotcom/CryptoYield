@@ -229,6 +229,7 @@ export interface IStorage {
   getUserWithdrawals(userId: string): Promise<Withdrawal[]>;
   processWithdrawal(userId: string, amount: string, withdrawMethod: 'crypto' | 'wire_transfer' | 'merchant_pay', destinationAddress: string, metadata?: any): Promise<Withdrawal>;
   approveWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
+  completeWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
   rejectWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
   cancelWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
   getAllWithdrawals(): Promise<(Withdrawal & { user: { email: string; firstName: string; lastName: string } })[]>;
@@ -2446,7 +2447,7 @@ export class DatabaseStorage implements IStorage {
 
     const [updated] = await db.update(withdrawals)
       .set({
-        status: 'completed',
+        status: 'approved',
         processedAt: new Date(),
       })
       .where(and(
@@ -2462,6 +2463,35 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async completeWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal> {
+    const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.id, withdrawalId));
+
+    if (!withdrawal) {
+      throw new Error('Withdrawal not found');
+    }
+
+    if (withdrawal.status !== 'approved') {
+      throw new Error('Only approved withdrawals can be marked as completed. Current status: ' + withdrawal.status);
+    }
+
+    const [updated] = await db.update(withdrawals)
+      .set({
+        status: 'completed',
+        processedAt: new Date(),
+      })
+      .where(and(
+        eq(withdrawals.id, withdrawalId),
+        eq(withdrawals.status, 'approved')
+      ))
+      .returning();
+
+    if (!updated) {
+      throw new Error('Failed to complete withdrawal - status may have changed');
+    }
+
+    return updated;
+  }
+
   async rejectWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal> {
     const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.id, withdrawalId));
     
@@ -2469,8 +2499,8 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Withdrawal not found');
     }
 
-    if (withdrawal.status !== 'pending') {
-      throw new Error('Only pending withdrawals can be rejected');
+    if (withdrawal.status !== 'pending' && withdrawal.status !== 'approved') {
+      throw new Error('Only pending or approved withdrawals can be rejected');
     }
 
     await db.update(users)
@@ -2520,8 +2550,8 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Withdrawal not found');
     }
 
-    if (withdrawal.status !== 'pending') {
-      throw new Error('Only pending withdrawals can be cancelled');
+    if (withdrawal.status !== 'pending' && withdrawal.status !== 'approved') {
+      throw new Error('Only pending or approved withdrawals can be cancelled');
     }
 
     await db.update(users)
