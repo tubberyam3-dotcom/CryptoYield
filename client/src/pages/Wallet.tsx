@@ -20,8 +20,10 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
-  CircleDollarSign,
+  Zap,
   BarChart2,
+  Layers,
+  CircleDollarSign,
 } from "lucide-react";
 
 interface DashboardStats {
@@ -80,7 +82,7 @@ export default function Wallet() {
   const bondsValue       = parseFloat(stats?.activeBonds || "0");
   const stakingValue     = parseFloat(stats?.activeStakes || "0");
   const stocksValue      = parseFloat(stats?.stocksValue || "0");
-  const totalInvested    = portfolioValue + bondsValue + stakingValue + stocksValue;
+  const totalAssets      = availableBalance + portfolioValue + bondsValue + stakingValue + stocksValue;
 
   const pendingWithdrawals = withdrawals
     .filter(w => w.status === "pending" || w.status === "approved")
@@ -125,10 +127,10 @@ export default function Wallet() {
 
         <main className="p-4 sm:p-6 space-y-4 sm:space-y-6 pb-24 lg:pb-6">
 
-          {/* ── Available Balance hero ─────────────────────────── */}
+          {/* ── Total Assets hero ───────────────────────────────── */}
           <Card className="overflow-hidden" data-testid="card-balance-summary">
-            {/* gradient header */}
             <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-5 sm:p-6">
+              {/* header row */}
               <div className="flex items-start justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-primary/15">
@@ -136,155 +138,171 @@ export default function Wallet() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
-                      Available Balance
+                      Total Balance
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Ready to withdraw or invest
+                      All your assets combined
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 opacity-60 hover:opacity-100"
-                    onClick={() => setShowBalance(v => !v)}
-                  >
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-60 hover:opacity-100"
+                    onClick={() => setShowBalance(v => !v)}>
                     {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 opacity-60 hover:opacity-100"
-                    onClick={() => refetchStats()}
-                    disabled={statsLoading}
-                  >
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-60 hover:opacity-100"
+                    onClick={() => refetchStats()} disabled={statsLoading}>
                     <RefreshCw className={`w-4 h-4 ${statsLoading ? "animate-spin" : ""}`} />
                   </Button>
                 </div>
               </div>
 
-              {/* big number */}
+              {/* big total */}
               <div className="mb-5">
                 {isLoading ? (
                   <div className="h-12 w-48 bg-muted/50 animate-pulse rounded-lg" />
                 ) : (
-                  <p
-                    className="text-4xl sm:text-5xl font-bold text-primary tracking-tight"
-                    data-testid="text-wallet-balance"
-                  >
-                    {showBalance ? `$${fmt(availableBalance)}` : "••••••"}
+                  <p className="text-4xl sm:text-5xl font-bold text-primary tracking-tight" data-testid="text-wallet-balance">
+                    {showBalance ? `$${fmt(totalAssets)}` : "••••••"}
                   </p>
                 )}
-                <p className="text-sm text-muted-foreground mt-1">
-                  {pendingWithdrawals > 0 && (
-                    <span className="inline-flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
-                      <Lock className="w-3 h-3" />
-                      ${fmt(pendingWithdrawals)} pending withdrawal
-                    </span>
-                  )}
-                  {pendingWithdrawals === 0 && "Full amount available"}
-                </p>
               </div>
 
-              {/* action buttons */}
+              {/* actions */}
               <div className="flex gap-3">
-                <Button
-                  onClick={() => setLocation("/deposit")}
-                  data-testid="button-deposit"
-                  className="flex-1 h-11 text-sm font-semibold"
-                >
+                <Button onClick={() => setLocation("/deposit")} data-testid="button-deposit"
+                  className="flex-1 h-11 text-sm font-semibold">
                   <ArrowDownLeft className="w-4 h-4 mr-2" />
                   Deposit
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation("/withdrawal")}
-                  data-testid="button-withdraw"
-                  className="flex-1 h-11 text-sm font-semibold"
-                >
+                <Button variant="outline" onClick={() => setLocation("/withdrawal")} data-testid="button-withdraw"
+                  className="flex-1 h-11 text-sm font-semibold">
                   <ArrowUpRight className="w-4 h-4 mr-2" />
                   Withdraw
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation("/portfolios")}
-                  data-testid="button-invest"
-                  className="flex-1 h-11 text-sm font-semibold"
-                >
+                <Button variant="outline" onClick={() => setLocation("/portfolios")} data-testid="button-invest"
+                  className="flex-1 h-11 text-sm font-semibold">
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Invest
                 </Button>
               </div>
             </div>
 
-            {/* ── Balance breakdown strip ── */}
+            {/* summary strip */}
             <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
               <div className="p-3 sm:p-4 text-center">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">
-                  Deposited
-                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">Deposited</p>
                 <p className="font-semibold text-green-500 text-sm">
                   {showBalance ? `+$${fmt(totalDeposited)}` : "••••"}
                 </p>
               </div>
               <div className="p-3 sm:p-4 text-center">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">
-                  Withdrawn
-                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">Withdrawn</p>
                 <p className="font-semibold text-orange-500 text-sm">
                   {showBalance ? `-$${fmt(totalWithdrawn)}` : "••••"}
                 </p>
               </div>
               <div className="p-3 sm:p-4 text-center">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">
-                  Invested
-                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">Invested</p>
                 <p className="font-semibold text-blue-500 text-sm">
-                  {showBalance ? `$${fmt(totalInvested)}` : "••••"}
+                  {showBalance ? `$${fmt(portfolioValue + bondsValue + stakingValue + stocksValue)}` : "••••"}
                 </p>
               </div>
             </div>
           </Card>
 
-          {/* ── What you can do ─────────────────────────────────── */}
+          {/* ── Asset breakdown ─────────────────────────────────── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Card className="p-4 border-dashed hover:border-primary/40 transition-colors cursor-pointer group"
-              onClick={() => setLocation("/withdrawal")}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <CircleDollarSign className="w-5 h-5 text-orange-500" />
+            {/* Available (cash) */}
+            <Card className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 bg-green-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <CircleDollarSign className="w-4 h-4 text-green-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Withdraw Funds</p>
-                  <p className="text-xs text-muted-foreground">
-                    Up to{" "}
-                    <span className="font-semibold text-foreground">
-                      {showBalance ? `$${fmt(availableBalance)}` : "••••"}
-                    </span>{" "}
-                    available
-                  </p>
+                  <p className="font-semibold text-sm">Available Cash</p>
+                  <p className="text-xs text-muted-foreground">Ready to withdraw or invest</p>
                 </div>
-                <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+              </div>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-available-balance">
+                {showBalance ? `$${fmt(availableBalance)}` : "••••••"}
+              </p>
+              {pendingWithdrawals > 0 && (
+                <p className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-1">
+                  <Lock className="w-3 h-3" />
+                  ${fmt(pendingWithdrawals)} pending withdrawal
+                </p>
+              )}
+              <div className="flex gap-2 mt-3">
+                <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => setLocation("/withdrawal")}>
+                  Withdraw
+                </Button>
+                <Button size="sm" className="flex-1 text-xs" onClick={() => setLocation("/portfolios")}>
+                  Invest
+                </Button>
               </div>
             </Card>
 
-            <Card className="p-4 border-dashed hover:border-primary/40 transition-colors cursor-pointer group"
-              onClick={() => setLocation("/portfolios")}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <BarChart2 className="w-5 h-5 text-blue-500" />
+            {/* Portfolio */}
+            <Card className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-4 h-4 text-blue-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Invest Balance</p>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-semibold text-foreground">
-                      {showBalance ? `$${fmt(availableBalance)}` : "••••"}
-                    </span>{" "}
-                    ready to deploy
-                  </p>
+                  <p className="font-semibold text-sm">Portfolio</p>
+                  <p className="text-xs text-muted-foreground">Active investments</p>
                 </div>
-                <TrendingUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+              </div>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {showBalance ? `$${fmt(portfolioValue)}` : "••••••"}
+              </p>
+              <Button size="sm" variant="ghost" className="mt-3 text-xs w-full" onClick={() => setLocation("/portfolios")}>
+                View portfolios →
+              </Button>
+            </Card>
+
+            {/* Stocks */}
+            <Card className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <BarChart2 className="w-4 h-4 text-purple-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">Stocks</p>
+                  <p className="text-xs text-muted-foreground">Market holdings (live)</p>
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                {showBalance ? `$${fmt(stocksValue)}` : "••••••"}
+              </p>
+              <Button size="sm" variant="ghost" className="mt-3 text-xs w-full" onClick={() => setLocation("/stocks")}>
+                View stocks →
+              </Button>
+            </Card>
+
+            {/* Bonds + Staking */}
+            <Card className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 bg-orange-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Layers className="w-4 h-4 text-orange-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">Bonds & Staking</p>
+                  <p className="text-xs text-muted-foreground">Fixed income &amp; rewards</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Bonds</span>
+                  <span className="font-semibold">{showBalance ? `$${fmt(bondsValue)}` : "••••"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-yellow-500" /> Staking
+                  </span>
+                  <span className="font-semibold">{showBalance ? `$${fmt(stakingValue)}` : "••••"}</span>
+                </div>
               </div>
             </Card>
           </div>
@@ -292,15 +310,9 @@ export default function Wallet() {
           {/* ── Transaction history tabs ─────────────────────────── */}
           <Tabs defaultValue="deposits" className="space-y-4">
             <TabsList className="grid grid-cols-3 w-full">
-              <TabsTrigger value="deposits" data-testid="tab-deposits">
-                Deposits
-              </TabsTrigger>
-              <TabsTrigger value="withdrawals" data-testid="tab-withdrawals">
-                Withdrawals
-              </TabsTrigger>
-              <TabsTrigger value="transactions" data-testid="tab-transactions">
-                All
-              </TabsTrigger>
+              <TabsTrigger value="deposits" data-testid="tab-deposits">Deposits</TabsTrigger>
+              <TabsTrigger value="withdrawals" data-testid="tab-withdrawals">Withdrawals</TabsTrigger>
+              <TabsTrigger value="transactions" data-testid="tab-transactions">All</TabsTrigger>
             </TabsList>
 
             {/* Deposits */}
@@ -315,18 +327,14 @@ export default function Wallet() {
                   <div className="text-center py-10 text-muted-foreground space-y-2">
                     <ArrowDownLeft className="w-10 h-10 mx-auto opacity-30" />
                     <p className="text-sm">No deposits yet. Make your first deposit to get started!</p>
-                    <Button size="sm" onClick={() => setLocation("/deposit")} className="mt-2">
-                      Deposit Now
-                    </Button>
+                    <Button size="sm" onClick={() => setLocation("/deposit")} className="mt-2">Deposit Now</Button>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {deposits.slice(0, 20).map(deposit => (
-                      <div
-                        key={deposit.id}
+                      <div key={deposit.id}
                         className="flex items-center gap-3 p-3 sm:p-4 border rounded-xl hover:bg-muted/40 transition-colors"
-                        data-testid={`deposit-${deposit.id}`}
-                      >
+                        data-testid={`deposit-${deposit.id}`}>
                         <div className="w-9 h-9 bg-green-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
                           <ArrowDownLeft className="w-4 h-4 text-green-500" />
                         </div>
@@ -346,11 +354,10 @@ export default function Wallet() {
                             </p>
                           )}
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="font-semibold text-sm sm:text-base text-green-500" data-testid={`text-deposit-amount-${deposit.id}`}>
-                            +${fmt(parseFloat(deposit.amount))}
-                          </p>
-                        </div>
+                        <p className="font-semibold text-sm sm:text-base text-green-500 flex-shrink-0"
+                          data-testid={`text-deposit-amount-${deposit.id}`}>
+                          +${fmt(parseFloat(deposit.amount))}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -370,18 +377,14 @@ export default function Wallet() {
                   <div className="text-center py-10 text-muted-foreground space-y-2">
                     <ArrowUpRight className="w-10 h-10 mx-auto opacity-30" />
                     <p className="text-sm">No withdrawals yet</p>
-                    <Button size="sm" variant="outline" onClick={() => setLocation("/withdrawal")} className="mt-2">
-                      Withdraw Funds
-                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setLocation("/withdrawal")} className="mt-2">Withdraw Funds</Button>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {withdrawals.map(withdrawal => (
-                      <div
-                        key={withdrawal.id}
+                      <div key={withdrawal.id}
                         className="flex items-center gap-3 p-3 sm:p-4 border rounded-xl hover:bg-muted/40 transition-colors"
-                        data-testid={`withdrawal-${withdrawal.id}`}
-                      >
+                        data-testid={`withdrawal-${withdrawal.id}`}>
                         <div className="w-9 h-9 bg-orange-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
                           <ArrowUpRight className="w-4 h-4 text-orange-500" />
                         </div>
@@ -404,11 +407,10 @@ export default function Wallet() {
                             <p className="text-xs text-red-500 mt-0.5">Rejected — funds returned to balance</p>
                           )}
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="font-semibold text-sm sm:text-base text-orange-500" data-testid={`text-withdrawal-amount-${withdrawal.id}`}>
-                            -${fmt(parseFloat(withdrawal.amount))}
-                          </p>
-                        </div>
+                        <p className="font-semibold text-sm sm:text-base text-orange-500 flex-shrink-0"
+                          data-testid={`text-withdrawal-amount-${withdrawal.id}`}>
+                          -${fmt(parseFloat(withdrawal.amount))}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -416,7 +418,7 @@ export default function Wallet() {
               </Card>
             </TabsContent>
 
-            {/* All Transactions */}
+            {/* All */}
             <TabsContent value="transactions">
               <Card className="p-4 sm:p-6" data-testid="card-transaction-history">
                 <h3 className="text-base font-semibold mb-4">All Transactions</h3>
@@ -434,11 +436,9 @@ export default function Wallet() {
                       const amount = isDeposit ? d.amount : w.amount;
                       const status = isDeposit ? d.status : w.status;
                       return (
-                        <div
-                          key={`${tx.txType}-${tx.id}`}
+                        <div key={`${tx.txType}-${tx.id}`}
                           className="flex items-center gap-3 p-3 sm:p-4 border rounded-xl hover:bg-muted/40 transition-colors"
-                          data-testid={`transaction-${tx.id}`}
-                        >
+                          data-testid={`transaction-${tx.id}`}>
                           <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isDeposit ? "bg-green-500/10" : "bg-orange-500/10"}`}>
                             {isDeposit
                               ? <ArrowDownLeft className="w-4 h-4 text-green-500" />
