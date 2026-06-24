@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { SiBitcoin, SiEthereum, SiTether, SiBinance, SiSolana, SiRipple, SiCardano, SiDogecoin, SiPolygon, SiLitecoin, SiWise } from "react-icons/si";
@@ -22,6 +22,12 @@ export default function Withdrawal() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+
+  const { data: stats } = useQuery<{ availableBalance: string }>({
+    queryKey: ["/api/dashboard/stats"],
+    enabled: !!user,
+  });
+  const availableBalance = parseFloat(stats?.availableBalance || "0").toLocaleString(undefined, { minimumFractionDigits: 2 });
 
   // Crypto withdrawal state
   const [cryptoStep, setCryptoStep] = useState(1);
@@ -251,7 +257,7 @@ export default function Withdrawal() {
             <div className="flex justify-between items-center mb-4">
               <div className="text-sm text-muted-foreground">
                 Available Balance: <span className="font-semibold text-foreground">
-                  ${user?.balance ? parseFloat(user.balance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                  ${availableBalance}
                 </span>
               </div>
               <Button variant="outline" onClick={() => setLocation("/wallet")} data-testid="button-back">
@@ -367,7 +373,7 @@ export default function Withdrawal() {
                             data-testid="input-crypto-amount"
                           />
                           <p className="text-sm text-muted-foreground mt-2">
-                            Available: ${user?.balance ? parseFloat(user.balance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                            Available: ${availableBalance}
                           </p>
                         </div>
 
@@ -559,7 +565,7 @@ export default function Withdrawal() {
                             data-testid="input-wire-amount"
                           />
                           <p className="text-sm text-muted-foreground mt-2">
-                            Available: ${user?.balance ? parseFloat(user.balance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                            Available: ${availableBalance}
                           </p>
                         </div>
 
@@ -854,7 +860,7 @@ export default function Withdrawal() {
                             data-testid="input-merchant-amount"
                           />
                           <p className="text-sm text-muted-foreground mt-2">
-                            Available: ${user?.balance ? parseFloat(user.balance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                            Available: ${availableBalance}
                           </p>
                         </div>
 
