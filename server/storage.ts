@@ -1476,9 +1476,23 @@ export class DatabaseStorage implements IStorage {
         );
     }
 
-    // Get the actual user balance from the database
-    const user = await this.getUser(userId);
-    const userBalance = user?.balance || '0';
+    // Get the available balance — for joint accounts sum both members' balances
+    let userBalance: string;
+    if (accountContext.isJointAccount) {
+      const memberBalances = await db
+        .select({ balance: users.balance })
+        .from(userJointAccounts)
+        .innerJoin(users, eq(userJointAccounts.userId, users.id))
+        .where(eq(userJointAccounts.jointAccountId, accountContext.accountId));
+      const totalBalance = memberBalances.reduce(
+        (acc, row) => acc + parseFloat(row.balance || '0'),
+        0
+      );
+      userBalance = totalBalance.toFixed(2);
+    } else {
+      const user = await this.getUser(userId);
+      userBalance = user?.balance || '0';
+    }
 
     // Sum totalInvested for approved/active stock holdings
     let stocksValueResult;
