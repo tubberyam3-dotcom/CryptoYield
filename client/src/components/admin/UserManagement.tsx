@@ -90,9 +90,12 @@ export function UserManagement() {
   const [convertPartnerName, setConvertPartnerName] = useState("");
   const [convertPartnerEmail, setConvertPartnerEmail] = useState("");
   const [convertRelationshipType, setConvertRelationshipType] = useState("");
-  // Link existing user as joint partner
+  // Link existing user as joint partner (from primary's page — enter partner email)
   const [showLinkPartner, setShowLinkPartner] = useState<{ primaryUserId: string; jointAccountId: string } | null>(null);
   const [linkPartnerEmail, setLinkPartnerEmail] = useState("");
+  // Link this user to an existing joint account (from personal user's page — enter join code)
+  const [showLinkToExisting, setShowLinkToExisting] = useState<string | null>(null); // stores the personal userId
+  const [linkToExistingJoinCode, setLinkToExistingJoinCode] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFirstName, setNewUserFirstName] = useState("");
   const [newUserLastName, setNewUserLastName] = useState("");
@@ -334,6 +337,25 @@ export function UserManagement() {
     },
     onError: (error: any) => {
       toast({ title: "Failed to Link Partner", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const linkToExistingMutation = useMutation({
+    mutationFn: async ({ partnerUserId, joinCode }: { partnerUserId: string; joinCode: string }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${partnerUserId}/link-to-joint`, { joinCode });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "User Linked", description: "User has been added to the joint account as a partner." });
+      if (showLinkToExisting) {
+        queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${showLinkToExisting}`] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowLinkToExisting(null);
+      setLinkToExistingJoinCode("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Link", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1131,18 +1153,32 @@ export function UserManagement() {
                 )}
 
                 {(userDetails as any).accountType !== 'joint' && !(userDetails as any).jointAccountInfo && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-2 border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
-                    onClick={() => {
-                      setShowConvertToJoint(userDetails.id);
-                      setConvertJointName(`${userDetails.firstName || ''} ${userDetails.lastName || ''} & Partner`.trim());
-                    }}
-                  >
-                    <Users className="w-4 h-4 mr-2" />
-                    Switch to Joint Account
-                  </Button>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                      onClick={() => {
+                        setShowConvertToJoint(userDetails.id);
+                        setConvertJointName(`${userDetails.firstName || ''} ${userDetails.lastName || ''} & Partner`.trim());
+                      }}
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Create New Joint Account
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+                      onClick={() => {
+                        setShowLinkToExisting(userDetails.id);
+                        setLinkToExistingJoinCode("");
+                      }}
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Add as Joint Partner
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -1451,6 +1487,50 @@ export function UserManagement() {
             >
               {linkPartnerMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
               Link Partner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add as Joint Partner Dialog (from personal user's page — enter join code) */}
+      <Dialog open={!!showLinkToExisting} onOpenChange={(open) => { if (!open) { setShowLinkToExisting(null); setLinkToExistingJoinCode(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              Add as Joint Partner
+            </DialogTitle>
+            <DialogDescription>
+              Enter the join code from the primary account holder's joint account. This user will be linked as the partner — their balance will be combined on both users' dashboards.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Join Code</Label>
+              <Input
+                value={linkToExistingJoinCode}
+                onChange={(e) => setLinkToExistingJoinCode(e.target.value.toUpperCase())}
+                placeholder="e.g. ABC12345"
+                className="font-mono tracking-widest uppercase"
+                maxLength={12}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Find this in the primary holder's Joint Account Details section.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setShowLinkToExisting(null); setLinkToExistingJoinCode(""); }}>Cancel</Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={!linkToExistingJoinCode.trim() || linkToExistingMutation.isPending}
+              onClick={() => {
+                if (!showLinkToExisting) return;
+                linkToExistingMutation.mutate({ partnerUserId: showLinkToExisting, joinCode: linkToExistingJoinCode.trim() });
+              }}
+            >
+              {linkToExistingMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+              Link as Partner
             </Button>
           </DialogFooter>
         </DialogContent>

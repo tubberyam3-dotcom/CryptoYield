@@ -1476,11 +1476,11 @@ export class DatabaseStorage implements IStorage {
         );
     }
 
-    // Get the available balance — for joint accounts sum both members' balances
+    // Get the available balance — for joint accounts sum both members' balances (distinct users only)
     let userBalance: string;
     if (accountContext.isJointAccount) {
       const memberBalances = await db
-        .select({ balance: users.balance })
+        .selectDistinct({ userId: userJointAccounts.userId, balance: users.balance })
         .from(userJointAccounts)
         .innerJoin(users, eq(userJointAccounts.userId, users.id))
         .where(eq(userJointAccounts.jointAccountId, accountContext.accountId));
