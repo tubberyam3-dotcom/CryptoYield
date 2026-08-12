@@ -90,6 +90,8 @@ export function UserManagement() {
   const [convertPartnerName, setConvertPartnerName] = useState("");
   const [convertPartnerEmail, setConvertPartnerEmail] = useState("");
   const [convertRelationshipType, setConvertRelationshipType] = useState("");
+  // Close joint account confirmation
+  const [showCloseJoint, setShowCloseJoint] = useState<{ jointAccountId: string; name: string; viewingUserId: string } | null>(null);
   // Link existing user as joint partner (from primary's page — enter partner email)
   const [showLinkPartner, setShowLinkPartner] = useState<{ primaryUserId: string; jointAccountId: string } | null>(null);
   const [linkPartnerEmail, setLinkPartnerEmail] = useState("");
@@ -356,6 +358,24 @@ export function UserManagement() {
     },
     onError: (error: any) => {
       toast({ title: "Failed to Link", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const closeJointAccountMutation = useMutation({
+    mutationFn: async (jointAccountId: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/joint-accounts/${jointAccountId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Joint Account Closed", description: "All members have been reverted to personal accounts." });
+      if (showCloseJoint) {
+        queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${showCloseJoint.viewingUserId}`] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowCloseJoint(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Close", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1250,6 +1270,22 @@ export function UserManagement() {
                         Add Partner User
                       </Button>
                     )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10"
+                      onClick={() => {
+                        const jaInfo = (userDetails as any).jointAccountInfo;
+                        setShowCloseJoint({
+                          jointAccountId: jaInfo?.jointAccount?.id,
+                          name: jaInfo?.jointAccount?.name || 'this joint account',
+                          viewingUserId: userDetails.id,
+                        });
+                      }}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Close Joint Account
+                    </Button>
                   </div>
                 </>
               )}
@@ -1487,6 +1523,37 @@ export function UserManagement() {
             >
               {linkPartnerMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
               Link Partner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Joint Account Confirmation Dialog */}
+      <Dialog open={!!showCloseJoint} onOpenChange={(open) => { if (!open) setShowCloseJoint(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Close Joint Account
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to close <strong>{showCloseJoint?.name}</strong>? This will:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 px-1">
+            <li>Remove the joint account partnership</li>
+            <li>Revert all members back to personal accounts</li>
+            <li>Existing investments will remain but will no longer be shared</li>
+          </ul>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowCloseJoint(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={closeJointAccountMutation.isPending}
+              onClick={() => showCloseJoint && closeJointAccountMutation.mutate(showCloseJoint.jointAccountId)}
+            >
+              {closeJointAccountMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <X className="w-4 h-4 mr-2" />}
+              Close Joint Account
             </Button>
           </DialogFooter>
         </DialogContent>

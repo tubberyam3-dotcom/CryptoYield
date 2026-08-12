@@ -3180,6 +3180,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Close / delete a joint account — reverts all members to personal accounts
+  app.delete('/api/admin/joint-accounts/:jointAccountId', adminAuth, async (req: any, res) => {
+    try {
+      const { jointAccountId } = req.params;
+      const jointAccount = await storage.getJointAccount(jointAccountId);
+      if (!jointAccount) return res.status(404).json({ message: "Joint account not found" });
+
+      await storage.closeJointAccount(jointAccountId);
+      res.json({ message: "Joint account closed successfully. All members reverted to personal accounts." });
+    } catch (error) {
+      console.error("Error closing joint account:", error);
+      res.status(500).json({ message: "Failed to close joint account" });
+    }
+  });
+
   // Convert a personal account to a joint account
   app.post('/api/admin/users/:userId/convert-to-joint', adminAuth, async (req: any, res) => {
     try {

@@ -509,6 +509,29 @@ export class DatabaseStorage implements IStorage {
       })));
   }
 
+  async closeJointAccount(jointAccountId: string): Promise<void> {
+    // Get all members so we can revert their accountType
+    const members = await db
+      .select({ userId: userJointAccounts.userId })
+      .from(userJointAccounts)
+      .where(eq(userJointAccounts.jointAccountId, jointAccountId));
+
+    // Revert each member's accountType back to personal
+    for (const { userId } of members) {
+      await db.update(users).set({ accountType: 'personal' }).where(eq(users.id, userId));
+    }
+
+    // Unlink jointAccountId from any investments (keep the investments, just detach the joint tag)
+    await db.update(userPortfolios).set({ jointAccountId: null }).where(eq(userPortfolios.jointAccountId, jointAccountId));
+    await db.update(userBonds).set({ jointAccountId: null }).where(eq(userBonds.jointAccountId, jointAccountId));
+    await db.update(userStocks).set({ jointAccountId: null }).where(eq(userStocks.jointAccountId, jointAccountId));
+    await db.update(challengeMembers).set({ jointAccountId: null }).where(eq(challengeMembers.jointAccountId, jointAccountId));
+
+    // Remove membership rows and the joint account record
+    await db.delete(userJointAccounts).where(eq(userJointAccounts.jointAccountId, jointAccountId));
+    await db.delete(jointAccounts).where(eq(jointAccounts.id, jointAccountId));
+  }
+
   async updateJointAccount(id: string, data: { name?: string; partnerEmail?: string; relationshipType?: string }): Promise<JointAccount> {
     const [updated] = await db
       .update(jointAccounts)
