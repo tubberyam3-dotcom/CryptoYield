@@ -3138,6 +3138,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Link an existing user as a partner in a joint account
+  app.post('/api/admin/users/:partnerUserId/link-to-joint', adminAuth, async (req: any, res) => {
+    try {
+      const { partnerUserId } = req.params;
+      const { jointAccountId } = req.body;
+
+      if (!jointAccountId) {
+        return res.status(400).json({ message: "jointAccountId is required" });
+      }
+
+      const partnerUser = await storage.getUser(partnerUserId);
+      if (!partnerUser) return res.status(404).json({ message: "User not found" });
+
+      // Ensure the joint account exists
+      const jointAccount = await storage.getJointAccount(jointAccountId);
+      if (!jointAccount) return res.status(404).json({ message: "Joint account not found" });
+
+      // Reject if user is already in any joint account
+      const existingMembership = await storage.getUserJointAccount(partnerUserId);
+      if (existingMembership) {
+        return res.status(400).json({ message: "User is already a member of a joint account" });
+      }
+
+      // Add user to joint account as partner
+      await storage.joinJointAccount({ userId: partnerUserId, jointAccountId, role: 'partner' });
+
+      // Update user accountType to joint
+      await storage.updateUserProfile(partnerUserId, { accountType: 'joint' } as any);
+
+      res.json({ message: "User linked to joint account as partner successfully" });
+    } catch (error) {
+      console.error("Error linking user to joint account:", error);
+      res.status(500).json({ message: "Failed to link user to joint account" });
+    }
+  });
+
   // Convert a personal account to a joint account
   app.post('/api/admin/users/:userId/convert-to-joint', adminAuth, async (req: any, res) => {
     try {

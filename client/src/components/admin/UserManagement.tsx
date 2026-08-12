@@ -90,6 +90,9 @@ export function UserManagement() {
   const [convertPartnerName, setConvertPartnerName] = useState("");
   const [convertPartnerEmail, setConvertPartnerEmail] = useState("");
   const [convertRelationshipType, setConvertRelationshipType] = useState("");
+  // Link existing user as joint partner
+  const [showLinkPartner, setShowLinkPartner] = useState<{ primaryUserId: string; jointAccountId: string } | null>(null);
+  const [linkPartnerEmail, setLinkPartnerEmail] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFirstName, setNewUserFirstName] = useState("");
   const [newUserLastName, setNewUserLastName] = useState("");
@@ -312,6 +315,25 @@ export function UserManagement() {
     },
     onError: (error: any) => {
       toast({ title: "Failed to Convert", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const linkPartnerMutation = useMutation({
+    mutationFn: async ({ partnerUserId, jointAccountId }: { partnerUserId: string; jointAccountId: string }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${partnerUserId}/link-to-joint`, { jointAccountId });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Partner Linked", description: "User has been added to the joint account as a partner." });
+      if (showLinkPartner) {
+        queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${showLinkPartner.primaryUserId}`] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowLinkPartner(null);
+      setLinkPartnerEmail("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Link Partner", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1176,6 +1198,22 @@ export function UserManagement() {
                         <span className="font-medium">{(userDetails as any).jointAccountInfo?.members?.length || 1} holder(s)</span>
                       </div>
                     </div>
+                    {/* Show "Add Partner" if fewer than 2 members */}
+                    {((userDetails as any).jointAccountInfo?.members?.length || 1) < 2 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                        onClick={() => {
+                          const jaInfo = (userDetails as any).jointAccountInfo;
+                          setShowLinkPartner({ primaryUserId: userDetails.id, jointAccountId: jaInfo?.jointAccount?.id });
+                          setLinkPartnerEmail("");
+                        }}
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Add Partner User
+                      </Button>
+                    )}
                   </div>
                 </>
               )}
@@ -1365,6 +1403,54 @@ export function UserManagement() {
             >
               {convertToJointMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Users className="w-4 h-4 mr-2" />}
               Convert to Joint
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Partner User to Joint Account Dialog */}
+      <Dialog open={!!showLinkPartner} onOpenChange={(open) => { if (!open) { setShowLinkPartner(null); setLinkPartnerEmail(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              Add Partner to Joint Account
+            </DialogTitle>
+            <DialogDescription>
+              Enter the email address of the existing user you want to add as the joint account partner. Their balance will be combined with the primary holder's balance on the dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Partner's Email Address</Label>
+              <Input
+                type="email"
+                value={linkPartnerEmail}
+                onChange={(e) => setLinkPartnerEmail(e.target.value)}
+                placeholder="partner@email.com"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setShowLinkPartner(null); setLinkPartnerEmail(""); }}>Cancel</Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={!linkPartnerEmail || linkPartnerMutation.isPending}
+              onClick={() => {
+                if (!showLinkPartner) return;
+                // Find user by email from the loaded users list
+                const partnerUser = (users as User[] | undefined)?.find(
+                  (u) => u.email?.toLowerCase() === linkPartnerEmail.toLowerCase()
+                );
+                if (!partnerUser) {
+                  toast({ title: "User Not Found", description: "No user found with that email address.", variant: "destructive" });
+                  return;
+                }
+                linkPartnerMutation.mutate({ partnerUserId: partnerUser.id, jointAccountId: showLinkPartner.jointAccountId });
+              }}
+            >
+              {linkPartnerMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+              Link Partner
             </Button>
           </DialogFooter>
         </DialogContent>
