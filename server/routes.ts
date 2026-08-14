@@ -3637,11 +3637,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       
       const deposits = await storage.getUserDeposits(id);
-      const stockPurchases = await storage.getUserStockPurchases(id);
+      const stockPurchases = await storage.getUserStocks(id);
       
       const transactions = [
         ...deposits.map((d: any) => ({ ...d, type: 'deposit' })),
-        ...stockPurchases.map((s: any) => ({ ...s, type: 'stock_purchase' })),
+        ...stockPurchases.map((s: any) => ({
+          ...s,
+          type: 'stock_purchase',
+          amount: s.totalInvested ?? s.amount ?? '0',
+          status: s.status ?? 'completed',
+        })),
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
       res.json(transactions);
