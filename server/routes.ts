@@ -3455,6 +3455,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin edit user profile (name, email)
+  app.patch('/api/admin/users/:id/profile', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { firstName, lastName, email } = req.body;
+      if (!firstName && !lastName && !email) {
+        return res.status(400).json({ message: "At least one field required" });
+      }
+      // Check email uniqueness if changing
+      if (email) {
+        const existing = await storage.getUserByEmail(email);
+        if (existing && existing.id !== id) {
+          return res.status(400).json({ message: "Email already in use by another account" });
+        }
+      }
+      const updatedUser = await storage.updateUserProfileAdmin(id, { firstName, lastName, email });
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update user profile" });
+    }
+  });
+
+  // Admin update transaction date
+  app.patch('/api/admin/transactions/:type/:id/date', adminAuth, async (req: any, res) => {
+    try {
+      const { type, id } = req.params;
+      const { date } = req.body;
+      if (!['deposit', 'stock_purchase'].includes(type)) {
+        return res.status(400).json({ message: "Invalid transaction type" });
+      }
+      if (!date) {
+        return res.status(400).json({ message: "Date is required" });
+      }
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date" });
+      }
+      await storage.updateTransactionDate(type as 'deposit' | 'stock_purchase', id, parsedDate);
+      res.json({ message: "Transaction date updated" });
+    } catch (error) {
+      console.error("Error updating transaction date:", error);
+      res.status(500).json({ message: "Failed to update transaction date" });
+    }
+  });
+
   // Bulk update users
   app.post('/api/admin/users/bulk', adminAuth, async (req: any, res) => {
     try {

@@ -98,6 +98,14 @@ export function UserManagement() {
   // Link this user to an existing joint account (from personal user's page — enter join code)
   const [showLinkToExisting, setShowLinkToExisting] = useState<string | null>(null); // stores the personal userId
   const [linkToExistingJoinCode, setLinkToExistingJoinCode] = useState("");
+  // Edit user profile
+  const [showEditProfile, setShowEditProfile] = useState<string | null>(null);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  // Edit transaction date
+  const [editingTxDate, setEditingTxDate] = useState<{ type: string; id: string } | null>(null);
+  const [editTxDateValue, setEditTxDateValue] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFirstName, setNewUserFirstName] = useState("");
   const [newUserLastName, setNewUserLastName] = useState("");
@@ -123,6 +131,11 @@ export function UserManagement() {
   const { data: userTransactions, isLoading: isLoadingTransactions } = useQuery<Transaction[]>({
     queryKey: [`/api/admin/users/${showTransactions}/transactions`],
     enabled: !!showTransactions,
+  });
+
+  const { data: detailTransactions, isLoading: isLoadingDetailTx } = useQuery<Transaction[]>({
+    queryKey: [`/api/admin/users/${viewingUserId}/transactions`],
+    enabled: !!viewingUserId,
   });
 
   const bulkUpdateMutation = useMutation({
@@ -376,6 +389,42 @@ export function UserManagement() {
     },
     onError: (error: any) => {
       toast({ title: "Failed to Close", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const editProfileMutation = useMutation({
+    mutationFn: async ({ userId, firstName, lastName, email }: { userId: string; firstName: string; lastName: string; email: string }) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/profile`, { firstName, lastName, email });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Profile Updated", description: "User's name and email have been saved." });
+      if (showEditProfile) {
+        queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${showEditProfile}`] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowEditProfile(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Update", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateTxDateMutation = useMutation({
+    mutationFn: async ({ type, id, date }: { type: string; id: string; date: string }) => {
+      const response = await apiRequest("PATCH", `/api/admin/transactions/${type}/${id}/date`, { date });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Date Updated", description: "Transaction date has been changed." });
+      if (viewingUserId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${viewingUserId}/transactions`] });
+      }
+      setEditingTxDate(null);
+      setEditTxDateValue("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Update Date", description: error.message, variant: "destructive" });
     },
   });
 
@@ -969,7 +1018,7 @@ export function UserManagement() {
                 <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-2xl font-medium">
                   {userDetails.firstName?.charAt(0) || userDetails.email?.charAt(0) || 'U'}
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="text-xl font-semibold">
                     {userDetails.firstName && userDetails.lastName 
                       ? `${userDetails.firstName} ${userDetails.lastName}`
@@ -985,6 +1034,19 @@ export function UserManagement() {
                     </Badge>
                   </div>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditFirstName(userDetails.firstName || '');
+                    setEditLastName(userDetails.lastName || '');
+                    setEditEmail(userDetails.email || '');
+                    setShowEditProfile(userDetails.id);
+                  }}
+                >
+                  <Edit className="w-3 h-3 mr-1" />
+                  Edit
+                </Button>
               </div>
 
               <Separator />
@@ -1289,6 +1351,90 @@ export function UserManagement() {
                   </div>
                 </>
               )}
+
+              <Separator />
+
+              {/* Transaction History */}
+              <div className="space-y-3">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  Transaction History
+                </h4>
+                {isLoadingDetailTx ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4 justify-center">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading transactions...
+                  </div>
+                ) : detailTransactions && detailTransactions.length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {detailTransactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg text-sm">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium capitalize">{tx.type.replace(/_/g, ' ')}</div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            {editingTxDate?.id === tx.id ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="date"
+                                  className="h-6 text-xs px-1 w-32"
+                                  value={editTxDateValue}
+                                  onChange={(e) => setEditTxDateValue(e.target.value)}
+                                />
+                                <Button
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  disabled={!editTxDateValue || updateTxDateMutation.isPending}
+                                  onClick={() => editingTxDate && updateTxDateMutation.mutate({
+                                    type: editingTxDate.type,
+                                    id: editingTxDate.id,
+                                    date: editTxDateValue,
+                                  })}
+                                >
+                                  {updateTxDateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 px-1 text-xs"
+                                  onClick={() => { setEditingTxDate(null); setEditTxDateValue(""); }}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                {new Date(tx.createdAt).toLocaleDateString()}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-4 w-4 p-0 opacity-50 hover:opacity-100"
+                                  title="Edit date"
+                                  onClick={() => {
+                                    setEditingTxDate({ type: tx.type, id: tx.id });
+                                    setEditTxDateValue(new Date(tx.createdAt).toISOString().split('T')[0]);
+                                  }}
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right ml-3 shrink-0">
+                          <div className="font-medium">${parseFloat(tx.amount || '0').toFixed(2)}</div>
+                          <Badge className={`text-xs ${tx.status === 'approved' || tx.status === 'completed' ? 'bg-green-100 text-green-800' : tx.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {tx.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg text-center">
+                    No transactions found
+                  </div>
+                )}
+              </div>
 
               <div className="text-xs text-muted-foreground">
                 User ID: {userDetails.id}
@@ -1598,6 +1744,63 @@ export function UserManagement() {
             >
               {linkToExistingMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
               Link as Partner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Profile Dialog */}
+      <Dialog open={!!showEditProfile} onOpenChange={(open) => !open && setShowEditProfile(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="w-5 h-5" />
+              Edit User Profile
+            </DialogTitle>
+            <DialogDescription>Update the user's name and email address.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>First Name</Label>
+                <Input
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  placeholder="First name"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Last Name</Label>
+                <Input
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Email Address</Label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowEditProfile(null)}>Cancel</Button>
+            <Button
+              disabled={editProfileMutation.isPending || (!editFirstName && !editLastName && !editEmail)}
+              onClick={() => showEditProfile && editProfileMutation.mutate({
+                userId: showEditProfile,
+                firstName: editFirstName,
+                lastName: editLastName,
+                email: editEmail,
+              })}
+            >
+              {editProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

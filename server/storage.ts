@@ -104,6 +104,8 @@ export interface IStorage {
   deleteUser(userId: string): Promise<void>;
   updateUserRole(userId: string, role: 'user' | 'admin'): Promise<User>;
   updateUserKycStatus(userId: string, kycStatus: 'pending' | 'approved' | 'rejected'): Promise<User>;
+  updateUserProfileAdmin(userId: string, data: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
+  updateTransactionDate(type: 'deposit' | 'stock_purchase', id: string, date: Date): Promise<void>;
   getUserStats(): Promise<{
     totalUsers: number;
     activeUsers: number;
@@ -714,6 +716,23 @@ export class DatabaseStorage implements IStorage {
     }
     
     return result[0];
+  }
+
+  async updateUserProfileAdmin(userId: string, data: { firstName?: string; lastName?: string; email?: string }): Promise<User> {
+    const updateData: any = { updatedAt: new Date() };
+    if (data.firstName !== undefined) updateData.firstName = data.firstName;
+    if (data.lastName !== undefined) updateData.lastName = data.lastName;
+    if (data.email !== undefined) updateData.email = data.email;
+    const [user] = await db.update(users).set(updateData).where(eq(users.id, userId)).returning();
+    return user;
+  }
+
+  async updateTransactionDate(type: 'deposit' | 'stock_purchase', id: string, date: Date): Promise<void> {
+    if (type === 'deposit') {
+      await db.update(deposits).set({ createdAt: date }).where(eq(deposits.id, id));
+    } else {
+      await db.update(userStocks).set({ createdAt: date, purchaseDate: date }).where(eq(userStocks.id, id));
+    }
   }
 
   async updateUserProfile(userId: string, profileData: {
