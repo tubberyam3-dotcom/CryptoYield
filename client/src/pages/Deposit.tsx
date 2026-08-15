@@ -1256,18 +1256,20 @@ export default function Deposit() {
                       </div>
 
                       <div className="pt-4 space-y-3">
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => {
-                            setSelectedMethod("bank");
-                            setBankStep(1);
-                          }}
-                          data-testid="button-try-bank-transfer"
-                        >
-                          <Building2 className="h-4 w-4 mr-2" />
-                          Try Bank Transfer Instead
-                        </Button>
+                        {enabledMethods?.bank && (
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => {
+                              setSelectedMethod("bank");
+                              setBankStep(1);
+                            }}
+                            data-testid="button-try-bank-transfer"
+                          >
+                            <Building2 className="h-4 w-4 mr-2" />
+                            Try Bank Transfer Instead
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           className="w-full"
