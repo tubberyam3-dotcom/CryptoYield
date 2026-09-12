@@ -124,10 +124,14 @@ export default function Withdrawal() {
       const res = await apiRequest("POST", "/api/withdrawals", data);
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       toast({
-        title: "Withdrawal Submitted",
-        description: data.message,
+        title: variables.withdrawMethod === 'wire_transfer'
+          ? "New Withdrawal Account Submitted for Approval"
+          : "Withdrawal Submitted",
+        description: variables.withdrawMethod === 'wire_transfer'
+          ? "Your account will be verified and qualified. An update will be sent to your email shortly."
+          : data.message,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/withdrawals"] });
@@ -750,8 +754,18 @@ export default function Withdrawal() {
                       <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-500/10 flex items-center justify-center">
                         <CheckCircle2 className="w-10 h-10 text-green-500" />
                       </div>
-                      <h2 className="text-2xl font-bold mb-2">Withdrawal Submitted!</h2>
-                      <p className="text-muted-foreground mb-6">Your wire transfer request has been submitted for review.</p>
+                      <h2 className="text-2xl font-bold mb-2">New Withdrawal Account Submitted for Approval</h2>
+                      <p className="text-muted-foreground mb-3">
+                        Your new bank account has been submitted for review.
+                      </p>
+                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6 text-left">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-muted-foreground">
+                            Your account will be verified and qualified. An update will be sent to your email shortly.
+                          </p>
+                        </div>
+                      </div>
                       
                       <Card className="p-4 text-left mb-6">
                         <div className="space-y-3">
