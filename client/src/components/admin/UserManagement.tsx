@@ -251,6 +251,21 @@ export function UserManagement() {
     },
   });
 
+  const withdrawalSuspensionMutation = useMutation({
+    mutationFn: async ({ userId, suspended }: { userId: string; suspended: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/withdrawal-suspension`, { suspended });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: data.user.withdrawalSuspended ? "Withdrawals Suspended" : "Withdrawals Restored", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      if (viewingUserId) queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${viewingUserId}`] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Update Withdrawals", description: error.message, variant: "destructive" });
+    },
+  });
+
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       const response = await apiRequest("DELETE", `/api/admin/users/${userId}`);
@@ -766,6 +781,17 @@ export function UserManagement() {
                           Activate User
                         </DropdownMenuItem>
                       )}
+                      <DropdownMenuItem
+                        className={(user as any).withdrawalSuspended ? "text-green-600" : "text-amber-600"}
+                        onClick={() => withdrawalSuspensionMutation.mutate({
+                          userId: user.id,
+                          suspended: !(user as any).withdrawalSuspended,
+                        })}
+                        data-testid={`menu-withdrawal-suspension-${user.id}`}
+                      >
+                        <AlertTriangle className="w-4 h-4 mr-2" />
+                        {(user as any).withdrawalSuspended ? "Restore Withdrawals" : "Suspend Withdrawals"}
+                      </DropdownMenuItem>
                       <DropdownMenuItem data-testid={`menu-assign-group-${user.id}`}>
                         <FolderPlus className="w-4 h-4 mr-2" />
                         Assign to Group
@@ -1203,6 +1229,12 @@ export function UserManagement() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">XP Balance</span>
                     <span className="font-medium">{userDetails.xpBalance || 0} XP</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Withdrawals</span>
+                    <span className={(userDetails as any).withdrawalSuspended ? "font-medium text-red-500" : "font-medium text-green-500"}>
+                      {(userDetails as any).withdrawalSuspended ? "Suspended" : "Enabled"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Created</span>

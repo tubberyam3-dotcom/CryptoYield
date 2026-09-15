@@ -43,6 +43,7 @@ export const users = pgTable("users", {
   xpBalance: integer("xp_balance").default(0), // User's XP balance
   kycStatus: varchar("kyc_status", { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   role: varchar("role", { enum: ['user', 'admin'] }).default('user'),
+  withdrawalSuspended: boolean("withdrawal_suspended").default(false).notNull(),
   lastDailyRewardClaim: timestamp("last_daily_reward_claim"), // Track last daily reward claim
   lastXpClaim: timestamp("last_xp_claim"), // Track last XP claim
   xpCode: varchar("xp_code", { length: 11 }).unique(), // One-time 11-character login code

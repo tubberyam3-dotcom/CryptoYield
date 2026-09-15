@@ -22,6 +22,7 @@ export default function Withdrawal() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const withdrawalsSuspended = !!(user as any)?.withdrawalSuspended;
 
   const { data: stats } = useQuery<{ availableBalance: string }>({
     queryKey: ["/api/dashboard/stats"],
@@ -257,6 +258,19 @@ export default function Withdrawal() {
         <TopBar title="Withdraw Funds" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
+          {withdrawalsSuspended && (
+            <Card className="border-red-500/30 bg-red-500/10 p-5" data-testid="notice-withdrawal-suspended">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h2 className="font-semibold text-red-500">Withdrawals Suspended</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Withdrawals are currently suspended on your account. Please contact support for assistance.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
           {!selectedMethod && (
             <div className="flex justify-between items-center mb-4">
               <div className="text-sm text-muted-foreground">
@@ -271,6 +285,7 @@ export default function Withdrawal() {
             </div>
           )}
 
+          <div className={withdrawalsSuspended ? "pointer-events-none opacity-50" : ""}>
           {!selectedMethod ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
               {withdrawalMethods.map((method) => (
@@ -1034,6 +1049,7 @@ export default function Withdrawal() {
               )}
             </div>
           )}
+          </div>
         </main>
       </div>
       

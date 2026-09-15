@@ -3455,6 +3455,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/admin/users/:id/withdrawal-suspension', adminAuth, async (req: any, res) => {
+    try {
+      const { suspended } = req.body;
+      if (typeof suspended !== 'boolean') {
+        return res.status(400).json({ message: "Suspended must be true or false" });
+      }
+      const updatedUser = await storage.updateUserWithdrawalSuspension(req.params.id, suspended);
+      res.json({
+        user: updatedUser,
+        message: suspended ? "Withdrawals suspended for this user" : "Withdrawal access restored",
+      });
+    } catch (error: any) {
+      console.error("Error updating withdrawal suspension:", error);
+      res.status(500).json({ message: error.message || "Failed to update withdrawal suspension" });
+    }
+  });
+
   // Admin edit user profile (name, email)
   app.patch('/api/admin/users/:id/profile', adminAuth, async (req: any, res) => {
     try {

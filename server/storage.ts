@@ -104,6 +104,7 @@ export interface IStorage {
   deleteUser(userId: string): Promise<void>;
   updateUserRole(userId: string, role: 'user' | 'admin'): Promise<User>;
   updateUserKycStatus(userId: string, kycStatus: 'pending' | 'approved' | 'rejected'): Promise<User>;
+  updateUserWithdrawalSuspension(userId: string, suspended: boolean): Promise<User>;
   updateUserProfileAdmin(userId: string, data: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
   updateTransactionDate(type: 'deposit' | 'stock_purchase', id: string, date: Date): Promise<void>;
   getUserStats(): Promise<{
@@ -697,6 +698,16 @@ export class DatabaseStorage implements IStorage {
       .set({ kycStatus, updatedAt: new Date() })
       .where(eq(users.id, userId))
       .returning();
+    return user;
+  }
+
+  async updateUserWithdrawalSuspension(userId: string, suspended: boolean): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ withdrawalSuspended: suspended, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) throw new Error('User not found');
     return user;
   }
 
@@ -2464,6 +2475,9 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) {
       throw new Error('User not found');
+    }
+    if (user.withdrawalSuspended) {
+      throw new Error('Withdrawals are currently suspended on your account');
     }
 
     const userBalance = parseFloat(user.balance || '0');
