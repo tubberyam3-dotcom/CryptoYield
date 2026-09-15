@@ -56,6 +56,7 @@ import {
   type LoginHistory,
   type InsertLoginHistory,
 } from "@shared/schema";
+import { processWithdrawalRequest, type WithdrawalMethod } from "./withdrawalService";
 import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
 
@@ -2463,45 +2464,32 @@ export class DatabaseStorage implements IStorage {
   async processWithdrawal(
     userId: string,
     amount: string,
-    withdrawMethod: 'crypto' | 'wire_transfer' | 'merchant_pay',
+    withdrawMethod: WithdrawalMethod,
     destinationAddress: string,
     metadata?: any
   ): Promise<Withdrawal> {
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0 || numericAmount > 1000000) {
-      throw new Error('Invalid withdrawal amount. Must be between $0.01 and $1,000,000');
-    }
-
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user) {
-      throw new Error('User not found');
-    }
-    if (user.withdrawalSuspended) {
-      throw new Error('Withdrawals are currently suspended on your account');
-    }
-
-    const userBalance = parseFloat(user.balance || '0');
-    if (userBalance < numericAmount) {
-      throw new Error('Insufficient balance');
-    }
-
-    await db.update(users)
-      .set({ 
-        balance: sql`${users.balance} - ${amount}`,
-        updatedAt: new Date() 
-      })
-      .where(eq(users.id, userId));
-
-    const withdrawal = await this.createWithdrawal({
+    return processWithdrawalRequest(
+      {
+        getUser: async id => {
+          const [user] = await db.select().from(users).where(eq(users.id, id));
+          return user;
+        },
+        deductBalance: async (id, withdrawalAmount) => {
+          await db.update(users)
+            .set({
+              balance: sql`${users.balance} - ${withdrawalAmount}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, id));
+        },
+        createWithdrawal: withdrawal => this.createWithdrawal(withdrawal as InsertWithdrawal),
+      },
       userId,
       amount,
       withdrawMethod,
       destinationAddress,
-      status: 'pending',
       metadata,
-    });
-
-    return withdrawal;
+    );
   }
 
   async approveWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal> {
