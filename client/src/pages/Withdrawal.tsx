@@ -258,19 +258,6 @@ export default function Withdrawal() {
         <TopBar title="Withdraw Funds" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
-          {withdrawalsSuspended && (
-            <Card className="border-red-500/30 bg-red-500/10 p-5" data-testid="notice-withdrawal-suspended">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h2 className="font-semibold text-red-500">Withdrawals Suspended</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Withdrawals are currently suspended on your account. Please contact support for assistance.
-                  </p>
-                </div>
-              </div>
-            </Card>
-          )}
           {!selectedMethod && (
             <div className="flex justify-between items-center mb-4">
               <div className="text-sm text-muted-foreground">
@@ -285,7 +272,6 @@ export default function Withdrawal() {
             </div>
           )}
 
-          <div className={withdrawalsSuspended ? "pointer-events-none opacity-50" : ""}>
           {!selectedMethod ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
               {withdrawalMethods.map((method) => (
@@ -515,11 +501,19 @@ export default function Withdrawal() {
                   {/* Step 5: Success */}
                   {cryptoStep === 5 && (
                     <div className="py-12 text-center">
-                      <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-500/10 flex items-center justify-center">
-                        <CheckCircle2 className="w-10 h-10 text-green-500" />
+                      <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${withdrawalsSuspended ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
+                        {withdrawalsSuspended
+                          ? <AlertCircle className="w-10 h-10 text-red-500" />
+                          : <CheckCircle2 className="w-10 h-10 text-green-500" />}
                       </div>
-                      <h2 className="text-2xl font-bold mb-2">Withdrawal Submitted!</h2>
-                      <p className="text-muted-foreground mb-6">Your withdrawal request has been submitted for review.</p>
+                      <h2 className={`text-2xl font-bold mb-2 ${withdrawalsSuspended ? 'text-red-500' : ''}`}>
+                        {withdrawalsSuspended ? 'Withdrawals Suspended' : 'Withdrawal Submitted!'}
+                      </h2>
+                      <p className="text-muted-foreground mb-6">
+                        {withdrawalsSuspended
+                          ? 'Withdrawals are currently suspended on your account. Please contact support for assistance.'
+                          : 'Your withdrawal request has been submitted for review.'}
+                      </p>
                       
                       <Card className="p-4 text-left mb-6">
                         <div className="space-y-3">
@@ -766,21 +760,27 @@ export default function Withdrawal() {
                   {/* Step 5: Success */}
                   {wireStep === 5 && (
                     <div className="py-12 text-center">
-                      <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-500/10 flex items-center justify-center">
-                        <CheckCircle2 className="w-10 h-10 text-green-500" />
+                      <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${withdrawalsSuspended ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
+                        {withdrawalsSuspended
+                          ? <AlertCircle className="w-10 h-10 text-red-500" />
+                          : <CheckCircle2 className="w-10 h-10 text-green-500" />}
                       </div>
-                      <h2 className="text-2xl font-bold mb-2">New Withdrawal Account Submitted for Approval</h2>
+                      <h2 className={`text-2xl font-bold mb-2 ${withdrawalsSuspended ? 'text-red-500' : ''}`}>
+                        {withdrawalsSuspended ? 'Withdrawals Suspended' : 'New Withdrawal Account Submitted for Approval'}
+                      </h2>
                       <p className="text-muted-foreground mb-3">
-                        Your new bank account has been submitted for review.
+                        {withdrawalsSuspended
+                          ? 'Withdrawals are currently suspended on your account. Please contact support for assistance.'
+                          : 'Your new bank account has been submitted for review.'}
                       </p>
-                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6 text-left">
+                      {!withdrawalsSuspended && <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6 text-left">
                         <div className="flex items-start gap-2">
                           <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
                           <p className="text-sm text-muted-foreground">
                             Your account will be verified and qualified. An update will be sent to your email shortly.
                           </p>
                         </div>
-                      </div>
+                      </div>}
                       
                       <Card className="p-4 text-left mb-6">
                         <div className="space-y-3">
@@ -1008,11 +1008,19 @@ export default function Withdrawal() {
                   {/* Step 5: Success */}
                   {merchantStep === 5 && (
                     <div className="py-12 text-center">
-                      <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-500/10 flex items-center justify-center">
-                        <CheckCircle2 className="w-10 h-10 text-green-500" />
+                      <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${withdrawalsSuspended ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
+                        {withdrawalsSuspended
+                          ? <AlertCircle className="w-10 h-10 text-red-500" />
+                          : <CheckCircle2 className="w-10 h-10 text-green-500" />}
                       </div>
-                      <h2 className="text-2xl font-bold mb-2">Withdrawal Submitted!</h2>
-                      <p className="text-muted-foreground mb-6">Your {selectedMerchant?.name} payment request has been submitted.</p>
+                      <h2 className={`text-2xl font-bold mb-2 ${withdrawalsSuspended ? 'text-red-500' : ''}`}>
+                        {withdrawalsSuspended ? 'Withdrawals Suspended' : 'Withdrawal Submitted!'}
+                      </h2>
+                      <p className="text-muted-foreground mb-6">
+                        {withdrawalsSuspended
+                          ? 'Withdrawals are currently suspended on your account. Please contact support for assistance.'
+                          : `Your ${selectedMerchant?.name} payment request has been submitted.`}
+                      </p>
                       
                       <Card className="p-4 text-left mb-6">
                         <div className="space-y-3">
@@ -1049,7 +1057,6 @@ export default function Withdrawal() {
               )}
             </div>
           )}
-          </div>
         </main>
       </div>
       
