@@ -7,7 +7,8 @@ test('joint account funding uses transactions and rolls back failed records', {
 }, async t => {
   const { db, pool } = await import('./db');
   const { DatabaseStorage } = await import('./storage');
-  const { users, jointAccounts, userJointAccounts, stockProducts, withdrawals } = await import('../shared/schema');
+  const { issueWithdrawalCode } = await import('./jointWithdrawalCodes');
+  const { users, jointAccounts, userJointAccounts, stockProducts, withdrawals, sessions } = await import('../shared/schema');
   const { eq, inArray } = await import('drizzle-orm');
   const storage = new DatabaseStorage();
   const rollback = new Error('ROLLBACK_TEST_FIXTURES');
@@ -39,11 +40,21 @@ test('joint account funding uses transactions and rolls back failed records', {
       await assert.rejects(storage.processWithdrawal(firstId, '300', 'crypto', 'test-wallet'), /XP code/);
       await assert.rejects(storage.processWithdrawal(firstId, '300', 'crypto', 'test-wallet', undefined, 'INVALIDCODE'), /XP code/);
       assert.equal(await balance(), 350);
-      const withdrawal = await storage.processWithdrawal(firstId, '300', 'crypto', 'test-wallet', undefined, code);
+      let authorizationCode = "";
+      await issueWithdrawalCode(firstId, joint.id, secondId,
+        { amount: "300", withdrawMethod: "crypto", destinationAddress: "test-wallet" },
+        async deliveredCode => { authorizationCode = deliveredCode; return { success: true }; });
+      await assert.rejects(storage.processWithdrawal(firstId, '300', 'crypto', 'test-wallet', undefined, code), /valid XP code/);
+      assert.equal(await balance(), 350);
+      const withdrawal = await storage.processWithdrawal(firstId, '300', 'crypto', 'test-wallet', undefined, authorizationCode);
       assert.equal(withdrawal.userId, firstId);
       assert.equal(await balance(), 50);
+      await assert.rejects(storage.processWithdrawal(firstId, '300', 'crypto', 'test-wallet', undefined, authorizationCode), /new XP code/);
+      await issueWithdrawalCode(secondId, joint.id, firstId,
+        { amount: "51", withdrawMethod: "wire_transfer", destinationAddress: "test-bank" },
+        async deliveredCode => { authorizationCode = deliveredCode; return { success: true }; });
       await assert.rejects(storage.processWithdrawal(secondId, '51', 'wire_transfer', 'test-bank',
-        undefined, code.split('').reverse().join('')), /Insufficient balance/);
+        undefined, authorizationCode), /Insufficient balance/);
       assert.equal(await balance(), 50);
       assert.equal((await tx.select().from(withdrawals).where(eq(withdrawals.userId, firstId))).length, 1);
 
@@ -58,10 +69,49 @@ test('joint account funding uses transactions and rolls back failed records', {
       assert.equal(investment.userId, null);
       assert.equal(await balance(), 40);
 
+      // Authorize all methods from either member, without using either login XP.
+      const methods = ['crypto', 'wire_transfer', 'merchant_pay'] as const;
+      for (const actorId of [firstId, secondId]) {
+        const partnerId = actorId === firstId ? secondId : firstId;
+        for (const method of methods) {
+          const sid = `joint-withdrawal-code:${actorId}`;
+          const [prior] = await tx.select().from(sessions).where(eq(sessions.sid, sid));
+          if (prior) await tx.update(sessions).set({
+            sess: { ...prior.sess as object, sentAt: 0 },
+          }).where(eq(sessions.sid, sid));
+          const request = { amount: '1', withdrawMethod: method, destinationAddress: `test-${method}` };
+          const before = await balance();
+          await issueWithdrawalCode(actorId, joint.id, partnerId, request,
+            async deliveredCode => { authorizationCode = deliveredCode; return { success: true }; });
+          await assert.rejects(issueWithdrawalCode(actorId, joint.id, partnerId, request,
+            async () => { throw new Error('Must not send during cooldown'); }), /wait 60 seconds/);
+          await assert.rejects(storage.processWithdrawal(actorId, '2', method, request.destinationAddress,
+            undefined, authorizationCode), /details changed/);
+          assert.equal(await balance(), before);
+          const authorized = await storage.processWithdrawal(actorId, '1', method, request.destinationAddress,
+            undefined, authorizationCode);
+          assert.equal(authorized.userId, actorId);
+          assert.equal(await balance(), before - 1);
+          await assert.rejects(storage.processWithdrawal(actorId, '1', method, request.destinationAddress,
+            undefined, authorizationCode), /new XP code/);
+          assert.equal(await balance(), before - 1);
+        }
+      }
+
+      // Failed delivery must not replace the previous authorization.
+      const secondSid = `joint-withdrawal-code:${secondId}`;
+      const [prior] = await tx.select().from(sessions).where(eq(sessions.sid, secondSid));
+      await tx.update(sessions).set({ sess: { ...prior.sess as object, sentAt: 0 } }).where(eq(sessions.sid, secondSid));
+      await assert.rejects(issueWithdrawalCode(secondId, joint.id, firstId,
+        { amount: '1', withdrawMethod: 'crypto', destinationAddress: 'test-failure' },
+        async () => ({ success: false })), /Could not send/);
+      assert.equal(((await tx.select().from(sessions).where(eq(sessions.sid, secondSid)))[0].sess as { used: boolean }).used, true);
+
+      const suspendedBalance = await balance();
       await tx.update(users).set({ withdrawalSuspended: true }).where(eq(users.id, secondId));
       await assert.rejects(storage.processWithdrawal(secondId, '10', 'merchant_pay', 'test-merchant',
         undefined, code.split('').reverse().join('')), /currently suspended/);
-      assert.equal(await balance(), 40);
+      assert.equal(await balance(), suspendedBalance);
       throw rollback;
     }), error => error === rollback);
   } finally {

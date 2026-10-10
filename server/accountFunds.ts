@@ -1,5 +1,3 @@
-import { timingSafeEqual } from 'node:crypto';
-
 const SCALE = BigInt(100000000);
 
 function units(value: string): bigint {
@@ -34,18 +32,4 @@ export function allocateAccountDebit(
     remaining -= debit;
   }
   return changes;
-}
-
-export function requireWithdrawalXpCode(
-  isJoint: boolean,
-  savedCode: string | null,
-  suppliedCode?: string,
-): void {
-  if (!isJoint) return;
-  if (!savedCode) throw new Error('Generate your XP code in account settings before withdrawing from a joint account');
-  const supplied = Buffer.from(typeof suppliedCode === 'string' ? suppliedCode.trim().toUpperCase() : '');
-  const expected = Buffer.from(savedCode);
-  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
-    throw new Error('A valid XP code is required for every joint account withdrawal');
-  }
 }

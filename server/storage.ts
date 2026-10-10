@@ -59,7 +59,8 @@ import {
 import { processWithdrawalRequest, WITHDRAWALS_SUSPENDED_MESSAGE, type WithdrawalMethod } from "./withdrawalService";
 import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql, inArray } from "drizzle-orm";
-import { allocateAccountDebit, requireWithdrawalXpCode } from "./accountFunds";
+import { allocateAccountDebit } from "./accountFunds";
+import { checkAndConsumeWithdrawalCode } from "./jointWithdrawalCodes";
 
 type FundsTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -2526,10 +2527,16 @@ export class DatabaseStorage implements IStorage {
     metadata?: any,
     xpCode?: string
   ): Promise<Withdrawal> {
-    return this.withAccountFunds(userId, async (tx, members, jointAccountId) => {
+    const result = await this.withAccountFunds(userId, async (tx, members, jointAccountId) => {
       const user = members.find(member => member.id === userId)!;
       if (user.withdrawalSuspended) throw new Error(WITHDRAWALS_SUSPENDED_MESSAGE);
-      requireWithdrawalXpCode(!!jointAccountId, user.xpCode, xpCode);
+      if (jointAccountId) {
+        const partner = members.find(member => member.id !== userId);
+        if (!partner) throw new Error("Your joint account partner must join before a withdrawal can be authorized.");
+        const problem = await checkAndConsumeWithdrawalCode(tx, userId, jointAccountId, partner.id,
+          { amount, withdrawMethod, destinationAddress, metadata }, xpCode);
+        if (problem) return { authorizationError: problem } as const;
+      }
       return processWithdrawalRequest(
       {
         getUser: async () => ({
@@ -2540,7 +2547,7 @@ export class DatabaseStorage implements IStorage {
           await this.debitAccount(tx, members, id, Number(withdrawalAmount).toFixed(8));
         },
         createWithdrawal: async withdrawal => {
-          const [created] = await tx.insert(withdrawals).values(withdrawal as InsertWithdrawal).returning();
+          const [created] = await tx.insert(withdrawals).values(withdrawal).returning();
           return created;
         },
       },
@@ -2551,6 +2558,8 @@ export class DatabaseStorage implements IStorage {
       metadata,
     );
     });
+    if ("authorizationError" in result) throw new Error(result.authorizationError);
+    return result;
   }
 
   async approveWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal> {

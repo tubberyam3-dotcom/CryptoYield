@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { allocateAccountDebit, requireWithdrawalXpCode } from './accountFunds';
+import { allocateAccountDebit } from './accountFunds';
 
 const members = [
   { id: 'primary', balance: '100.00000000' },
@@ -44,19 +44,7 @@ test('invalid or excessive amounts never change the provided balances', () => {
   assert.equal(members[0].balance, '100.00000000');
 });
 
-test('joint withdrawals require the initiating member XP code on every request', () => {
-  const savedCode = 'TESTXP12345';
-  for (const suppliedCode of [undefined, '', 'WRONGXP1234']) {
-    assert.throws(() => requireWithdrawalXpCode(true, savedCode, suppliedCode), /valid XP code/);
-  }
-  requireWithdrawalXpCode(true, savedCode, ' testxp12345 ');
-  // Authorization does not carry over to the next request.
-  assert.throws(() => requireWithdrawalXpCode(true, savedCode), /valid XP code/);
-  assert.throws(() => requireWithdrawalXpCode(true, null, savedCode), /Generate your XP code/);
-});
-
 test('personal account withdrawals do not require XP codes', () => {
-  requireWithdrawalXpCode(false, null);
   assert.deepEqual(allocateAccountDebit([members[0]], 'primary', '75'), [
     { id: 'primary', balance: '25.00000000' },
   ]);

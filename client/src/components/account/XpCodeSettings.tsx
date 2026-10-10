@@ -20,7 +20,7 @@ export function XpCodeSettings({
         <KeyRound className="w-4 h-4" /> XP Code
       </h4>
       <p className="text-sm text-muted-foreground">
-        Generate your XP code once. Use it for secure login and to authorize each joint-account withdrawal.
+        Generate your XP code once for secure login. Joint withdrawals use a separate one-time code sent to your partner’s registered email.
       </p>
       {generatedCode ? (
         <div className="space-y-3">

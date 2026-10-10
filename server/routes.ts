@@ -6,6 +6,8 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import yahooFinance from "yahoo-finance2";
 import { MarketQuoteCache, MARKET_REFRESH_MS, CRYPTO_SYMBOLS, fetchCryptoQuote } from "./marketPrices";
 import PDFDocument from "pdfkit";
+import { issueWithdrawalCode } from "./jointWithdrawalCodes";
+import { emailService } from "./email";
 
 import {
   insertPortfolioSchema,
@@ -4491,6 +4493,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Withdrawal Endpoints
+  app.post("/api/withdrawals/joint-xp-code", express.json(), enhancedAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const parsed = insertWithdrawalSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Complete your withdrawal details before requesting an XP code." });
+      const { amount, withdrawMethod, destinationAddress, metadata } = parsed.data;
+      if (!Number.isFinite(Number(amount)) || Number(amount) <= 0 || Number(amount) > 1_000_000 || !destinationAddress?.trim()) {
+        return res.status(400).json({ message: "Enter a valid amount and withdrawal destination." });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "Authentication required" });
+      if (user.withdrawalSuspended) return res.status(403).json({ message: "Withdrawals are currently suspended on your account." });
+      const context = await storage.getAccountContext(userId);
+      if (!context.isJointAccount) return res.status(400).json({ message: "Partner authorization is only required for joint accounts." });
+      const members = await storage.getJointAccountMembers(context.accountId);
+      const partner = members.find(member => member.userId !== userId)?.user;
+      if (!partner?.email) return res.status(400).json({ message: "Your partner must join with a registered email before a withdrawal can be authorized." });
+      const escapeHtml = (value: string) => value.replace(/[&<>"']/g, character =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
+      await issueWithdrawalCode(userId, context.accountId, partner.id,
+        { amount, withdrawMethod, destinationAddress, metadata },
+        code => emailService.sendEmail({
+          to: partner.email!,
+          subject: "Authorize a joint-account withdrawal | Reflux Capital",
+          text: `A partner requested a joint-account withdrawal of $${Number(amount).toFixed(2)} via ${withdrawMethod} to ${destinationAddress}. Your one-time withdrawal XP code is ${code}. It expires in 10 minutes and authorizes only this withdrawal. Share it with your partner only if you approve this withdrawal. If you do not recognize this request, do not share the code.`,
+          html: `<p>A partner requested a joint-account withdrawal of $${Number(amount).toFixed(2)} via ${escapeHtml(withdrawMethod)} to ${escapeHtml(destinationAddress)}.</p><p>Your one-time withdrawal XP code:</p><p style="font-size:24px;font-weight:bold;letter-spacing:3px">${code}</p><p>This code expires in 10 minutes and authorizes only this withdrawal. Share it with your partner only if you approve. If you do not recognize this request, do not share the code.</p>`,
+        }));
+      const [local, domain] = partner.email.split("@");
+      return res.json({ success: true, recipientEmail: `${local.slice(0, 1)}***@${domain}`, expiresInSeconds: 600 });
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message || "Unable to send partner authorization code." });
+    }
+  });
+
   app.post("/api/withdrawals", express.json(), enhancedAuth, async (req, res) => {
     try {
       if (!req.user) {

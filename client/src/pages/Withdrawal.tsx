@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { SiBitcoin, SiEthereum, SiTether, SiBinance, SiSolana, SiRipple, SiCardano, SiDogecoin, SiPolygon, SiLitecoin, SiWise } from "react-icons/si";
 import { Copy, Check, Building2, Store, Wallet, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { JointWithdrawalCodeForm } from "@/components/account/JointWithdrawalCodeForm";
 
 export default function Withdrawal() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -23,6 +24,8 @@ export default function Withdrawal() {
   const [, setLocation] = useLocation();
   const { user, hasJointAccount } = useAuth();
   const [xpCode, setXpCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState<string>();
   const withdrawalsSuspended = !!(user as any)?.withdrawalSuspended;
 
   const { data: stats } = useQuery<{ availableBalance: string }>({
@@ -55,6 +58,46 @@ export default function Withdrawal() {
   const [merchantPlatform, setMerchantPlatform] = useState("");
   const [merchantEmail, setMerchantEmail] = useState("");
   const [merchantNote, setMerchantNote] = useState("");
+
+  const currentStep = selectedMethod === "crypto" ? cryptoStep : selectedMethod === "wire" ? wireStep : merchantStep;
+  const currentWithdrawal = selectedMethod === "crypto" ? {
+    amount: cryptoAmount.replace(/,/g, ""), withdrawMethod: "crypto" as const,
+    destinationAddress: cryptoWalletAddress,
+    metadata: { crypto: selectedCrypto, network: cryptoNetwork, walletAddress: cryptoWalletAddress },
+  } : selectedMethod === "wire" ? {
+    amount: wireAmount.replace(/,/g, ""), withdrawMethod: "wire_transfer" as const,
+    destinationAddress: accountNumber,
+    metadata: { bankName, accountHolderName, accountNumber, routingNumber, swiftCode, bankAddress },
+  } : {
+    amount: merchantAmount.replace(/,/g, ""), withdrawMethod: "merchant_pay" as const,
+    destinationAddress: merchantEmail,
+    metadata: { platform: merchantPlatform, email: merchantEmail, note: merchantNote },
+  };
+  const withdrawalDetailsKey = JSON.stringify(currentWithdrawal);
+  useEffect(() => {
+    setXpCode("");
+    setCodeSent(false);
+    setRecipientEmail(undefined);
+  }, [withdrawalDetailsKey, selectedMethod]);
+
+  const sendCodeMutation = useMutation({
+    mutationFn: async () => {
+      const requestedDetailsKey = withdrawalDetailsKey;
+      const res = await apiRequest("POST", "/api/withdrawals/joint-xp-code", currentWithdrawal);
+      return { ...await res.json(), requestedDetailsKey };
+    },
+    onSuccess: data => {
+      if (data.requestedDetailsKey !== withdrawalDetailsKey) return;
+      setXpCode("");
+      setCodeSent(true);
+      setRecipientEmail(data.recipientEmail);
+      toast({ title: "XP Code Sent", description: "Ask your partner for the one-time code sent to their registered email." });
+      requestAnimationFrame(() => document.getElementById("withdrawal-xp-code")?.focus());
+    },
+    onError: (error: Error) => {
+      toast({ title: "Unable to Send XP Code", description: error.message, variant: "destructive" });
+    },
+  });
 
   const cryptoCoins = [
     { id: "BTC", name: "Bitcoin", icon: SiBitcoin, color: "text-orange-500", networks: ["Bitcoin", "Lightning Network"] },
@@ -131,6 +174,7 @@ export default function Withdrawal() {
     },
     onSuccess: (data, variables) => {
       setXpCode("");
+      setCodeSent(false);
       if (variables.withdrawMethod === 'crypto') setCryptoStep(5);
       if (variables.withdrawMethod === 'wire_transfer') setWireStep(5);
       if (variables.withdrawMethod === 'merchant_pay') setMerchantStep(5);
@@ -148,6 +192,7 @@ export default function Withdrawal() {
     },
     onError: (error: Error) => {
       setXpCode("");
+      if (error.message.includes("Request a new") || error.message.includes("Too many")) setCodeSent(false);
       if (error.message.includes("Withdrawals are currently suspended")) {
         if (selectedMethod === 'crypto') setCryptoStep(5);
         if (selectedMethod === 'wire') setWireStep(5);
@@ -168,12 +213,16 @@ export default function Withdrawal() {
 
   const validateXpCode = () => {
     if (!hasJointAccount || withdrawalsSuspended) return true;
-    if (/^[A-Z0-9]{11}$/.test(xpCode.trim().toUpperCase())) return true;
+    if (codeSent && /^[A-Z0-9]{11}$/.test(xpCode.trim().toUpperCase())) return true;
     toast({
       title: "XP Code Required",
-      description: "Enter your 11-character XP code to authorize this joint account withdrawal.",
+      description: "Request a code and enter the one-time XP code sent to your partner's registered email.",
       variant: "destructive",
     });
+    const formControl = document.querySelector<HTMLElement>(codeSent
+      ? "#withdrawal-xp-code" : '[data-testid="withdrawal-send-xp-code"]');
+    formControl?.scrollIntoView({ behavior: "smooth", block: "center" });
+    formControl?.focus({ preventScroll: true });
     return false;
   };
 
@@ -251,6 +300,7 @@ export default function Withdrawal() {
 
   const resetAll = () => {
     setXpCode("");
+    setCodeSent(false);
     setSelectedMethod(null);
     setCryptoStep(1);
     setSelectedCrypto(null);
@@ -284,26 +334,17 @@ export default function Withdrawal() {
         <TopBar title="Withdraw Funds" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
-          {hasJointAccount && selectedMethod && !withdrawalsSuspended &&
-            cryptoStep < 4 && wireStep < 4 && merchantStep < 4 && (
-            <Card className="p-5 space-y-3">
-              <Label htmlFor="withdrawal-xp-code">Joint Account Withdrawal — XP Code</Label>
-              <p className="text-sm text-muted-foreground">
-                Both members can withdraw from the combined available balance. Enter your own XP code for every withdrawal.
-                If you have not generated one, generate it in account settings first.
-              </p>
-              <Input
-                id="withdrawal-xp-code"
-                data-testid="withdrawal-xp-code"
-                type="password"
-                autoComplete="off"
-                maxLength={11}
-                value={xpCode}
-                onChange={event => setXpCode(event.target.value.toUpperCase())}
-                placeholder="Your 11-character XP code"
-                className="max-w-sm"
-              />
-            </Card>
+          {hasJointAccount && selectedMethod && !withdrawalsSuspended && currentStep < 4 && (
+            <JointWithdrawalCodeForm
+              code={xpCode}
+              onCodeChange={setXpCode}
+              onSend={() => sendCodeMutation.mutate()}
+              sending={sendCodeMutation.isPending}
+              sent={codeSent}
+              ready={currentStep === 3 && Number(currentWithdrawal.amount) > 0 && !!currentWithdrawal.destinationAddress}
+              recipientEmail={recipientEmail}
+              disabled={withdrawMutation.isPending}
+            />
           )}
           {!selectedMethod && (
             <div className="flex justify-between items-center mb-4">
