@@ -24,7 +24,7 @@ export default function Dashboard() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationType, setCelebrationType] = useState<"investment" | "achievement" | "milestone" | "streak">("achievement");
   const [celebrationMessage, setCelebrationMessage] = useState("");
-  const { user, isLoading, hasJointAccount } = useAuth();
+  const { user, isLoading } = useAuth();
 
   // Authentication is handled by App component routing
 
@@ -47,18 +47,6 @@ export default function Dashboard() {
         <TopBar title="Dashboard" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="mx-auto max-w-[1440px] space-y-4 p-3 pb-28 sm:p-5 lg:space-y-5 lg:p-7 lg:pb-7">
-          <nav aria-label="Account shortcuts" className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
-            <span className="w-full text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:w-auto sm:pr-1">Account shortcuts</span>
-            <Link href="/settings?tab=security#xp-code" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold transition-colors hover:border-primary/40 hover:bg-primary/5">
-              <i className="fas fa-key text-primary" aria-hidden="true"></i>
-              XP Code
-            </Link>
-            <Link href="/settings?tab=account#joint-account" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold transition-colors hover:border-primary/40 hover:bg-primary/5">
-              <i className="fas fa-users text-primary" aria-hidden="true"></i>
-              {hasJointAccount ? "Joint account" : "Set up joint account"}
-            </Link>
-          </nav>
-
           <section aria-label="Account balance" className="space-y-3">
             <h2 className="text-lg font-bold text-foreground">Your account</h2>
             <BalanceSummary />
