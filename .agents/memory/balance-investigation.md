@@ -9,6 +9,12 @@ Investigate published account balances using the database skill's read-only prod
 
 **How to apply:** Establish the data environment before drawing conclusions. Never overwrite live data with the development dataset.
 
+Parameterized production queries must contain one SQL statement per call.
+
+**Why:** Sending several statements with parameters fails with PostgreSQL's “cannot insert multiple commands into a prepared statement” error.
+
+**How to apply:** Run independent parameterized audit queries in parallel rather than combining them into one SQL string.
+
 Do not credit or adjust cash by replacing it with arithmetic based on an earlier balance read. Use atomic increments or locked transactions, and commit administrative adjustments together with their financial record.
 
 **Why:** Overlapping credits, spending and admin adjustments can overwrite one another even when all final balances remain nonnegative.
