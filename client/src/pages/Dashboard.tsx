@@ -17,6 +17,7 @@ import { CelebrationAnimation } from "@/components/gamification/CelebrationAnima
 import { InteractiveElements } from "@/components/gamification/InteractiveElements";
 import { FloatingClaimButton } from "@/components/dashboard/FloatingClaimButton";
 import { useAuth } from "@/hooks/useAuth";
+import { useGreeting } from "@/hooks/useGreeting";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const [celebrationType, setCelebrationType] = useState<"investment" | "achievement" | "milestone" | "streak">("achievement");
   const [celebrationMessage, setCelebrationMessage] = useState("");
   const { user, isLoading } = useAuth();
+  const { greeting, source: greetingSource } = useGreeting(user?.firstName, !!user);
 
   // Authentication is handled by App component routing
 
@@ -48,7 +50,14 @@ export default function Dashboard() {
         
         <main className="mx-auto max-w-[1440px] space-y-4 p-3 pb-28 sm:p-5 lg:space-y-5 lg:p-7 lg:pb-7">
           <section aria-label="Account balance" className="space-y-3">
-            <h2 className="text-lg font-bold text-foreground">Your account</h2>
+            <h2
+              className="text-lg font-bold text-foreground"
+              data-testid="dashboard-greeting"
+              data-greeting-source={greetingSource}
+              title={greetingSource === "ip" ? "Based on your approximate IP timezone" : "Based on your device timezone"}
+            >
+              {greeting}
+            </h2>
             <BalanceSummary />
           </section>
 

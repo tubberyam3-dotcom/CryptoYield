@@ -9,6 +9,7 @@ import PDFDocument from "pdfkit";
 import { issueWithdrawalCode } from "./jointWithdrawalCodes";
 import { emailService } from "./email";
 import { listAdminJoinRequests, listUserJoinRequests, reviewJointAccountJoin } from "./jointAccountJoinRequests";
+import { resolveIpTimezone } from "./ipTimezone";
 
 import {
   insertPortfolioSchema,
@@ -106,6 +107,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // Auth routes
+  app.get("/api/account/timezone", enhancedAuth, async (req, res) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    const timeZone = await resolveIpTimezone(req.ip);
+    res.json({ timeZone, source: timeZone ? "ip" : "unavailable" });
+  });
+
   app.get('/api/auth/user', async (req: any, res) => {
     try {
       // Check for password-based session
