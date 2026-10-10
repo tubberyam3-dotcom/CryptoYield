@@ -197,19 +197,19 @@ export function JointAccountManager() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Heart className="h-6 w-6 text-pink-500" />
-          <h3 className="text-2xl font-semibold">Joint Account</h3>
+    <div className="w-full min-w-0 space-y-6">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center space-x-3">
+          <Heart className="h-6 w-6 shrink-0 text-pink-500" />
+          <h3 className="text-xl font-semibold sm:text-2xl">Joint Account</h3>
         </div>
         {!hasJointAccount && !restrictNewRequests && (
-          <div className="flex space-x-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:space-x-2 sm:gap-0">
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" data-testid="button-create-joint-account">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Joint Account
+                <Button size="sm" className="h-auto min-h-9 min-w-0 whitespace-normal px-2 text-xs sm:text-sm" data-testid="button-create-joint-account">
+                  <Plus className="mr-1 h-4 w-4 shrink-0 sm:mr-2" />
+                  <span className="min-w-0 text-left">Create Joint Account</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -240,7 +240,7 @@ export function JointAccountManager() {
                       data-testid="input-joint-account-description"
                     />
                   </div>
-                  <div className="flex justify-end space-x-2">
+                  <div className="flex flex-wrap justify-end gap-2">
                     <Button 
                       variant="outline" 
                       onClick={() => setCreateDialogOpen(false)}
@@ -262,9 +262,9 @@ export function JointAccountManager() {
 
             <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" data-testid="button-join-joint-account">
-                  <Users className="h-4 w-4 mr-2" />
-                  Join Joint Account
+                <Button variant="outline" size="sm" className="h-auto min-h-9 min-w-0 whitespace-normal px-2 text-xs sm:text-sm" data-testid="button-join-joint-account">
+                  <Users className="mr-1 h-4 w-4 shrink-0 sm:mr-2" />
+                  <span className="min-w-0 text-left">Join Joint Account</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -287,7 +287,7 @@ export function JointAccountManager() {
                       data-testid="input-join-code"
                     />
                   </div>
-                  <div className="flex justify-end space-x-2">
+                  <div className="flex flex-wrap justify-end gap-2">
                     <Button 
                       variant="outline" 
                       onClick={() => setJoinDialogOpen(false)}
@@ -312,11 +312,11 @@ export function JointAccountManager() {
 
       {!hasJointAccount && pendingJoinRequest && (
         <Card className="border-amber-300 bg-amber-50 shadow-none" role="status">
-          <CardContent className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+          <CardContent className="flex min-w-0 flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 [overflow-wrap:anywhere]">
               <p className="font-semibold text-amber-950">Join request pending</p>
               <p className="text-sm text-amber-900/80">
-                {pendingJoinRequest.jointAccountName} · Submitted {new Date(pendingJoinRequest.createdAt).toLocaleDateString()}.
+                <span className="[overflow-wrap:anywhere]">{pendingJoinRequest.jointAccountName}</span> · Submitted {new Date(pendingJoinRequest.createdAt).toLocaleDateString()}.
                 An administrator must approve it before you have access.
               </p>
             </div>
@@ -331,8 +331,8 @@ export function JointAccountManager() {
 
       {!hasJointAccount && joinRequestsError && (
         <Card className="border-destructive/30 bg-destructive/5 shadow-none" role="alert">
-          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-destructive">We couldn’t check your join-request status. Try again before creating or joining another account.</p>
+          <CardContent className="flex min-w-0 flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="min-w-0 text-sm [overflow-wrap:anywhere] text-destructive">We couldn’t check your join-request status. Try again before creating or joining another account.</p>
             <Button variant="outline" size="sm" onClick={() => refetchJoinRequests()}>
               <RefreshCw className="mr-2 h-4 w-4" /> Retry
             </Button>
@@ -342,7 +342,7 @@ export function JointAccountManager() {
 
       {!hasJointAccount && !pendingJoinRequest && latestJoinRequest?.status === "rejected" && (
         <Card className="border-rose-300 bg-rose-50 shadow-none" role="status">
-          <CardContent className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <CardContent className="flex min-w-0 flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-rose-950">Previous join request was declined</p>
               <p className="text-sm text-rose-900/80">You can try another join code or ask the account owner for help.</p>
@@ -354,7 +354,7 @@ export function JointAccountManager() {
 
       {approvedJoinRequest && (
         <Card className="border-emerald-300 bg-emerald-50 shadow-none" role="status">
-          <CardContent className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <CardContent className="flex min-w-0 flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-emerald-950">Request approved</p>
               <p className="text-sm text-emerald-900/80">
@@ -367,27 +367,27 @@ export function JointAccountManager() {
       )}
 
       {hasJointAccount && jointAccount ? (
-        <Card data-testid="card-joint-account-info">
+        <Card className="w-full min-w-0" data-testid="card-joint-account-info">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>{jointAccount.name}</span>
+            <CardTitle className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span className="min-w-0 [overflow-wrap:anywhere]">{jointAccount.name}</span>
               <Badge variant={getRoleBadgeVariant(userRole || 'secondary')} data-testid="badge-user-role">
                 {getRoleDisplay(userRole || 'secondary')}
               </Badge>
             </CardTitle>
             {jointAccount.description && (
-              <CardDescription>{jointAccount.description}</CardDescription>
+              <CardDescription className="min-w-0 [overflow-wrap:anywhere]">{jointAccount.description}</CardDescription>
             )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div>
+              <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-muted p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <Label className="text-sm font-medium">Join Code</Label>
                   <p className="text-xs text-muted-foreground">Manual code entry</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <code className="px-3 py-1 bg-background rounded text-lg font-mono" data-testid="text-join-code">
+                <div className="flex min-w-0 items-center gap-2">
+                  <code className="min-w-0 break-all rounded bg-background px-3 py-1 font-mono text-lg" data-testid="text-join-code">
                     {jointAccount.joinCode}
                   </code>
                   <Button
@@ -411,9 +411,9 @@ export function JointAccountManager() {
               </Button>
             </div>
 
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Shield className="h-4 w-4" />
-              <span>Your investment data is automatically aggregated across both individual and joint accounts</span>
+            <div className="flex min-w-0 items-start gap-2 text-sm text-muted-foreground">
+              <Shield className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="min-w-0 [overflow-wrap:anywhere]">Your investment data is automatically aggregated across both individual and joint accounts</span>
             </div>
 
             <div className="pt-2">
@@ -430,13 +430,13 @@ export function JointAccountManager() {
           </CardContent>
         </Card>
       ) : (
-        <Card data-testid="card-no-joint-account">
+        <Card className="w-full min-w-0" data-testid="card-no-joint-account">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex min-w-0 items-center gap-2">
               <Heart className="h-5 w-5 text-pink-500" />
-              <span>Create a Joint Account</span>
+              <span className="min-w-0 [overflow-wrap:anywhere]">Create a Joint Account</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="min-w-0 [overflow-wrap:anywhere]">
               Manage your investments together with your partner in a shared account.
             </CardDescription>
           </CardHeader>
