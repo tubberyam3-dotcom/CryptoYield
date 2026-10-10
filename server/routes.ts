@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import yahooFinance from "yahoo-finance2";
+import { MarketQuoteCache, MARKET_REFRESH_MS, CRYPTO_SYMBOLS, fetchCryptoQuote } from "./marketPrices";
 import PDFDocument from "pdfkit";
 
 import {
@@ -2268,7 +2269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/user/stocks', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { stockProductId, symbol, name, sector, quantity, purchasePrice } = req.body;
+      const { stockProductId, symbol, name, sector, quantity } = req.body;
       
       let stockProduct;
       
@@ -2306,7 +2307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const quantityNum = parseFloat(quantity);
       const minQuantity = parseFloat(stockProduct.minPurchaseQuantity?.toString() || '1');
       
-      if (quantityNum <= 0) {
+      if (!Number.isFinite(quantityNum) || quantityNum <= 0) {
         return res.status(400).json({ message: "Quantity must be positive" });
       }
       
@@ -2322,6 +2323,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      const marketQuote = await stockMarket.get(stockProduct.symbol);
+      if (!marketQuote) {
+        return res.status(503).json({ message: "Current market price unavailable. Please try again shortly." });
+      }
+      const purchasePrice = marketQuote.price.toString();
       const accountContext = await storage.getAccountContext(userId);
       const totalInvested = quantityNum * parseFloat(purchasePrice);
       const userBalance = parseFloat(user.balance?.toString() || '0');
@@ -2580,12 +2586,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!pd?.lastSalePrice) return null;
 
       const price = parseFloat(pd.lastSalePrice.replace(/[^0-9.-]/g, ''));
-      const change = parseFloat((pd.netChange || '0').replace(/[^0-9.-]/g, '')) * (pd.deltaIndicator === 'down' ? -1 : 1);
-      const changePct = parseFloat((pd.percentageChange || '0').replace(/[^0-9.-]/g, '')) * (pd.deltaIndicator === 'down' ? -1 : 1);
+      const change = Math.abs(parseFloat((pd.netChange || '0').replace(/[^0-9.-]/g, ''))) * (pd.deltaIndicator === 'down' ? -1 : 1);
+      const changePct = Math.abs(parseFloat((pd.percentageChange || '0').replace(/[^0-9.-]/g, ''))) * (pd.deltaIndicator === 'down' ? -1 : 1);
 
       if (!price || isNaN(price)) return null;
 
-      // Use fallback extras (volume, marketCap) from our map if available
+      // Use the catalog for the name only, never for invented market measurements.
       const fb = extendedFallbackStocks[symbol.toUpperCase()];
 
       return {
@@ -2595,10 +2601,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         change,
         changePercent: changePct,
         previousClose: price - change,
-        dayHigh: fb ? fb.dayHigh : price * 1.01,
-        dayLow: fb ? fb.dayLow : price * 0.99,
-        volume: fb?.volume ?? 0,
-        marketCap: fb?.marketCap ?? 0,
+        dayHigh: null,
+        dayLow: null,
+        volume: null,
+        marketCap: null,
       };
     } catch {
       return null;
@@ -2606,9 +2612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Display symbol → exchange ticker overrides (e.g. platform uses SPACEX but NASDAQ lists it as SPCX)
-  const SYMBOL_OVERRIDES: Record<string, string> = {
-    'SPACEX': 'SPCX',
-  };
+  const SYMBOL_OVERRIDES: Record<string, string> = {};
 
   // ── Primary quote helper: tries NASDAQ → yahoo-finance2 → null ──
   async function getLiveQuote(symbol: string): Promise<any | null> {
@@ -2618,8 +2622,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // 1. NASDAQ public API (most reliable from this server)
     const nasdaqQuote = await fetchNasdaqQuote(fetchSymbol);
-    // Re-stamp with the platform display symbol so the UI sees SPACEX, not SPCX
-    if (nasdaqQuote) return { ...nasdaqQuote, symbol: upper };
+    // Preserve the actual requested ticker; never substitute an unrelated security.
+    if (nasdaqQuote) return { ...nasdaqQuote, symbol: upper, source: 'NASDAQ', checkedAt: new Date().toISOString() };
 
     // 2. yahoo-finance2 library (may fail due to crumb issues)
     try {
@@ -2629,6 +2633,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           symbol: upper,
           name: quote.longName || quote.shortName || upper,
           price: quote.regularMarketPrice,
+          source: 'Yahoo Finance',
+          checkedAt: new Date().toISOString(),
           change: quote.regularMarketChange,
           changePercent: quote.regularMarketChangePercent,
           previousClose: quote.regularMarketPreviousClose,
@@ -2643,9 +2649,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return null;
   }
 
-  // Per-symbol quote cache (5-min TTL) — keeps prices consistent across all page sections
-  const quoteCache = new Map<string, { data: any; ts: number }>();
-  const QUOTE_CACHE_TTL = 5 * 60 * 1000;
+  const stockMarket = new MarketQuoteCache(getLiveQuote);
+  const cryptoMarket = new MarketQuoteCache(fetchCryptoQuote);
+  let marketRefreshRunning = false;
+  async function refreshMarketPrices() {
+    if (marketRefreshRunning) return;
+    marketRefreshRunning = true;
+    try {
+      const products = await storage.getStockProducts();
+      await Promise.all([
+        stockMarket.refresh(),
+        ...CRYPTO_SYMBOLS.map(symbol => cryptoMarket.get(symbol, true)),
+        ...products.map(async product => {
+          await stockMarket.get(product.symbol, true);
+        }),
+      ]);
+    } catch (error) {
+      console.error('[Market prices] Refresh failed:', error);
+    } finally {
+      marketRefreshRunning = false;
+    }
+  }
+  void refreshMarketPrices();
+  const marketInterval = setInterval(() => void refreshMarketPrices(), MARKET_REFRESH_MS);
+  marketInterval.unref();
+
+  app.get('/api/crypto/prices', async (_req, res) => {
+    const quotes = await Promise.all(CRYPTO_SYMBOLS.map(symbol => cryptoMarket.get(symbol)));
+    res.set('Cache-Control', 'no-store');
+    res.json(Object.fromEntries(quotes.filter(q => q !== null).map(q => [q!.symbol, q])));
+  });
 
   app.get('/api/stocks/quote', async (req, res) => {
     try {
@@ -2656,26 +2689,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const upperSymbol = symbol.toUpperCase();
 
-      // Return cached quote if still fresh
-      const cached = quoteCache.get(upperSymbol);
-      if (cached && Date.now() - cached.ts < QUOTE_CACHE_TTL) {
-        return res.json(cached.data);
-      }
-
-      const live = await getLiveQuote(upperSymbol);
+      res.set('Cache-Control', 'no-store');
+      const live = await stockMarket.get(upperSymbol);
       if (live) {
-        quoteCache.set(upperSymbol, { data: live, ts: Date.now() });
         return res.json(live);
       }
-
-      // Last-resort: hardcoded fallback — NO jitter so price is stable across all calls
-      const fallback = extendedFallbackStocks[upperSymbol];
-      if (fallback) {
-        quoteCache.set(upperSymbol, { data: fallback, ts: Date.now() });
-        return res.json(fallback);
-      }
-
-      return res.status(404).json({ message: `No price data available for ${upperSymbol}` });
+      return res.status(503).json({ message: `Current market price unavailable for ${upperSymbol}` });
     } catch (error) {
       console.error("Error fetching stock quote:", error);
       res.status(500).json({ message: "Failed to fetch stock quote" });
@@ -2690,30 +2709,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Symbols parameter is required" });
       }
 
-      const symbolArray = symbols.toUpperCase().split(',').map(s => s.trim());
+      const symbolArray = Array.from(new Set(symbols.toUpperCase().split(',').map(s => s.trim()))).slice(0, 150);
       const quotes = await Promise.all(
-        symbolArray.map(async (symbol) => {
-          try {
-            const quote: any = await yahooFinance.quote(symbol);
-            return {
-              symbol: quote.symbol,
-              name: quote.longName || quote.shortName || symbol,
-              price: quote.regularMarketPrice,
-              change: quote.regularMarketChange,
-              changePercent: quote.regularMarketChangePercent,
-              previousClose: quote.regularMarketPreviousClose,
-              dayHigh: quote.regularMarketDayHigh,
-              dayLow: quote.regularMarketDayLow,
-              volume: quote.regularMarketVolume,
-              marketCap: quote.marketCap,
-            };
-          } catch (error) {
-            console.error(`Error fetching quote for ${symbol}:`, error);
-            return null;
-          }
-        })
+        symbolArray.map(symbol => stockMarket.get(symbol))
       );
-
+      res.set('Cache-Control', 'no-store');
       res.json(quotes.filter(q => q !== null));
     } catch (error) {
       console.error("Error fetching stock quotes:", error);
@@ -2721,9 +2721,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cache for top performers (5 minute TTL — NASDAQ data is 15-min delayed anyway)
+  // All list and individual market quotes expire after 30 seconds.
   let topPerformersCache: { data: any[]; timestamp: number } | null = null;
-  const STOCK_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const STOCK_CACHE_TTL = MARKET_REFRESH_MS;
 
   // Fallback stock data when Yahoo Finance API fails
   const fallbackStockData = [
@@ -2913,7 +2913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (let i = 0; i < nasdaqEligible.length; i += CONCURRENCY) {
         const batch = nasdaqEligible.slice(i, i + CONCURRENCY);
-        const results = await Promise.all(batch.map(sym => fetchNasdaqQuote(sym)));
+        const results = await Promise.all(batch.map(sym => stockMarket.get(sym)));
         results.forEach((q, idx) => {
           if (q) liveMap.set(batch[idx], q);
         });
@@ -2921,41 +2921,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For non-NASDAQ symbols, try yahoo-finance2 as backup
       for (const sym of nonNasdaqSymbols) {
-        try {
-          const quote: any = await yahooFinance.quote(sym);
-          if (quote?.regularMarketPrice) {
-            liveMap.set(sym, {
-              symbol: quote.symbol,
-              name: quote.longName || quote.shortName || sym,
-              price: quote.regularMarketPrice,
-              change: quote.regularMarketChange,
-              changePercent: quote.regularMarketChangePercent,
-              previousClose: quote.regularMarketPreviousClose,
-              dayHigh: quote.regularMarketDayHigh,
-              dayLow: quote.regularMarketDayLow,
-              volume: quote.regularMarketVolume,
-              marketCap: quote.marketCap,
-            });
-          }
-        } catch { /* use fallback */ }
+        const quote = await stockMarket.get(sym);
+        if (quote) liveMap.set(sym, quote);
       }
 
       // Build final list — live data preferred, stale fallback fills gaps
       const allQuotes = topStocks.map(sym => {
         if (liveMap.has(sym)) return liveMap.get(sym);
-        const fallback = fallbackStockData.find(s => s.symbol === sym);
-        if (fallback) return { ...fallback };
         return null;
       }).filter(Boolean);
 
-      console.log(`[Stocks] NASDAQ live: ${liveMap.size}/${topStocks.length}, fallback used for ${topStocks.length - liveMap.size}`);
+      console.log(`[Stocks] Market quotes available: ${liveMap.size}/${topStocks.length}`);
 
       // Cache the results
       topPerformersCache = { data: allQuotes, timestamp: Date.now() };
-      res.json(allQuotes);
+      res.set('Cache-Control', 'no-store').json(allQuotes);
     } catch (error) {
       console.error("Error fetching top performers:", error);
-      res.json(fallbackStockData);
+      res.status(503).json({ message: "Current stock market prices unavailable" });
     }
   });
 

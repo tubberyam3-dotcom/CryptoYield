@@ -70,7 +70,7 @@ export function BalanceSummary() {
     };
 
     fetchQuotes();
-    const interval = setInterval(fetchQuotes, 60000);
+    const interval = setInterval(fetchQuotes, 30000);
     return () => clearInterval(interval);
   }, [userStocks]);
 

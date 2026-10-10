@@ -57,21 +57,31 @@ export default function StockDetail() {
     if (symbol) {
       setLoadingQuote(true);
       fetch(`/api/stocks/quote?symbol=${symbol}`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error('Current market quote unavailable');
+          return res.json();
+        })
         .then(data => {
           setQuote(data);
           setLoadingQuote(false);
         })
         .catch(err => {
+          setQuote(null);
           console.error('Failed to fetch quote:', err);
           setLoadingQuote(false);
         });
 
       const interval = setInterval(() => {
         fetch(`/api/stocks/quote?symbol=${symbol}`)
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) throw new Error('Current market quote unavailable');
+            return res.json();
+          })
           .then(data => setQuote(data))
-          .catch(err => console.error('Failed to refresh quote:', err));
+          .catch(err => {
+            setQuote(null);
+            console.error('Failed to refresh quote:', err);
+          });
       }, 30000);
 
       return () => clearInterval(interval);
@@ -422,7 +432,7 @@ export default function StockDetail() {
                         </Button>
 
                         <p className="text-xs text-muted-foreground text-center">
-                          Live market price updates every 30 seconds
+                          Market quotes refresh every 30 seconds. Provider delays may apply.
                         </p>
                       </form>
                     </Form>
@@ -483,7 +493,7 @@ export default function StockDetail() {
                           </Button>
                           
                           <p className="text-xs text-muted-foreground text-center">
-                            Live market price updates every 30 seconds
+                            Market quotes refresh every 30 seconds. Provider delays may apply.
                           </p>
                         </>
                       ) : (

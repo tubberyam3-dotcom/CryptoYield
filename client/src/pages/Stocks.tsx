@@ -101,6 +101,7 @@ export default function Stocks() {
 
   const { data: stockProducts, isLoading: productsLoading } = useQuery<StockProduct[]>({
     queryKey: ["/api/stocks/products"],
+    refetchInterval: 30000,
   });
 
   const { data: userStocks } = useQuery<HoldingWithProduct[]>({
@@ -109,8 +110,8 @@ export default function Stocks() {
 
   const { data: topPerformers, isLoading: topPerformersLoading } = useQuery<StockQuote[]>({
     queryKey: ["/api/stocks/top-performers"],
-    refetchInterval: 60000,
-    staleTime: 55000,
+    refetchInterval: 30000,
+    staleTime: 0,
   });
 
   const purchaseMutation = useMutation({
@@ -151,16 +152,24 @@ export default function Stocks() {
 
   useEffect(() => {
     if (!stockProducts) return;
-    for (const stock of stockProducts) {
-      setStockQuotes(prev => {
-        if (prev[stock.symbol]) return prev;
+    const refreshProducts = () => {
+      for (const stock of stockProducts) {
         fetch(`/api/stocks/quote?symbol=${stock.symbol}`)
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) throw new Error('Market quote unavailable');
+            return res.json();
+          })
           .then(data => setStockQuotes(cur => ({ ...cur, [stock.symbol]: data })))
-          .catch(() => {});
-        return prev;
-      });
-    }
+          .catch(() => setStockQuotes(cur => {
+            const next = { ...cur };
+            delete next[stock.symbol];
+            return next;
+          }));
+      }
+    };
+    refreshProducts();
+    const interval = setInterval(refreshProducts, 30000);
+    return () => clearInterval(interval);
   }, [stockProducts]);
 
   useEffect(() => {
@@ -170,13 +179,20 @@ export default function Stocks() {
         const sym = h.stockProduct?.symbol;
         if (!sym) continue;
         fetch(`/api/stocks/quote?symbol=${sym}`)
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) throw new Error('Market quote unavailable');
+            return res.json();
+          })
           .then(data => setStockQuotes(cur => ({ ...cur, [sym]: data })))
-          .catch(() => {});
+          .catch(() => setStockQuotes(cur => {
+            const next = { ...cur };
+            delete next[sym];
+            return next;
+          }));
       }
     };
     fetchHoldingQuotes();
-    const interval = setInterval(fetchHoldingQuotes, 60000);
+    const interval = setInterval(fetchHoldingQuotes, 30000);
     return () => clearInterval(interval);
   }, [userStocks]);
 

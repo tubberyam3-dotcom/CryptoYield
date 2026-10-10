@@ -79,6 +79,12 @@ export default function Deposit() {
   });
 
   // Fetch which deposit methods are enabled by admin
+  const { data: cryptoPrices } = useQuery<Record<string, { price: number; checkedAt: string }>>({
+    queryKey: ['/api/crypto/prices'],
+    refetchInterval: 30000,
+    staleTime: 0,
+  });
+
   const { data: enabledMethods } = useQuery<{
     crypto: boolean; bank: boolean; card: boolean; merchant: boolean; coupon: boolean; merchantNoMatch: boolean;
   }>({
@@ -120,17 +126,17 @@ export default function Deposit() {
   };
 
   const cryptoCoins = [
-    { id: "BTC", name: "Bitcoin", icon: SiBitcoin, color: "text-orange-500", address: cryptoWallets?.BTC || '', network: "Bitcoin Network", priceUsd: 97842.50 },
-    { id: "ETH", name: "Ethereum", icon: SiEthereum, color: "text-blue-500", address: cryptoWallets?.ETH || '', network: "ERC-20", priceUsd: 3456.78 },
-    { id: "USDT", name: "Tether", icon: SiTether, color: "text-green-500", address: cryptoWallets?.USDT || '', network: cryptoWallets?.USDT_network || 'ERC-20', priceUsd: 1.00 },
-    { id: "BNB", name: "Binance Coin", icon: SiBinance, color: "text-yellow-500", address: '', network: "BEP-20", priceUsd: 623.45 },
-    { id: "SOL", name: "Solana", icon: SiSolana, color: "text-purple-500", address: cryptoWallets?.SOL || '', network: "Solana Network", priceUsd: 234.67 },
-    { id: "XRP", name: "Ripple", icon: SiRipple, color: "text-blue-400", address: cryptoWallets?.XRP || '', network: "XRP Ledger", priceUsd: 1.42 },
-    { id: "ADA", name: "Cardano", icon: SiCardano, color: "text-cyan-500", address: '', network: "Cardano Network", priceUsd: 1.05 },
-    { id: "DOGE", name: "Dogecoin", icon: SiDogecoin, color: "text-yellow-600", address: '', network: "Dogecoin Network", priceUsd: 0.38 },
-    { id: "MATIC", name: "Polygon", icon: SiPolygon, color: "text-purple-600", address: '', network: "Polygon Network", priceUsd: 0.52 },
-    { id: "LTC", name: "Litecoin", icon: SiLitecoin, color: "text-gray-500", address: cryptoWallets?.LTC || '', network: "Litecoin Network", priceUsd: 102.34 },
-  ];
+    { id: "BTC", name: "Bitcoin", icon: SiBitcoin, color: "text-orange-500", address: cryptoWallets?.BTC || '', network: "Bitcoin Network" },
+    { id: "ETH", name: "Ethereum", icon: SiEthereum, color: "text-blue-500", address: cryptoWallets?.ETH || '', network: "ERC-20" },
+    { id: "USDT", name: "Tether", icon: SiTether, color: "text-green-500", address: cryptoWallets?.USDT || '', network: cryptoWallets?.USDT_network || 'ERC-20' },
+    { id: "BNB", name: "Binance Coin", icon: SiBinance, color: "text-yellow-500", address: '', network: "BEP-20" },
+    { id: "SOL", name: "Solana", icon: SiSolana, color: "text-purple-500", address: cryptoWallets?.SOL || '', network: "Solana Network" },
+    { id: "XRP", name: "Ripple", icon: SiRipple, color: "text-blue-400", address: cryptoWallets?.XRP || '', network: "XRP Ledger" },
+    { id: "ADA", name: "Cardano", icon: SiCardano, color: "text-cyan-500", address: '', network: "Cardano Network" },
+    { id: "DOGE", name: "Dogecoin", icon: SiDogecoin, color: "text-yellow-600", address: '', network: "Dogecoin Network" },
+    { id: "MATIC", name: "Polygon", icon: SiPolygon, color: "text-purple-600", address: '', network: "Polygon Network" },
+    { id: "LTC", name: "Litecoin", icon: SiLitecoin, color: "text-gray-500", address: cryptoWallets?.LTC || '', network: "Litecoin Network" },
+  ].map(coin => ({ ...coin, priceUsd: cryptoPrices?.[coin.id]?.price ?? null }));
 
   useEffect(() => {
     if (cryptoStep === 3 && timeRemaining > 0) {
@@ -555,12 +561,12 @@ export default function Deposit() {
                                 <div className="flex items-center space-x-2">
                                   {CoinIcon && <CoinIcon className={`${selectedCoin.color} text-base md:text-lg`} />}
                                   <span className="text-sm md:text-lg font-bold break-all" data-testid="text-crypto-equivalent">
-                                    {(parseFloat(cryptoAmount.replace(/,/g, '')) / selectedCoin.priceUsd).toFixed(8)} {selectedCoin.id}
+                                    {selectedCoin.priceUsd ? `${(parseFloat(cryptoAmount.replace(/,/g, '')) / selectedCoin.priceUsd).toFixed(8)} ${selectedCoin.id}` : 'Market price unavailable'}
                                   </span>
                                 </div>
                               </div>
                               <div className="mt-1 text-[10px] md:text-xs text-muted-foreground text-left md:text-right">
-                                @ ${selectedCoin.priceUsd.toLocaleString()} per {selectedCoin.id}
+                                {selectedCoin.priceUsd ? `@ $${selectedCoin.priceUsd.toLocaleString()} per ${selectedCoin.id}` : 'Waiting for a current market quote'}
                               </div>
                             </div>
                           )}
@@ -569,6 +575,7 @@ export default function Deposit() {
                           type="submit"
                           className="w-full"
                           size="lg"
+                          disabled={!selectedCoin?.priceUsd}
                           data-testid="button-continue-to-payment"
                         >
                           Continue to Payment
@@ -610,7 +617,7 @@ export default function Deposit() {
                         <div className="flex items-center justify-center gap-3">
                           {CoinIcon && <CoinIcon className={`${selectedCoin?.color} text-3xl`} />}
                           <span className="text-3xl md:text-4xl font-extrabold tracking-tight" data-testid="text-send-amount">
-                            {selectedCoin && (parseFloat(cryptoAmount.replace(/,/g, '')) / selectedCoin.priceUsd).toFixed(8)}
+                            {selectedCoin?.priceUsd ? (parseFloat(cryptoAmount.replace(/,/g, '')) / selectedCoin.priceUsd).toFixed(8) : 'Market price unavailable'}
                           </span>
                           <span className="text-2xl font-bold text-muted-foreground">{selectedCrypto}</span>
                         </div>

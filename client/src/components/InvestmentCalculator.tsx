@@ -69,7 +69,7 @@ export function InvestmentCalculator() {
       return response.json();
     },
     enabled: Boolean(symbols),
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 30000,
   });
 
   const calculateProjection = (
