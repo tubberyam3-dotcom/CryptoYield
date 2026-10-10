@@ -143,7 +143,7 @@ export function GamifiedStats() {
 
               <div className="space-y-2 md:space-y-3">
                 <div>
-                  <h3 className="text-lg md:text-2xl font-bold tracking-tight">{stat.value}</h3>
+                  <h3 className="font-sans tabular-nums text-lg md:text-2xl font-bold tracking-tight">{stat.value}</h3>
                   <p className={`text-sm ${stat.changeColor} font-medium`}>
                     {stat.change}
                   </p>

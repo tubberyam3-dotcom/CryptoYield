@@ -81,7 +81,7 @@ export function StakingCalculator({ plans, selectedPlan, onPlanChange }: Staking
               id="amount"
               type="text"
               inputMode="decimal"
-              className="pl-8 font-['Archivo']"
+              className="pl-8 font-sans tabular-nums"
               placeholder="1,000"
               value={amount}
               onChange={(e) => {

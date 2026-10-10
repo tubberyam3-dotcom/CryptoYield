@@ -159,7 +159,7 @@ export function BalanceSummary() {
           <CardContent className="px-0 pb-0">
             <div className="space-y-2 md:space-y-3">
               <div className="flex items-baseline gap-2">
-                <h2 className="text-2xl md:text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="total-balance">
+                <h2 className="font-sans tabular-nums text-2xl md:text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="total-balance">
                   {showBalance ? `$${totalBalance.toLocaleString()}` : "****"}
                 </h2>
                 {parseFloat(stats?.portfolioGrowthPercent || '0') !== 0 && (

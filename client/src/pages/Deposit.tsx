@@ -551,7 +551,7 @@ export default function Deposit() {
                               const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
                               setCryptoAmount(formatted);
                             }}
-                            className="font-['Archivo'] text-lg"
+                            className="font-sans tabular-nums text-lg"
                             data-testid="input-crypto-amount"
                           />
                           {cryptoAmount && selectedCoin && (
@@ -751,7 +751,7 @@ export default function Deposit() {
                                 const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
                                 setBankAmount(formatted);
                               }}
-                              className="pl-8 text-2xl font-bold h-16 font-['Archivo']"
+                              className="pl-8 text-2xl font-bold h-16 font-sans tabular-nums"
                               data-testid="input-bank-amount"
                             />
                           </div>
@@ -1035,7 +1035,7 @@ export default function Deposit() {
                                 const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
                                 setCardAmount(formatted);
                               }}
-                              className="pl-8 text-2xl font-bold h-16 font-['Archivo']"
+                              className="pl-8 text-2xl font-bold h-16 font-sans tabular-nums"
                               data-testid="input-card-amount"
                             />
                           </div>
@@ -1103,7 +1103,7 @@ export default function Deposit() {
                             <div className="w-5 h-5 md:w-6 md:h-6 bg-orange-400 rounded-full opacity-80 -ml-2 md:-ml-3"></div>
                           </div>
                         </div>
-                        <div className="font-mono text-base md:text-xl tracking-wider md:tracking-widest mb-4 md:mb-6">
+                        <div className="font-sans tabular-nums text-base md:text-xl tracking-wider md:tracking-widest mb-4 md:mb-6">
                           {cardNumber ? cardNumber.replace(/(\d{4})(?=\d)/g, '$1 ').trim() : '**** **** **** ****'}
                         </div>
                         <div className="flex justify-between text-sm">
@@ -1396,7 +1396,7 @@ export default function Deposit() {
                                     { v: tl.seconds, l: 'Sec' },
                                   ].map(({ v, l }) => (
                                     <div key={l} className="flex flex-col items-center bg-background rounded-lg px-3 py-2 min-w-[52px] border border-border">
-                                      <span className="text-2xl font-bold font-mono">{String(v).padStart(2, '0')}</span>
+                                      <span className="text-2xl font-bold font-sans tabular-nums">{String(v).padStart(2, '0')}</span>
                                       <span className="text-xs text-muted-foreground">{l}</span>
                                     </div>
                                   ))}
@@ -1553,7 +1553,7 @@ export default function Deposit() {
                                 const formatted = parts.length === 2 ? `${integerPart}.${parts[1].slice(0, 2)}` : integerPart;
                                 setMerchantAmount(formatted);
                               }}
-                              className="pl-8 text-2xl font-bold h-16 font-['Archivo']"
+                              className="pl-8 text-2xl font-bold h-16 font-sans tabular-nums"
                               data-testid="input-merchant-amount"
                             />
                           </div>
@@ -1837,7 +1837,7 @@ export default function Deposit() {
                                 { v: tl.seconds, l: 'Sec' },
                               ].map(({ v, l }) => (
                                 <div key={l} className="flex flex-col items-center bg-background rounded-lg px-3 py-2 min-w-[52px] border border-border">
-                                  <span className="text-2xl font-bold font-mono">{String(v).padStart(2, '0')}</span>
+                                  <span className="text-2xl font-bold font-sans tabular-nums">{String(v).padStart(2, '0')}</span>
                                   <span className="text-xs text-muted-foreground">{l}</span>
                                 </div>
                               ))}

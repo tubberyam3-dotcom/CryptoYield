@@ -1756,7 +1756,7 @@ export function UserManagement() {
                 value={linkToExistingJoinCode}
                 onChange={(e) => setLinkToExistingJoinCode(e.target.value.toUpperCase())}
                 placeholder="e.g. ABC12345"
-                className="font-mono tracking-widest uppercase"
+                className="font-sans tracking-widest uppercase"
                 maxLength={12}
               />
               <p className="text-xs text-muted-foreground mt-1">

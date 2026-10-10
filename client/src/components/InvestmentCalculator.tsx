@@ -294,7 +294,7 @@ export function InvestmentCalculator() {
                       setAmount(formatted);
                     }}
                     placeholder="1,000"
-                    className="h-12 pl-8 border-2 hover:border-primary/50 focus:border-primary transition-colors text-lg font-['Archivo']"
+                    className="h-12 pl-8 border-2 hover:border-primary/50 focus:border-primary transition-colors text-lg font-sans tabular-nums"
                     data-testid="input-amount"
                   />
                 </div>

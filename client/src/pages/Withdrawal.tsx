@@ -462,7 +462,7 @@ export default function Withdrawal() {
                             placeholder="0.00"
                             value={cryptoAmount}
                             onChange={(e) => setCryptoAmount(formatAmount(e.target.value))}
-                            className="font-['Archivo'] text-2xl h-14 mt-2"
+                            className="font-sans tabular-nums text-2xl h-14 mt-2"
                             data-testid="input-crypto-amount"
                           />
                           <p className="text-sm text-muted-foreground mt-2">
@@ -662,7 +662,7 @@ export default function Withdrawal() {
                             placeholder="0.00"
                             value={wireAmount}
                             onChange={(e) => setWireAmount(formatAmount(e.target.value))}
-                            className="font-['Archivo'] text-2xl h-14 mt-2"
+                            className="font-sans tabular-nums text-2xl h-14 mt-2"
                             data-testid="input-wire-amount"
                           />
                           <p className="text-sm text-muted-foreground mt-2">
@@ -973,7 +973,7 @@ export default function Withdrawal() {
                             placeholder="0.00"
                             value={merchantAmount}
                             onChange={(e) => setMerchantAmount(formatAmount(e.target.value))}
-                            className="font-['Archivo'] text-2xl h-14 mt-2"
+                            className="font-sans tabular-nums text-2xl h-14 mt-2"
                             data-testid="input-merchant-amount"
                           />
                           <p className="text-sm text-muted-foreground mt-2">

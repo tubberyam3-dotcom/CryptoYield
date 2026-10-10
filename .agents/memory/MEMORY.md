@@ -2,3 +2,4 @@
 - [Joint account spending](joint-account-spending.md) — both members can spend the combined balance; each withdrawal requires a one-time code emailed to the partner.
 - [Mobile account controls](mobile-account-controls.md) — XP code and joint-account management must remain accessible on mobile, not just desktop settings.
 - [App visual effects](app-visual-effects.md) — no hover lift/enlargement or glass-style blur and transparency across the app.
+- [App typography](app-typography.md) — Urbanist for headings; Inter for all body text, financial figures, tables and controls.

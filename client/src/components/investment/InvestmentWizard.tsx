@@ -240,7 +240,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                         id="investAmount"
                         type="text"
                         inputMode="decimal"
-                        className="pl-10 text-lg py-6 font-['Archivo']"
+                        className="pl-10 text-lg py-6 font-sans tabular-nums"
                         placeholder="0.00"
                         value={investAmount}
                         onChange={(e) => {

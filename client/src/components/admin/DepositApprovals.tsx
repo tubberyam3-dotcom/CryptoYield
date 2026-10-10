@@ -125,7 +125,7 @@ export function DepositApprovals() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   {getMethodIcon(deposit.method || '')}
-                  <CardTitle className="text-lg">
+                  <CardTitle className="font-sans tabular-nums text-lg">
                     ${parseFloat(deposit.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </CardTitle>
                 </div>

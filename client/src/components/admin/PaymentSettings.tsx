@@ -575,7 +575,7 @@ export function PaymentSettings() {
                       value={formData.crypto_btc_address}
                       onChange={(e) => updateField("crypto_btc_address", e.target.value)}
                       placeholder="bc1q..."
-                      className="font-mono text-sm"
+                      className="font-sans text-sm"
                       data-testid="input-crypto-btc"
                     />
                     <Button
@@ -599,7 +599,7 @@ export function PaymentSettings() {
                       value={formData.crypto_eth_address}
                       onChange={(e) => updateField("crypto_eth_address", e.target.value)}
                       placeholder="0x..."
-                      className="font-mono text-sm"
+                      className="font-sans text-sm"
                       data-testid="input-crypto-eth"
                     />
                     <Button
@@ -623,7 +623,7 @@ export function PaymentSettings() {
                       value={formData.crypto_usdt_address}
                       onChange={(e) => updateField("crypto_usdt_address", e.target.value)}
                       placeholder="0x... or T..."
-                      className="font-mono text-sm"
+                      className="font-sans text-sm"
                       data-testid="input-crypto-usdt"
                     />
                     <Button
@@ -654,7 +654,7 @@ export function PaymentSettings() {
                       value={formData.crypto_ltc_address}
                       onChange={(e) => updateField("crypto_ltc_address", e.target.value)}
                       placeholder="ltc1..."
-                      className="font-mono text-sm"
+                      className="font-sans text-sm"
                       data-testid="input-crypto-ltc"
                     />
                     <Button
@@ -675,7 +675,7 @@ export function PaymentSettings() {
                       value={formData.crypto_xrp_address}
                       onChange={(e) => updateField("crypto_xrp_address", e.target.value)}
                       placeholder="r..."
-                      className="font-mono text-sm"
+                      className="font-sans text-sm"
                       data-testid="input-crypto-xrp"
                     />
                     <Button
@@ -696,7 +696,7 @@ export function PaymentSettings() {
                       value={formData.crypto_sol_address}
                       onChange={(e) => updateField("crypto_sol_address", e.target.value)}
                       placeholder="..."
-                      className="font-mono text-sm"
+                      className="font-sans text-sm"
                       data-testid="input-crypto-sol"
                     />
                     <Button

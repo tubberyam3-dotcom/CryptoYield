@@ -45,7 +45,7 @@ export function JointWithdrawalCodeForm({
           aria-describedby="withdrawal-xp-code-help"
           placeholder="Enter 11-character code"
           disabled={!sent || isDisabled}
-          className="w-full max-w-md font-mono uppercase tracking-[0.12em] disabled:cursor-not-allowed"
+          className="w-full max-w-md font-sans uppercase tracking-[0.12em] disabled:cursor-not-allowed"
         />
       </div>
 

@@ -129,7 +129,7 @@ function CountdownTimer({ targetDate, period }: { targetDate: Date; period: stri
           <Clock className="w-4 h-4" />
           Next {period} earning
         </span>
-        <span className="font-mono font-bold text-accent">
+        <span className="font-sans tabular-nums font-bold text-accent">
           {String(timeLeft.hours).padStart(2, '0')}:
           {String(timeLeft.minutes).padStart(2, '0')}:
           {String(timeLeft.seconds).padStart(2, '0')}

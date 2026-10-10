@@ -762,10 +762,10 @@ function PortfolioForm({
             <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-3 text-sm">
               <p className="font-medium text-orange-600 dark:text-orange-400">Effective Rate Preview</p>
               <p className="text-muted-foreground mt-1">
-                Base rate: <span className="font-mono font-medium">{(parseFloat(formData.interestRate || '0') * 100).toFixed(4)}%</span> per {formData.interestPeriod}
+                Base rate: <span className="font-sans tabular-nums font-medium">{(parseFloat(formData.interestRate || '0') * 100).toFixed(4)}%</span> per {formData.interestPeriod}
               </p>
               <p className="text-muted-foreground">
-                After {formData.meterReduction}% reduction: <span className="font-mono font-medium text-foreground">
+                After {formData.meterReduction}% reduction: <span className="font-sans tabular-nums font-medium text-foreground">
                   {(parseFloat(formData.interestRate || '0') * (1 - parseFloat(formData.meterReduction) / 100) * 100).toFixed(4)}%
                 </span> per {formData.interestPeriod}
               </p>
