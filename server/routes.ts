@@ -1023,10 +1023,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (userPortfolio && userPortfolio.userId) {
           const user = await storage.getUser(userPortfolio.userId);
           if (user) {
-            const currentBalance = parseFloat(user.balance?.toString() || '0');
             const refundAmount = parseFloat(userPortfolio.investedAmount.toString());
-            const newBalance = (currentBalance + refundAmount).toString();
-            await storage.updateUserBalance(userPortfolio.userId, newBalance);
+            await storage.creditUserBalance(userPortfolio.userId, refundAmount.toString());
           }
           
           // Restore portfolio units that were consumed when investment was created
@@ -2050,10 +2048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Refund the user's balance
         const user = await storage.getUser(purchase.userId);
         if (user) {
-          const currentBalance = parseFloat(user.balance?.toString() || '0');
-          const refundAmount = parseFloat(purchase.totalInvested.toString());
-          const newBalance = (currentBalance + refundAmount).toString();
-          await storage.updateUserBalance(purchase.userId, newBalance);
+          await storage.creditUserBalance(purchase.userId, purchase.totalInvested.toString());
         }
       }
 
@@ -3723,8 +3718,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Amount and type are required" });
       }
       
-      const numAmount = parseFloat(amount);
-      if (isNaN(numAmount) || numAmount <= 0) {
+      const numAmount = Number(amount);
+      if (!Number.isFinite(numAmount) || numAmount <= 0 || Number(numAmount.toFixed(8)) <= 0) {
         return res.status(400).json({ message: "Invalid amount" });
       }
       
@@ -3737,50 +3732,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      const currentBalance = parseFloat(user.balance || '0');
-      let newBalance: number;
-      
-      if (type === 'add') {
-        newBalance = currentBalance + numAmount;
-      } else {
-        if (currentBalance < numAmount) {
-          return res.status(400).json({ message: "Insufficient balance for withdrawal" });
-        }
-        newBalance = currentBalance - numAmount;
-      }
-      
-      console.log(`[Admin Balance Adjustment] User ${id}: Current balance: ${currentBalance}, Amount: ${numAmount}, Type: ${type}, New balance: ${newBalance}`);
-      
-      // Update user balance - use toFixed(8) to match decimal precision
-      try {
-        const updatedUserFromBalance = await storage.updateUserBalance(id, newBalance.toFixed(8));
-        console.log(`[Admin Balance Adjustment] Updated user balance result:`, updatedUserFromBalance?.balance);
-        
-        if (!updatedUserFromBalance) {
-          console.error(`[Admin Balance Adjustment] updateUserBalance returned undefined for user ${id}`);
-        }
-      } catch (balanceError) {
-        console.error(`[Admin Balance Adjustment] Error updating balance:`, balanceError);
-        throw balanceError;
-      }
-      
-      // Create a deposit record for tracking
       const customDate = date ? new Date(date) : undefined;
+      if (customDate && !Number.isFinite(customDate.getTime())) {
+        return res.status(400).json({ message: "Invalid transaction date" });
+      }
       const trxRef = Math.floor(100000 + Math.random() * 9000000);
       const trxLabel = type === 'add' ? `Deposit-Trx${trxRef}` : `Withdrawal-Trx${trxRef}`;
-      await storage.createDeposit({
-        userId: id,
-        amount: type === 'add' ? numAmount.toString() : `-${numAmount}`,
-        depositMethod: 'admin_adjustment',
-        status: 'completed',
-        transactionId: trxLabel,
-        metadata: { 
+      const updatedUser = await storage.adjustUserBalance(
+        id, numAmount.toFixed(8), type, {
           adjustedBy: adminId, 
           type, 
           reason: reason || 'Admin adjustment',
           trxRef: trxLabel,
-        },
-      }, customDate);
+        }, trxLabel, customDate,
+      );
       
       // Send credit notification email if admin opted in (only for "add" type)
       if (type === 'add' && sendNotification === true) {
@@ -3796,12 +3761,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const updatedUser = await storage.getUser(id);
       res.json({ 
         message: `Successfully ${type === 'add' ? 'added' : 'withdrew'} $${numAmount.toFixed(2)}`,
         newBalance: updatedUser?.balance 
       });
     } catch (error) {
+      if (error instanceof Error && error.message === 'Insufficient balance') {
+        return res.status(400).json({ message: "Insufficient balance for withdrawal" });
+      }
       console.error("Error adjusting user balance:", error);
       res.status(500).json({ message: "Failed to adjust balance" });
     }

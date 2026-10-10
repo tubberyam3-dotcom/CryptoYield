@@ -13,7 +13,7 @@ import {
 
 interface DashboardStats {
   totalPortfolioValue: string;
-  activeStakes: string;
+  activeBonds: string;
   activeChallenges: number;
   availableBalance: string;
   stocksValue: string;
@@ -119,7 +119,7 @@ export function BalanceSummary() {
   }
 
   const portfolioValue = parseFloat(stats?.totalPortfolioValue || '0');
-  const stakingValue = parseFloat(stats?.activeStakes || '0');
+  const stakingValue = parseFloat(stats?.activeBonds || '0');
   const availableBalance = parseFloat(stats?.availableBalance || '0');
   // Use live market value if available, fall back to purchase-price total from server
   const stocksValue = liveStocksValue !== null ? liveStocksValue : parseFloat(stats?.stocksValue || '0');

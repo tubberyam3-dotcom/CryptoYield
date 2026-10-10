@@ -112,6 +112,8 @@ export interface IStorage {
   updateUserRole(userId: string, role: 'user' | 'admin'): Promise<User>;
   updateUserKycStatus(userId: string, kycStatus: 'pending' | 'approved' | 'rejected'): Promise<User>;
   updateUserWithdrawalSuspension(userId: string, suspended: boolean): Promise<User>;
+  creditUserBalance(userId: string, amount: string): Promise<User>;
+  adjustUserBalance(userId: string, amount: string, type: 'add' | 'withdraw', metadata: Record<string, unknown>, transactionId: string, date?: Date): Promise<User>;
   updateUserProfileAdmin(userId: string, data: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
   updateTransactionDate(type: 'deposit' | 'stock_purchase', id: string, date: Date): Promise<void>;
   getUserStats(): Promise<{
@@ -709,22 +711,44 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserBalance(userId: string, newBalance: string): Promise<User> {
-    console.log(`[Storage.updateUserBalance] Updating user ${userId} balance to ${newBalance}`);
-    const result = await db
-      .update(users)
-      .set({ balance: newBalance, updatedAt: new Date() })
-      .where(eq(users.id, userId))
-      .returning();
-    
-    console.log(`[Storage.updateUserBalance] Update result:`, result.length > 0 ? `Updated to ${result[0].balance}` : 'No rows updated');
-    
-    if (result.length === 0) {
-      console.error(`[Storage.updateUserBalance] No user found with id ${userId}`);
-      throw new Error(`User not found: ${userId}`);
+  async creditUserBalance(userId: string, amount: string): Promise<User> {
+    if (!Number.isFinite(Number(amount)) || Number(amount) < 0 || !amount.trim()) {
+      throw new Error('Invalid credit amount');
     }
-    
-    return result[0];
+    // Increment the current database value, never replace it with a stale snapshot.
+    const [user] = await db.update(users)
+      .set({ balance: sql`${users.balance} + ${amount}::numeric`, updatedAt: new Date() })
+      .where(eq(users.id, userId)).returning();
+    if (!user) throw new Error('User not found');
+    return user;
+  }
+
+  async adjustUserBalance(
+    userId: string, amount: string, type: 'add' | 'withdraw',
+    metadata: Record<string, unknown>, transactionId: string, date?: Date,
+  ): Promise<User> {
+    if (!/^\d+(\.\d{1,8})?$/.test(amount) || Number(amount) <= 0 ||
+      !Number.isFinite(Number(amount)) || !['add', 'withdraw'].includes(type) ||
+      (date && !Number.isFinite(date.getTime()))) throw new Error('Invalid adjustment');
+    return db.transaction(async tx => {
+      const [current] = await tx.select().from(users).where(eq(users.id, userId)).for('update');
+      if (!current) throw new Error('User not found');
+      if (type === 'withdraw') {
+        // Validate against the locked balance with exact eight-decimal arithmetic.
+        allocateAccountDebit([current], userId, amount);
+      }
+      const signedAmount = type === 'add' ? amount : `-${amount}`;
+      const [updated] = await tx.update(users)
+        .set({ balance: sql`${users.balance} + ${signedAmount}::numeric`, updatedAt: new Date() })
+        .where(eq(users.id, userId)).returning();
+      const recordedAt = date || new Date();
+      await tx.insert(deposits).values({
+        userId, amount: signedAmount, depositMethod: 'admin_adjustment',
+        status: 'completed', transactionId, metadata,
+        createdAt: recordedAt, completedAt: recordedAt,
+      });
+      return updated;
+    });
   }
 
   async updateUserProfileAdmin(userId: string, data: { firstName?: string; lastName?: string; email?: string }): Promise<User> {
@@ -916,8 +940,7 @@ export class DatabaseStorage implements IStorage {
 
     const user = await this.getUser(userPortfolio.userId);
     if (user) {
-      const currentBalance = parseFloat(user.balance?.toString() || '0');
-      await this.updateUserBalance(userPortfolio.userId, (currentBalance + refundAmount).toString());
+      await this.creditUserBalance(userPortfolio.userId, refundAmount.toString());
     }
 
     if (userPortfolio.portfolioId && userPortfolio.unitsPurchased) {
@@ -1089,19 +1112,18 @@ export class DatabaseStorage implements IStorage {
         if (currentPeriodsCompleted >= termDuration && !userPortfolio.maturityPaidAt && userPortfolio.userId) {
           const user = await this.getUser(userPortfolio.userId);
           if (user) {
-            const currentBalance = parseFloat(user.balance?.toString() || '0');
             const investedAmt = parseFloat(userPortfolio.investedAmount?.toString() || '0');
             
             if (payoutTerm === 'profit_only') {
               // Return capital at maturity
-              await this.updateUserBalance(userPortfolio.userId, (currentBalance + investedAmt).toString());
+              await this.creditUserBalance(userPortfolio.userId, investedAmt.toString());
               await db.update(userPortfolios).set({ maturityPaidAt: now }).where(eq(userPortfolios.id, userPortfolio.id));
               maturityPayouts++;
             } else if (payoutTerm === 'after_maturity') {
               // Legacy: Pay only accrued profit at maturity (no capital return)
               const unpaidProfit = parseFloat(userPortfolio.accruedUnpaidProfit?.toString() || '0');
               if (unpaidProfit > 0) {
-                await this.updateUserBalance(userPortfolio.userId, (currentBalance + unpaidProfit).toString());
+                await this.creditUserBalance(userPortfolio.userId, unpaidProfit.toString());
                 totalInterestAdded += unpaidProfit;
               }
               await db.update(userPortfolios).set({ maturityPaidAt: now, accruedUnpaidProfit: '0' }).where(eq(userPortfolios.id, userPortfolio.id));
@@ -1123,19 +1145,18 @@ export class DatabaseStorage implements IStorage {
         if (currentPeriodsCompleted >= termDuration && !userPortfolio.maturityPaidAt && userPortfolio.userId) {
           const user = await this.getUser(userPortfolio.userId);
           if (user) {
-            const currentBalance = parseFloat(user.balance?.toString() || '0');
             const investedAmt = parseFloat(userPortfolio.investedAmount?.toString() || '0');
             
             if (payoutTerm === 'profit_only') {
               // Return capital at maturity
-              await this.updateUserBalance(userPortfolio.userId, (currentBalance + investedAmt).toString());
+              await this.creditUserBalance(userPortfolio.userId, investedAmt.toString());
               await db.update(userPortfolios).set({ maturityPaidAt: now }).where(eq(userPortfolios.id, userPortfolio.id));
               maturityPayouts++;
             } else if (payoutTerm === 'after_maturity') {
               // Legacy: Pay only accrued profit at maturity (no capital return)
               const unpaidProfit = parseFloat(userPortfolio.accruedUnpaidProfit?.toString() || '0');
               if (unpaidProfit > 0) {
-                await this.updateUserBalance(userPortfolio.userId, (currentBalance + unpaidProfit).toString());
+                await this.creditUserBalance(userPortfolio.userId, unpaidProfit.toString());
                 totalInterestAdded += unpaidProfit;
               }
               await db.update(userPortfolios).set({ maturityPaidAt: now, accruedUnpaidProfit: '0' }).where(eq(userPortfolios.id, userPortfolio.id));
@@ -1180,8 +1201,7 @@ export class DatabaseStorage implements IStorage {
         if (userPortfolio.userId) {
           const user = await this.getUser(userPortfolio.userId);
           if (user) {
-            const currentBalance = parseFloat(user.balance?.toString() || '0');
-            await this.updateUserBalance(userPortfolio.userId, (currentBalance + interestToAdd).toString());
+            await this.creditUserBalance(userPortfolio.userId, interestToAdd.toString());
           }
         }
         
@@ -1189,8 +1209,7 @@ export class DatabaseStorage implements IStorage {
         if (payoutTerm === 'profit_only' && newPeriodsCompleted >= termDuration && userPortfolio.userId && !userPortfolio.maturityPaidAt) {
           const user = await this.getUser(userPortfolio.userId);
           if (user) {
-            const currentBalance = parseFloat(user.balance?.toString() || '0');
-            await this.updateUserBalance(userPortfolio.userId, (currentBalance + investedAmount).toString());
+            await this.creditUserBalance(userPortfolio.userId, investedAmount.toString());
             updateData.maturityPaidAt = now;
             maturityPayouts++;
           }
@@ -1222,8 +1241,7 @@ export class DatabaseStorage implements IStorage {
         if (userPortfolio.userId) {
           const user = await this.getUser(userPortfolio.userId);
           if (user) {
-            const currentBalance = parseFloat(user.balance?.toString() || '0');
-            await this.updateUserBalance(userPortfolio.userId, (currentBalance + totalPayout).toString());
+            await this.creditUserBalance(userPortfolio.userId, totalPayout.toString());
           }
         }
         
@@ -1245,8 +1263,7 @@ export class DatabaseStorage implements IStorage {
           const user = await this.getUser(userPortfolio.userId);
           if (user) {
             const totalUnpaid = currentUnpaid + interestToAdd;
-            const currentBalance = parseFloat(user.balance?.toString() || '0');
-            await this.updateUserBalance(userPortfolio.userId, (currentBalance + totalUnpaid).toString());
+            await this.creditUserBalance(userPortfolio.userId, totalUnpaid.toString());
             updateData.maturityPaidAt = now;
             updateData.accruedUnpaidProfit = '0';
             maturityPayouts++;
@@ -2006,17 +2023,15 @@ export class DatabaseStorage implements IStorage {
       }
 
       const rewardAmount = coupon.rewardAmount;
-      const currentBalance = parseFloat(user.balance || '0');
-      const newBalance = (currentBalance + parseFloat(rewardAmount)).toFixed(8);
 
       // Update user balance
-      await tx
+      const [creditedUser] = await tx
         .update(users)
         .set({ 
-          balance: newBalance,
+          balance: sql`${users.balance} + ${rewardAmount}::numeric`,
           updatedAt: new Date()
         })
-        .where(eq(users.id, userId));
+        .where(eq(users.id, userId)).returning();
 
       // Create redemption record
       await tx.insert(couponRedemptions).values({
@@ -2035,7 +2050,7 @@ export class DatabaseStorage implements IStorage {
 
       return {
         rewardAmount,
-        newBalance,
+        newBalance: creditedUser.balance!,
         description: coupon.description || 'Coupon redeemed successfully',
       };
     });
@@ -2144,35 +2159,29 @@ export class DatabaseStorage implements IStorage {
     // Get conversion rate from settings
     const setting = await this.getSetting('xp_conversion_rate');
     const conversionRate = setting ? parseFloat(setting.settingValue) : 0.01; // Default: 1 XP = $0.01
-
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user) {
-      throw new Error('User not found');
+    if (!Number.isSafeInteger(xpAmount) || xpAmount <= 0 ||
+      !Number.isFinite(conversionRate) || conversionRate <= 0) {
+      throw new Error('Invalid XP conversion');
     }
-
-    if ((user.xpBalance || 0) < xpAmount) {
-      throw new Error('Insufficient XP balance');
-    }
-
     const convertedAmount = (xpAmount * conversionRate).toFixed(8);
-    const currentBalance = parseFloat(user.balance || '0');
-    const newBalance = (currentBalance + parseFloat(convertedAmount)).toFixed(8);
-    const newXpBalance = (user.xpBalance || 0) - xpAmount;
-
-    await db
-      .update(users)
-      .set({
-        balance: newBalance,
-        xpBalance: newXpBalance,
+    if (!Number.isFinite(Number(convertedAmount)) || Number(convertedAmount) <= 0) {
+      throw new Error('Invalid XP conversion');
+    }
+    return db.transaction(async tx => {
+      const [user] = await tx.select().from(users).where(eq(users.id, userId)).for('update');
+      if (!user) throw new Error('User not found');
+      if ((user.xpBalance || 0) < xpAmount) throw new Error('Insufficient XP balance');
+      const [updated] = await tx.update(users).set({
+        balance: sql`${users.balance} + ${convertedAmount}::numeric`,
+        xpBalance: sql`${users.xpBalance} - ${xpAmount}`,
         updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-
-    return {
-      convertedAmount,
-      newBalance,
-      newXpBalance,
-    };
+      }).where(eq(users.id, userId)).returning();
+      return {
+        convertedAmount,
+        newBalance: updated.balance!,
+        newXpBalance: updated.xpBalance!,
+      };
+    });
   }
 
   async getUserXpClaims(userId: string): Promise<XpClaim[]> {
