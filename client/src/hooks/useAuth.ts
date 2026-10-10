@@ -13,6 +13,7 @@ export interface AccountContext {
 
 export interface AuthResponse extends User {
   accountContext?: AccountContext;
+  hasXpCode?: boolean;
 }
 
 export function useAuth() {
@@ -55,6 +56,7 @@ export function useAuth() {
     jointAccount,
     userRole,
     accountContext,
+    hasXpCode: !!authResponse?.hasXpCode,
     error,
   };
 }

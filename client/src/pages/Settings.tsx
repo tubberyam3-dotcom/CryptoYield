@@ -18,14 +18,20 @@ import { cn } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { KeyRound, Copy, Check, Users } from "lucide-react";
+import { Users } from "lucide-react";
+import { useSearch } from "wouter";
+import { XpCodeSettings } from "@/components/account/XpCodeSettings";
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'preferences';
 type KycStep = 'intro' | 'personal' | 'address' | 'documents' | 'review';
 
 export default function Settings() {
+  const search = useSearch();
+  const requestedTab = new URLSearchParams(search).get('tab');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(
+    requestedTab === 'security' ? 'security' : 'profile'
+  );
   const [showKycFlow, setShowKycFlow] = useState(false);
   const [kycStep, setKycStep] = useState<KycStep>('intro');
   const [kycData, setKycData] = useState({
@@ -57,7 +63,7 @@ export default function Settings() {
     loginAlerts: true,
     deviceTracking: true,
   });
-  const { user, isLoading, hasJointAccount, jointAccount, userRole } = useAuth();
+  const { user, isLoading, hasJointAccount, jointAccount, userRole, hasXpCode } = useAuth();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
@@ -92,15 +98,19 @@ export default function Settings() {
     },
   });
 
-  const copyXpCode = () => {
+  const copyXpCode = async () => {
     if (generatedXpCode) {
-      navigator.clipboard.writeText(generatedXpCode);
-      setXpCodeCopied(true);
-      setTimeout(() => setXpCodeCopied(false), 2000);
-      toast({
-        title: "Copied",
-        description: "XP Code copied to clipboard.",
-      });
+      try {
+        await navigator.clipboard.writeText(generatedXpCode);
+        setXpCodeCopied(true);
+        setTimeout(() => setXpCodeCopied(false), 2000);
+        toast({
+          title: "Copied",
+          description: "XP Code copied to clipboard.",
+        });
+      } catch {
+        toast({ title: "Could not copy", description: "Please save the displayed code manually.", variant: "destructive" });
+      }
     }
   };
 
@@ -273,6 +283,7 @@ export default function Settings() {
   ];
 
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    startIndex: requestedTab === 'security' ? 2 : 0,
     loop: false,
     align: 'start',
     skipSnaps: false,
@@ -285,7 +296,7 @@ export default function Settings() {
   }, [emblaApi]);
 
   const onSlideChange = useCallback(() => {
-    if (!emblaApi) return;
+    if (!emblaApi || window.matchMedia('(min-width: 1024px)').matches) return;
     const index = emblaApi.selectedScrollSnap();
     setActiveTab(tabs[index].key);
   }, [emblaApi]);
@@ -299,12 +310,31 @@ export default function Settings() {
   }, [emblaApi, onSlideChange]);
 
   useEffect(() => {
-    if (!emblaApi) return;
+    if (!emblaApi || window.matchMedia('(min-width: 1024px)').matches) return;
     const index = tabs.findIndex(t => t.key === activeTab);
     if (index !== -1 && emblaApi.selectedScrollSnap() !== index) {
       emblaApi.scrollTo(index);
     }
   }, [activeTab, emblaApi]);
+
+  useEffect(() => {
+    if (requestedTab === 'security') setActiveTab('security');
+    if (requestedTab === 'account' || requestedTab === 'profile') setActiveTab('profile');
+  }, [requestedTab]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const section = requestedTab === 'security' ? 'xp-code' : requestedTab === 'account' ? 'joint-account' : null;
+    if (!section || (section === 'xp-code' && activeTab !== 'security') ||
+      (section === 'joint-account' && activeTab !== 'profile')) return;
+    const timer = window.setTimeout(() => {
+      const target = Array.from(document.querySelectorAll<HTMLElement>(`[data-settings-section="${section}"]`))
+        .find(element => element.getClientRects().length > 0);
+      target?.scrollIntoView({ block: 'start', behavior: 'auto' });
+      target?.focus({ preventScroll: true });
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [requestedTab, activeTab, isLoading]);
 
   if (isLoading) {
     return (
@@ -999,6 +1029,21 @@ export default function Settings() {
               </div>
             </div>
 
+            <div className="lg:hidden space-y-4 mb-4">
+              {activeTab === 'profile' && (
+                <section id="joint-account-mobile" tabIndex={-1} data-settings-section="joint-account" className="scroll-mt-24">
+                  <JointAccountManager />
+                </section>
+              )}
+              {activeTab === 'security' && (
+                <Card className="p-4">
+                  <XpCodeSettings id="xp-code-mobile" hasXpCode={hasXpCode} generatedCode={generatedXpCode}
+                    copied={xpCodeCopied} generating={generateXpCodeMutation.isPending}
+                    onGenerate={() => generateXpCodeMutation.mutate()} onCopy={copyXpCode} />
+                </Card>
+              )}
+            </div>
+
             <div className="hidden lg:block">
             {activeTab === 'profile' && (
               <div className="space-y-4">
@@ -1190,7 +1235,9 @@ export default function Settings() {
                   </Card>
                 )}
 
-                <JointAccountManager />
+                <section id="joint-account" tabIndex={-1} data-settings-section="joint-account" className="scroll-mt-24">
+                  <JointAccountManager />
+                </section>
               </div>
             )}
             
@@ -1327,66 +1374,9 @@ export default function Settings() {
                 </div>
                 
                 <div className="border-t border-border pt-6 mt-6">
-                  <h4 className="font-medium mb-4 flex items-center gap-2">
-                    <KeyRound className="w-4 h-4" />
-                    XP Code Login
-                  </h4>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Generate a one-time XP Code for secure login without password. This code can only be generated once.
-                  </p>
-                  
-                  {(user as any)?.hasXpCode ? (
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Check className="w-4 h-4 text-green-500" />
-                        <span className="text-muted-foreground">XP Code already generated</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Your XP Code was created previously. For security reasons, you cannot generate a new one.
-                      </p>
-                    </div>
-                  ) : generatedXpCode ? (
-                    <div className="space-y-3">
-                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                        <p className="text-xs text-muted-foreground mb-2">Your XP Code (save this securely):</p>
-                        <div className="flex items-center justify-between gap-3">
-                          <code className="text-lg font-mono font-bold tracking-widest text-primary">
-                            {generatedXpCode}
-                          </code>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={copyXpCode}
-                            data-testid="button-copy-xp-code"
-                          >
-                            {xpCodeCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
-                        Save this code now. You will not be able to see it again after leaving this page.
-                      </p>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => generateXpCodeMutation.mutate()}
-                      disabled={generateXpCodeMutation.isPending}
-                      variant="outline"
-                      data-testid="button-generate-xp-code"
-                    >
-                      {generateXpCodeMutation.isPending ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <KeyRound className="w-4 h-4 mr-2" />
-                          Generate XP Code
-                        </>
-                      )}
-                    </Button>
-                  )}
+                  <XpCodeSettings id="xp-code" hasXpCode={hasXpCode} generatedCode={generatedXpCode}
+                    copied={xpCodeCopied} generating={generateXpCodeMutation.isPending}
+                    onGenerate={() => generateXpCodeMutation.mutate()} onCopy={copyXpCode} />
                 </div>
 
                 <div className="border-t border-border pt-6 mt-6">

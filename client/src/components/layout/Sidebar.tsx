@@ -40,19 +40,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-background z-40 lg:hidden"
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          className="fixed inset-0 z-40 bg-background/70 lg:hidden"
           onClick={onClose}
         />
       )}
       
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out",
+        "fixed inset-y-0 left-0 z-50 flex max-h-[100dvh] w-64 flex-col overflow-y-auto overscroll-contain border-r border-sidebar-border bg-sidebar pb-[env(safe-area-inset-bottom,0px)]",
+        "transform transition-transform duration-300 ease-in-out",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-sidebar-border">
+        <div className="flex shrink-0 items-center justify-between border-b border-sidebar-border p-6">
           <div className="flex items-center space-x-3">
             <img 
               src={theme === 'dark' ? refluxLogoLight : refluxLogoDark} 
@@ -71,7 +74,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="p-4">
+        <nav className="min-h-0 flex-1 p-4">
           <ul className="space-y-2">
             {navigationItems.map((item) => (
               <li key={item.href}>
