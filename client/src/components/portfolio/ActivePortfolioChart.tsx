@@ -262,7 +262,7 @@ export function ActivePortfolioChart({ investments }: ActivePortfolioChartProps)
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-card/50 backdrop-blur border border-border/50 rounded-lg p-3">
+              <div className="bg-card border border-border/50 rounded-lg p-3">
                 <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
                   <DollarSign className="w-3 h-3" />
                   Total Invested
@@ -272,7 +272,7 @@ export function ActivePortfolioChart({ investments }: ActivePortfolioChartProps)
                 </div>
               </div>
               
-              <div className="bg-card/50 backdrop-blur border border-border/50 rounded-lg p-3">
+              <div className="bg-card border border-border/50 rounded-lg p-3">
                 <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
                   <TrendingUp className="w-3 h-3" />
                   Current Value
@@ -302,7 +302,7 @@ export function ActivePortfolioChart({ investments }: ActivePortfolioChartProps)
 
             {currentInvestment && (
               <>
-                <div className="bg-card/50 backdrop-blur border border-accent/20 rounded-lg p-3">
+                <div className="bg-card border border-accent/20 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-muted-foreground">Est. Next Earning</span>
                     <span className="text-accent font-bold">+${estimatedNextEarning}</span>

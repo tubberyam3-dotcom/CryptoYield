@@ -134,7 +134,7 @@ export default function JoinAccount() {
           className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background" />
         <Card className="relative z-10 w-full max-w-md">
           <CardHeader className="text-center">
             <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
@@ -177,7 +177,7 @@ export default function JoinAccount() {
           className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -207,7 +207,7 @@ export default function JoinAccount() {
           className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -234,7 +234,7 @@ export default function JoinAccount() {
         className="fixed inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${windmillBg})` }}
       />
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+      <div className="fixed inset-0 bg-background" />
       <motion.div
         initial={{ y: "100%", opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

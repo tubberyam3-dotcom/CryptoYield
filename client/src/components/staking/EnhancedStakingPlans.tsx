@@ -126,11 +126,10 @@ export function EnhancedStakingPlans() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.02, y: -4 }}
                   className="relative"
                 >
                   <Card 
-                    className={`${colors.bg} ${colors.border} border-2 hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden relative`}
+                    className={`${colors.bg} ${colors.border} border-2 cursor-pointer group overflow-hidden relative`}
                     data-testid={`enhanced-staking-plan-${plan.id}`}
                   >
                     {/* Popular Badge */}
@@ -222,7 +221,7 @@ export function EnhancedStakingPlans() {
                       {/* Stake Button */}
                       <Button 
                         onClick={() => handleSelectPlan(plan)}
-                        className="w-full group-hover:shadow-md transition-shadow"
+                        className="w-full"
                         data-testid={`button-stake-${plan.id}`}
                       >
                         <Zap className="w-4 h-4 mr-2" />

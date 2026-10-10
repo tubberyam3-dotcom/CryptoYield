@@ -100,7 +100,7 @@ export function CommunityChalllenges() {
         {challenges?.map((challenge) => {
           const progress = calculateProgress(challenge.currentAmount || '0', challenge.targetAmount);
           return (
-            <Card key={challenge.id} className="p-6 hover-lift" data-testid={`card-challenge-${challenge.id}`}>
+            <Card key={challenge.id} className="p-6" data-testid={`card-challenge-${challenge.id}`}>
               <div className="flex items-center justify-between mb-4">
                 <Badge className={challenge.type === 'group' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}>
                   {challenge.status}

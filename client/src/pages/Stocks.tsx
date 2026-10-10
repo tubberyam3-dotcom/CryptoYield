@@ -331,7 +331,7 @@ export default function Stocks() {
                   {stockProducts.map((stock) => {
                     const quote = stockQuotes[stock.symbol];
                     return (
-                      <Card key={stock.id} className="p-5 hover:shadow-lg transition-shadow" data-testid={`card-available-stock-${stock.id}`}>
+                      <Card key={stock.id} className="p-5" data-testid={`card-available-stock-${stock.id}`}>
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
                             <StockIcon symbol={stock.symbol} size="md" />
@@ -456,7 +456,7 @@ export default function Stocks() {
                 {topPerformers
                   .filter(s => !searchQuery || s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || s.name.toLowerCase().includes(searchQuery.toLowerCase()))
                   .map((stock) => (
-                    <Card key={stock.symbol} className="p-3 md:p-4 hover:shadow-xl hover:border-primary/30 transition-all duration-200" data-testid={`card-top-stock-${stock.symbol}`}>
+                    <Card key={stock.symbol} className="p-3 md:p-4 hover:border-primary/30 transition-colors duration-200" data-testid={`card-top-stock-${stock.symbol}`}>
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => setLocation(`/stocks/${stock.symbol}`)}>
                           <StockIcon symbol={stock.symbol} size="sm" className="flex-shrink-0" />

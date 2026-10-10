@@ -22,7 +22,7 @@ export function WalletOverview() {
   const totalAssets = balance + portfolioValue + bondsValue;
 
   return (
-    <Card className="p-6 card-hover animate-fade-in-scale nude-gradient-light border-nude-medium/20" data-testid="card-wallet-overview">
+    <Card className="p-6 animate-fade-in-scale nude-gradient-light border-nude-medium/20" data-testid="card-wallet-overview">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold">Wallet Overview</h2>
         <Link href="/wallet">

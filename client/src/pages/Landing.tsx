@@ -65,7 +65,7 @@ export default function Landing() {
           className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -94,7 +94,7 @@ export default function Landing() {
           className="fixed inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${windmillBg})` }}
         />
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-background" />
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -118,7 +118,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+      <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
@@ -130,14 +130,12 @@ export default function Landing() {
             <Button 
               onClick={handleDemo} 
               variant="outline"
-              className="hover:scale-105 transition-transform"
               data-testid="button-try-demo"
             >
               Try Demo
             </Button>
             <Button 
               onClick={() => setAuthView('login')} 
-              className="hover:scale-105 transition-transform"
               data-testid="button-login"
             >
               Sign In
@@ -145,7 +143,6 @@ export default function Landing() {
             <Button
               onClick={() => setAuthView('signup')}
               variant="outline"
-              className="hover:scale-105 transition-transform"
               data-testid="button-signup"
             >
               Create Account
@@ -187,7 +184,7 @@ export default function Landing() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="hover-lift border-2 transition-all duration-300 hover:border-primary/50 hover:shadow-xl" data-testid="card-feature-portfolios">
+            <Card className="border-2 transition-colors duration-300 hover:border-primary/50" data-testid="card-feature-portfolios">
               <CardHeader>
                 <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center mb-4 shadow-lg">
                   <Briefcase className="w-7 h-7 text-white" />
@@ -201,7 +198,7 @@ export default function Landing() {
               </CardContent>
             </Card>
 
-            <Card className="hover-lift border-2 transition-all duration-300 hover:border-accent/50 hover:shadow-xl" data-testid="card-feature-bonds">
+            <Card className="border-2 transition-colors duration-300 hover:border-accent/50" data-testid="card-feature-bonds">
               <CardHeader>
                 <div className="w-14 h-14 bg-gradient-to-br from-accent to-accent/60 rounded-xl flex items-center justify-center mb-4 shadow-lg">
                   <BarChart3 className="w-7 h-7 text-white" />
@@ -215,7 +212,7 @@ export default function Landing() {
               </CardContent>
             </Card>
 
-            <Card className="hover-lift border-2 transition-all duration-300 hover:border-yellow-500/50 hover:shadow-xl" data-testid="card-feature-challenges">
+            <Card className="border-2 transition-colors duration-300 hover:border-yellow-500/50" data-testid="card-feature-challenges">
               <CardHeader>
                 <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center mb-4 shadow-lg">
                   <Trophy className="w-7 h-7 text-white" />

@@ -199,7 +199,7 @@ export function BalanceSummary() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
             >
-              <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="portfolio-summary">
+              <Card className="p-3 md:p-4 cursor-pointer group" data-testid="portfolio-summary">
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export function BalanceSummary() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.15 }}
             >
-              <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="stocks-summary">
+              <Card className="p-3 md:p-4 cursor-pointer group" data-testid="stocks-summary">
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ export function BalanceSummary() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.2 }}
             >
-              <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="staking-summary">
+              <Card className="p-3 md:p-4 cursor-pointer group" data-testid="staking-summary">
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -307,7 +307,7 @@ export function BalanceSummary() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.3 }}
             >
-              <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="challenges-summary">
+              <Card className="p-3 md:p-4 cursor-pointer group" data-testid="challenges-summary">
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -343,7 +343,7 @@ export function BalanceSummary() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.4 }}
             >
-              <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="rewards-summary">
+              <Card className="p-3 md:p-4 cursor-pointer group" data-testid="rewards-summary">
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -379,7 +379,7 @@ export function BalanceSummary() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.5 }}
             >
-              <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="activity-summary">
+              <Card className="p-3 md:p-4 cursor-pointer group" data-testid="activity-summary">
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -418,7 +418,7 @@ export function BalanceSummary() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="portfolio-summary-desktop">
+          <Card className="p-3 md:p-4 cursor-pointer group" data-testid="portfolio-summary-desktop">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -452,7 +452,7 @@ export function BalanceSummary() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
         >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="stocks-summary-desktop">
+          <Card className="p-3 md:p-4 cursor-pointer group" data-testid="stocks-summary-desktop">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -486,7 +486,7 @@ export function BalanceSummary() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
         >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="staking-summary-desktop">
+          <Card className="p-3 md:p-4 cursor-pointer group" data-testid="staking-summary-desktop">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -520,7 +520,7 @@ export function BalanceSummary() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
         >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="challenges-summary-desktop">
+          <Card className="p-3 md:p-4 cursor-pointer group" data-testid="challenges-summary-desktop">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -554,7 +554,7 @@ export function BalanceSummary() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.4 }}
         >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="rewards-summary-desktop">
+          <Card className="p-3 md:p-4 cursor-pointer group" data-testid="rewards-summary-desktop">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -588,7 +588,7 @@ export function BalanceSummary() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.5 }}
         >
-          <Card className="p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer group" data-testid="activity-summary-desktop">
+          <Card className="p-3 md:p-4 cursor-pointer group" data-testid="activity-summary-desktop">
             <CardContent className="p-0">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">

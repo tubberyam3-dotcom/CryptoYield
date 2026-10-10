@@ -24,7 +24,6 @@ export function FloatingClaimButton() {
       className="fixed bottom-24 right-6 z-50 lg:hidden"
       initial={{ scale: 0, rotate: -180 }}
       animate={{ scale: 1, rotate: 0 }}
-      whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
       transition={{ type: "spring", stiffness: 260, damping: 20 }}
       data-testid="button-claim-daily-reward"

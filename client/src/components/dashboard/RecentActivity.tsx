@@ -91,7 +91,7 @@ export function RecentActivity() {
   };
 
   return (
-    <Card className="p-6 card-hover animate-fade-in-scale nude-gradient-warm border-nude-medium/20" data-testid="card-recent-activity">
+    <Card className="p-6 animate-fade-in-scale nude-gradient-warm border-nude-medium/20" data-testid="card-recent-activity">
       <h2 className="text-xl font-semibold mb-6">Recent Activity</h2>
       
       {isLoading ? (

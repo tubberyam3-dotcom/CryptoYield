@@ -205,7 +205,7 @@ export default function Staking() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {stakingPlans?.map((plan) => (
-                  <Card key={plan.id} className="p-6 hover-lift" data-testid={`card-staking-plan-${plan.id}`}>
+                  <Card key={plan.id} className="p-6" data-testid={`card-staking-plan-${plan.id}`}>
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold mb-2" data-testid={`text-plan-name-${plan.id}`}>
                         {plan.name}

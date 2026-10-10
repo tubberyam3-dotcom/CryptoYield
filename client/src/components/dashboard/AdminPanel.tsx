@@ -60,12 +60,12 @@ export function AdminPanel() {
         {adminActions.map((action, index) => (
           <Link key={index} href={action.link}>
             <div 
-              className="block p-4 border border-border rounded-lg hover:border-primary transition-all duration-200 hover:shadow-md group cursor-pointer"
+              className="block p-4 border border-border rounded-lg hover:border-primary transition-colors duration-200 group cursor-pointer"
               data-testid={`link-admin-${action.title.toLowerCase().replace(/\s+/g, '-')}`}
             >
               <div className="flex flex-col items-center space-y-3 text-center">
                 <div className={`p-3 rounded-full bg-muted group-hover:bg-primary/10 transition-colors`}>
-                  <i className={`${action.icon} ${action.color} text-xl group-hover:scale-110 transition-transform`}></i>
+                  <i className={`${action.icon} ${action.color} text-xl`}></i>
                 </div>
                 <div>
                   <h3 className="font-medium text-sm mb-1">{action.title}</h3>

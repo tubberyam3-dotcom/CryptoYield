@@ -178,7 +178,7 @@ export function InvestmentCalculator() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card className="relative border-0 shadow-2xl bg-gradient-to-br from-background via-background/95 to-primary/5 backdrop-blur-xl overflow-hidden" data-testid="calculator-card">
+        <Card className="relative border-0 shadow-2xl bg-card overflow-hidden" data-testid="calculator-card">
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)] pointer-events-none"></div>
           <CardHeader className="space-y-4 pb-8 relative">
             <div className="flex items-center justify-between">
@@ -348,7 +348,7 @@ export function InvestmentCalculator() {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <Card className="border-0 bg-gradient-to-br from-primary/5 via-primary/10 to-purple-500/10 shadow-xl hover:shadow-2xl transition-shadow" data-testid="result-card-1">
+                      <Card className="border-0 bg-gradient-to-br from-primary/5 via-primary/10 to-purple-500/10 shadow-xl" data-testid="result-card-1">
                         <CardHeader className="pb-4">
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-xl font-bold flex items-center gap-3">
@@ -402,7 +402,7 @@ export function InvestmentCalculator() {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.3, delay: 0.1 }}
                       >
-                        <Card className="border-0 bg-gradient-to-br from-accent/5 via-accent/10 to-pink-500/10 shadow-xl hover:shadow-2xl transition-shadow" data-testid="result-card-2">
+                        <Card className="border-0 bg-gradient-to-br from-accent/5 via-accent/10 to-pink-500/10 shadow-xl" data-testid="result-card-2">
                           <CardHeader className="pb-4">
                             <div className="flex items-center justify-between">
                               <CardTitle className="text-xl font-bold flex items-center gap-3">
@@ -555,7 +555,7 @@ export function InvestmentCalculator() {
                       index === 0 ? 'border-yellow-500/50 bg-yellow-500/5' :
                       index === 1 ? 'border-slate-400/50 bg-slate-400/5' :
                       'border-orange-600/50 bg-orange-600/5'
-                    } hover:shadow-lg transition-shadow`}>
+                    }`}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">

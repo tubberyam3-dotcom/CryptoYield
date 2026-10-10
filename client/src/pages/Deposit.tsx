@@ -416,7 +416,7 @@ export default function Deposit() {
               {depositMethods.map((method) => (
                 <Card
                   key={method.id}
-                  className="p-2 md:p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+                  className="p-2 md:p-4 cursor-pointer"
                   onClick={() => setSelectedMethod(method.id)}
                   data-testid={`card-method-${method.id}`}
                 >
@@ -481,7 +481,7 @@ export default function Deposit() {
                         {cryptoCoins.filter(c => c.address).map((coin) => (
                           <Card
                             key={coin.id}
-                            className={`p-4 cursor-pointer transition-all hover:scale-105 ${
+                            className={`p-4 cursor-pointer ${
                               selectedCrypto === coin.id ? "border-2 border-primary" : ""
                             }`}
                             onClick={() => {

@@ -67,7 +67,7 @@ export function FeaturedPortfolios() {
         {portfolios?.slice(0, 3).map((portfolio) => (
           <Card 
             key={portfolio.id} 
-            className="card-hover cursor-pointer nude-gradient-light border-nude-medium/20 overflow-hidden" 
+            className="cursor-pointer nude-gradient-light border-nude-medium/20 overflow-hidden"
             data-testid={`card-portfolio-${portfolio.id}`}
           >
             {portfolio.imageUrl && (

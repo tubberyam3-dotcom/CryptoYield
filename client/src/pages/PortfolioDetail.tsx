@@ -242,7 +242,7 @@ export default function PortfolioDetail() {
                 <Badge className={getStrategyColor(portfolio.strategyTag || '')}>
                   {portfolio.strategyTag || 'General'}
                 </Badge>
-                <Badge variant="outline" className={`${getRiskColor(portfolio.riskLevel)} bg-background/80`}>
+                <Badge variant="outline" className={`${getRiskColor(portfolio.riskLevel)} bg-background`}>
                   <Shield className="w-3 h-3 mr-1" />
                   {portfolio.riskLevel} Risk
                 </Badge>
@@ -270,7 +270,7 @@ export default function PortfolioDetail() {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div className="bg-background/50 rounded-lg p-4 border">
+              <div className="bg-card rounded-lg p-4 border">
                 <div className="flex items-center gap-2 mb-2">
                   <DollarSign className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Min. Investment</span>
@@ -279,14 +279,14 @@ export default function PortfolioDetail() {
                   ${parseFloat(portfolio.minInvestment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
-              <div className="bg-background/50 rounded-lg p-4 border">
+              <div className="bg-card rounded-lg p-4 border">
                 <div className="flex items-center gap-2 mb-2">
                   <PieChart className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Assets</span>
                 </div>
                 <div className="text-2xl font-bold">{assets.length}</div>
               </div>
-              <div className="bg-background/50 rounded-lg p-4 border">
+              <div className="bg-card rounded-lg p-4 border">
                 <div className="flex items-center gap-2 mb-2">
                   <Activity className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Status</span>

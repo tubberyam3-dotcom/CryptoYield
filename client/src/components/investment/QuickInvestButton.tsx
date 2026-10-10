@@ -26,7 +26,7 @@ export function QuickInvestButton({
     return (
       <>
         <div 
-          className={`p-4 border rounded-lg hover:shadow-md transition-all cursor-pointer group ${className}`}
+          className={`p-4 border rounded-lg cursor-pointer group ${className}`}
           onClick={() => setWizardOpen(true)}
           data-testid={`quick-invest-card-${portfolio.id}`}
         >
@@ -46,7 +46,7 @@ export function QuickInvestButton({
           
           <Button 
             size="sm" 
-            className="w-full group-hover:shadow-sm transition-shadow"
+            className="w-full"
             data-testid={`button-invest-${portfolio.id}`}
           >
             <DollarSign className="w-4 h-4 mr-1" />

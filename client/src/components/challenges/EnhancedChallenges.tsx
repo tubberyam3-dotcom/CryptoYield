@@ -188,11 +188,10 @@ export function EnhancedChallenges({ compact = false }: EnhancedChallengesProps)
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      whileHover={{ scale: 1.02, y: -4 }}
                       className="relative"
                     >
                       <Card 
-                        className={`${colors.bg} ${colors.border} border-2 hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden relative`}
+                        className={`${colors.bg} ${colors.border} border-2 cursor-pointer group overflow-hidden relative`}
                         data-testid={`challenge-card-${challenge.id}`}
                       >
                         {/* Trending Badge */}
@@ -294,7 +293,7 @@ export function EnhancedChallenges({ compact = false }: EnhancedChallengesProps)
                           {/* Join Button */}
                           <Button 
                             onClick={() => handleJoinChallenge(challenge)}
-                            className="w-full group-hover:shadow-md transition-shadow text-sm py-2 sm:py-2.5"
+                            className="w-full text-sm py-2 sm:py-2.5"
                             data-testid={`button-join-${challenge.id}`}
                           >
                             <Trophy className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -323,7 +322,7 @@ export function EnhancedChallenges({ compact = false }: EnhancedChallengesProps)
                       transition={{ delay: index * 0.1 }}
                       className="relative"
                     >
-                      <Card className={`${colors.bg} ${colors.border} border-2 shadow-lg hover:shadow-xl transition-shadow`}>
+                      <Card className={`${colors.bg} ${colors.border} border-2 shadow-lg`}>
                         <div className="absolute top-3 right-3">
                           <Badge className="bg-red-500 text-white">
                             <Flame className="w-3 h-3 mr-1" />

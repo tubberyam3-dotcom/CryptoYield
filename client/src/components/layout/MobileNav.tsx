@@ -107,7 +107,7 @@ export function MobileNav() {
 
       <nav
         aria-label="Primary mobile navigation"
-        className="fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom,0px))] z-[100] rounded-xl border border-border bg-card/95 p-1.5 shadow-lg backdrop-blur-sm"
+        className="fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom,0px))] z-[100] rounded-xl border border-border bg-card p-1.5 shadow-lg"
       >
         <div className="grid grid-cols-5 gap-1">
           {primaryItems.map((item) => (

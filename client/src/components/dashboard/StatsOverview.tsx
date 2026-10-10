@@ -79,7 +79,7 @@ export function StatsOverview() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {statsData.map((stat, index) => (
-        <Card key={index} className="p-6 hover-lift" data-testid={`card-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+        <Card key={index} className="p-6" data-testid={`card-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">{stat.title}</p>

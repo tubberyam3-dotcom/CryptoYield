@@ -106,10 +106,9 @@ export function GamifiedStats() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
-          whileHover={{ scale: 1.02, y: -4 }}
           className="relative"
         >
-          <Card className="p-3 md:p-6 hover-lift relative overflow-hidden group cursor-pointer" data-testid={`gamified-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Card className="p-3 md:p-6 relative overflow-hidden group cursor-pointer" data-testid={`gamified-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             {/* Celebration sparkles */}
             {stat.celebration && (
               <div className="absolute top-2 right-2">
