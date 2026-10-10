@@ -13,7 +13,7 @@ export function getGreeting(
       }).format(now));
       greeting = hour >= 5 && hour < 12 ? "Good morning"
         : hour >= 12 && hour < 18 ? "Good afternoon"
-        : "Good evening";
+        : "Good Evening";
     } catch {
       // Do not guess a local time when the supplied timezone is invalid.
     }

@@ -7,14 +7,14 @@ test("greeting uses the local timezone and first name", () => {
   const now = new Date("2026-10-10T13:00:00Z");
   assert.equal(getGreeting(" Ada ", "Africa/Lagos", now), "Good afternoon, Ada");
   assert.equal(getGreeting("Ada", "America/New_York", now), "Good morning, Ada");
-  assert.equal(getGreeting("Ada", "Asia/Tokyo", now), "Good evening, Ada");
+  assert.equal(getGreeting("Ada", "Asia/Tokyo", now), "Good Evening, Ada");
   assert.equal(getGreeting("", "Africa/Lagos", now), "Good afternoon");
   assert.equal(getGreeting(null, "invalid/timezone", now), "Hello");
 });
 
 test("greeting changes at morning, noon and evening boundaries", () => {
-  for (const [hour, expected] of [[0, "Good evening"], [4, "Good evening"], [5, "Good morning"],
-    [11, "Good morning"], [12, "Good afternoon"], [17, "Good afternoon"], [18, "Good evening"]] as const) {
+  for (const [hour, expected] of [[0, "Good Evening"], [4, "Good Evening"], [5, "Good morning"],
+    [11, "Good morning"], [12, "Good afternoon"], [17, "Good afternoon"], [18, "Good Evening"]] as const) {
     assert.equal(getGreeting("Ada", "UTC", new Date(`2026-10-10T${String(hour).padStart(2, "0")}:00:00Z`)), `${expected}, Ada`);
   }
   assert.equal(getGreeting("Ada", "America/New_York", new Date("2026-01-10T16:30:00Z")), "Good morning, Ada");
