@@ -56,9 +56,12 @@ import {
   type LoginHistory,
   type InsertLoginHistory,
 } from "@shared/schema";
-import { processWithdrawalRequest, type WithdrawalMethod } from "./withdrawalService";
+import { processWithdrawalRequest, WITHDRAWALS_SUSPENDED_MESSAGE, type WithdrawalMethod } from "./withdrawalService";
 import { db } from "./db";
-import { eq, desc, and, or, sum, count, sql } from "drizzle-orm";
+import { eq, desc, and, or, sum, count, sql, inArray } from "drizzle-orm";
+import { allocateAccountDebit, requireWithdrawalXpCode } from "./accountFunds";
+
+type FundsTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface IStorage {
   // User operations (supports both OAuth and password auth)
@@ -125,7 +128,7 @@ export interface IStorage {
   
   // User Portfolio operations
   getUserPortfolios(userId: string): Promise<(UserPortfolio & { portfolio: Portfolio })[]>;
-  createUserPortfolio(userPortfolio: InsertUserPortfolio): Promise<UserPortfolio>;
+  createUserPortfolio(userPortfolio: InsertUserPortfolio, fundingUserId?: string): Promise<UserPortfolio>;
   updateUserPortfolio(id: string, updates: Partial<InsertUserPortfolio>): Promise<UserPortfolio>;
   getUserPortfolioById(id: string): Promise<UserPortfolio | undefined>;
   getPendingPortfolioInvestments(): Promise<(UserPortfolio & { portfolio: Portfolio; user?: { email: string; firstName: string; lastName: string } })[]>;
@@ -142,7 +145,7 @@ export interface IStorage {
   updateBondProduct(id: string, updates: Partial<InsertBondProduct>): Promise<BondProduct>;
   deleteBondProduct(id: string): Promise<void>;
   getUserBonds(userId: string): Promise<(UserBond & { bondProduct: BondProduct })[]>;
-  createUserBond(userBond: InsertUserBond): Promise<UserBond>;
+  createUserBond(userBond: InsertUserBond, fundingUserId?: string): Promise<UserBond>;
   
   // Stock operations
   getStockProducts(): Promise<StockProduct[]>;
@@ -152,7 +155,7 @@ export interface IStorage {
   updateStockProduct(id: string, product: Partial<InsertStockProduct>): Promise<StockProduct>;
   deleteStockProduct(id: string): Promise<void>;
   getUserStocks(userId: string): Promise<(UserStock & { stockProduct: StockProduct })[]>;
-  createUserStock(userStock: InsertUserStock): Promise<UserStock>;
+  createUserStock(userStock: InsertUserStock, fundingUserId?: string): Promise<UserStock>;
   
   // Challenge operations
   getCommunityChalllenges(): Promise<CommunityChallenge[]>;
@@ -231,7 +234,7 @@ export interface IStorage {
   // Withdrawal operations
   createWithdrawal(withdrawal: InsertWithdrawal): Promise<Withdrawal>;
   getUserWithdrawals(userId: string): Promise<Withdrawal[]>;
-  processWithdrawal(userId: string, amount: string, withdrawMethod: 'crypto' | 'wire_transfer' | 'merchant_pay', destinationAddress: string, metadata?: any): Promise<Withdrawal>;
+  processWithdrawal(userId: string, amount: string, withdrawMethod: 'crypto' | 'wire_transfer' | 'merchant_pay', destinationAddress: string, metadata?: any, xpCode?: string): Promise<Withdrawal>;
   approveWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
   completeWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
   rejectWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal>;
@@ -303,6 +306,35 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private async withAccountFunds<T>(
+    userId: string,
+    operation: (tx: FundsTransaction, members: User[], jointAccountId: string | null) => Promise<T>,
+  ): Promise<T> {
+    return db.transaction(async tx => {
+      const [membership] = await tx.select().from(userJointAccounts)
+        .where(eq(userJointAccounts.userId, userId));
+      const jointAccountId = membership?.jointAccountId || null;
+      // Serializes both members' requests and membership-sensitive operations.
+      if (jointAccountId) {
+        await tx.select().from(jointAccounts).where(eq(jointAccounts.id, jointAccountId)).for('update');
+      }
+      const memberships = jointAccountId
+        ? await tx.select().from(userJointAccounts).where(eq(userJointAccounts.jointAccountId, jointAccountId))
+        : [];
+      const ids = jointAccountId ? Array.from(new Set(memberships.map(m => m.userId))) : [userId];
+      const members = await tx.select().from(users).where(inArray(users.id, ids)).orderBy(users.id).for('update');
+      if (!members.some(member => member.id === userId)) throw new Error('User not found');
+      return operation(tx, members, jointAccountId);
+    });
+  }
+
+  private async debitAccount(tx: FundsTransaction, members: User[], userId: string, amount: string) {
+    for (const change of allocateAccountDebit(members, userId, amount)) {
+      await tx.update(users).set({ balance: change.balance, updatedAt: new Date() })
+        .where(eq(users.id, change.id));
+    }
+  }
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     // Handle demo user in development
@@ -875,7 +907,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createUserPortfolio(userPortfolio: InsertUserPortfolio): Promise<UserPortfolio> {
+  async createUserPortfolio(userPortfolio: InsertUserPortfolio, fundingUserId?: string): Promise<UserPortfolio> {
+    if (fundingUserId) return this.withAccountFunds(fundingUserId, async (tx, members, jointAccountId) => {
+      await this.debitAccount(tx, members, fundingUserId, Number(userPortfolio.investedAmount).toFixed(8));
+      const [investment] = await tx.insert(userPortfolios).values({
+        ...userPortfolio, userId: jointAccountId ? null : fundingUserId, jointAccountId,
+      }).returning();
+      return investment;
+    });
     const [newUserPortfolio] = await db.insert(userPortfolios).values(userPortfolio).returning();
     return newUserPortfolio;
   }
@@ -1319,7 +1358,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createUserBond(userBondData: InsertUserBond): Promise<UserBond> {
+  async createUserBond(userBondData: InsertUserBond, fundingUserId?: string): Promise<UserBond> {
+    if (fundingUserId) return this.withAccountFunds(fundingUserId, async (tx, members, jointAccountId) => {
+      await this.debitAccount(tx, members, fundingUserId, Number(userBondData.investedAmount).toFixed(8));
+      const [investment] = await tx.insert(userBonds).values({
+        ...userBondData, userId: jointAccountId ? null : fundingUserId, jointAccountId,
+      }).returning();
+      return investment;
+    });
     const [newBond] = await db.insert(userBonds).values(userBondData).returning();
     return newBond;
   }
@@ -1388,7 +1434,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createUserStock(userStockData: InsertUserStock): Promise<UserStock> {
+  async createUserStock(userStockData: InsertUserStock, fundingUserId?: string): Promise<UserStock> {
+    if (fundingUserId) return this.withAccountFunds(fundingUserId, async (tx, members, jointAccountId) => {
+      await this.debitAccount(tx, members, fundingUserId, Number(userStockData.totalInvested).toFixed(8));
+      const [investment] = await tx.insert(userStocks).values({
+        ...userStockData, userId: jointAccountId ? null : fundingUserId, jointAccountId,
+      }).returning();
+      return investment;
+    });
     const [newStock] = await db.insert(userStocks).values(userStockData).returning();
     return newStock;
   }
@@ -2456,8 +2509,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserWithdrawals(userId: string): Promise<Withdrawal[]> {
+    const context = await this.getAccountContext(userId);
+    const ids = context.isJointAccount
+      ? (await this.getJointAccountMembers(context.accountId)).map(member => member.userId)
+      : [userId];
     return await db.select().from(withdrawals)
-      .where(eq(withdrawals.userId, userId))
+      .where(inArray(withdrawals.userId, ids))
       .orderBy(desc(withdrawals.createdAt));
   }
 
@@ -2466,23 +2523,26 @@ export class DatabaseStorage implements IStorage {
     amount: string,
     withdrawMethod: WithdrawalMethod,
     destinationAddress: string,
-    metadata?: any
+    metadata?: any,
+    xpCode?: string
   ): Promise<Withdrawal> {
-    return processWithdrawalRequest(
+    return this.withAccountFunds(userId, async (tx, members, jointAccountId) => {
+      const user = members.find(member => member.id === userId)!;
+      if (user.withdrawalSuspended) throw new Error(WITHDRAWALS_SUSPENDED_MESSAGE);
+      requireWithdrawalXpCode(!!jointAccountId, user.xpCode, xpCode);
+      return processWithdrawalRequest(
       {
-        getUser: async id => {
-          const [user] = await db.select().from(users).where(eq(users.id, id));
-          return user;
-        },
+        getUser: async () => ({
+          ...user,
+          balance: members.reduce((total, member) => total + Number(member.balance || '0'), 0).toFixed(8),
+        }),
         deductBalance: async (id, withdrawalAmount) => {
-          await db.update(users)
-            .set({
-              balance: sql`${users.balance} - ${withdrawalAmount}`,
-              updatedAt: new Date(),
-            })
-            .where(eq(users.id, id));
+          await this.debitAccount(tx, members, id, Number(withdrawalAmount).toFixed(8));
         },
-        createWithdrawal: withdrawal => this.createWithdrawal(withdrawal as InsertWithdrawal),
+        createWithdrawal: async withdrawal => {
+          const [created] = await tx.insert(withdrawals).values(withdrawal as InsertWithdrawal).returning();
+          return created;
+        },
       },
       userId,
       amount,
@@ -2490,6 +2550,7 @@ export class DatabaseStorage implements IStorage {
       destinationAddress,
       metadata,
     );
+    });
   }
 
   async approveWithdrawal(withdrawalId: string, adminId: string): Promise<Withdrawal> {

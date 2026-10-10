@@ -21,12 +21,14 @@ export default function Withdrawal() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, hasJointAccount } = useAuth();
+  const [xpCode, setXpCode] = useState("");
   const withdrawalsSuspended = !!(user as any)?.withdrawalSuspended;
 
   const { data: stats } = useQuery<{ availableBalance: string }>({
     queryKey: ["/api/dashboard/stats"],
     enabled: !!user,
+    refetchInterval: 30000,
   });
   const availableBalance = parseFloat(stats?.availableBalance || "0").toLocaleString(undefined, { minimumFractionDigits: 2 });
 
@@ -122,10 +124,16 @@ export default function Withdrawal() {
       destinationAddress: string;
       metadata?: any;
     }) => {
-      const res = await apiRequest("POST", "/api/withdrawals", data);
+      const res = await apiRequest("POST", "/api/withdrawals", {
+        ...data, ...(hasJointAccount ? { xpCode: xpCode.trim().toUpperCase() } : {}),
+      });
       return res.json();
     },
     onSuccess: (data, variables) => {
+      setXpCode("");
+      if (variables.withdrawMethod === 'crypto') setCryptoStep(5);
+      if (variables.withdrawMethod === 'wire_transfer') setWireStep(5);
+      if (variables.withdrawMethod === 'merchant_pay') setMerchantStep(5);
       toast({
         title: variables.withdrawMethod === 'wire_transfer'
           ? "New Withdrawal Account Submitted for Approval"
@@ -136,8 +144,20 @@ export default function Withdrawal() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error: Error) => {
+      setXpCode("");
+      if (error.message.includes("Withdrawals are currently suspended")) {
+        if (selectedMethod === 'crypto') setCryptoStep(5);
+        if (selectedMethod === 'wire') setWireStep(5);
+        if (selectedMethod === 'merchant') setMerchantStep(5);
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        return;
+      }
+      setCryptoStep(3);
+      setWireStep(3);
+      setMerchantStep(3);
       toast({
         title: "Withdrawal Failed",
         description: error.message,
@@ -146,7 +166,19 @@ export default function Withdrawal() {
     },
   });
 
+  const validateXpCode = () => {
+    if (!hasJointAccount || withdrawalsSuspended) return true;
+    if (/^[A-Z0-9]{11}$/.test(xpCode.trim().toUpperCase())) return true;
+    toast({
+      title: "XP Code Required",
+      description: "Enter your 11-character XP code to authorize this joint account withdrawal.",
+      variant: "destructive",
+    });
+    return false;
+  };
+
   const handleCryptoWithdraw = () => {
+    if (!validateXpCode()) return;
     if (!cryptoAmount || !cryptoWalletAddress || !selectedCrypto || !cryptoNetwork) {
       toast({
         title: "Error",
@@ -156,7 +188,6 @@ export default function Withdrawal() {
       return;
     }
     setCryptoStep(4); // Processing step
-    setTimeout(() => {
       withdrawMutation.mutate({
         amount: cryptoAmount.replace(/,/g, ''),
         withdrawMethod: 'crypto',
@@ -167,11 +198,10 @@ export default function Withdrawal() {
           walletAddress: cryptoWalletAddress
         }
       });
-      setCryptoStep(5); // Success step
-    }, 3000);
   };
 
   const handleWireWithdraw = () => {
+    if (!validateXpCode()) return;
     if (!wireAmount || !bankName || !accountHolderName || !accountNumber || !routingNumber) {
       toast({
         title: "Error",
@@ -181,7 +211,6 @@ export default function Withdrawal() {
       return;
     }
     setWireStep(4); // Processing step
-    setTimeout(() => {
       withdrawMutation.mutate({
         amount: wireAmount.replace(/,/g, ''),
         withdrawMethod: 'wire_transfer',
@@ -195,11 +224,10 @@ export default function Withdrawal() {
           bankAddress
         }
       });
-      setWireStep(5); // Success step
-    }, 3000);
   };
 
   const handleMerchantWithdraw = () => {
+    if (!validateXpCode()) return;
     if (!merchantAmount || !merchantPlatform || !merchantEmail) {
       toast({
         title: "Error",
@@ -209,7 +237,6 @@ export default function Withdrawal() {
       return;
     }
     setMerchantStep(4); // Processing step
-    setTimeout(() => {
       withdrawMutation.mutate({
         amount: merchantAmount.replace(/,/g, ''),
         withdrawMethod: 'merchant_pay',
@@ -220,11 +247,10 @@ export default function Withdrawal() {
           note: merchantNote
         }
       });
-      setMerchantStep(5); // Success step
-    }, 3000);
   };
 
   const resetAll = () => {
+    setXpCode("");
     setSelectedMethod(null);
     setCryptoStep(1);
     setSelectedCrypto(null);
@@ -258,6 +284,27 @@ export default function Withdrawal() {
         <TopBar title="Withdraw Funds" onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
         
         <main className="p-6 space-y-6 pb-20 lg:pb-6">
+          {hasJointAccount && selectedMethod && !withdrawalsSuspended &&
+            cryptoStep < 4 && wireStep < 4 && merchantStep < 4 && (
+            <Card className="p-5 space-y-3">
+              <Label htmlFor="withdrawal-xp-code">Joint Account Withdrawal — XP Code</Label>
+              <p className="text-sm text-muted-foreground">
+                Both members can withdraw from the combined available balance. Enter your own XP code for every withdrawal.
+                If you have not generated one, generate it in account settings first.
+              </p>
+              <Input
+                id="withdrawal-xp-code"
+                data-testid="withdrawal-xp-code"
+                type="password"
+                autoComplete="off"
+                maxLength={11}
+                value={xpCode}
+                onChange={event => setXpCode(event.target.value.toUpperCase())}
+                placeholder="Your 11-character XP code"
+                className="max-w-sm"
+              />
+            </Card>
+          )}
           {!selectedMethod && (
             <div className="flex justify-between items-center mb-4">
               <div className="text-sm text-muted-foreground">

@@ -1,1 +1,2 @@
 - [Market quote integrity](market-quotes.md) — refresh market quotes every 30 seconds; do not disguise sample prices or substitute unrelated tickers.
+- [Joint account spending](joint-account-spending.md) — both members can spend the combined balance; require the initiating member's XP code for every withdrawal.

@@ -32,6 +32,7 @@ export function useAuth() {
     profileImageUrl: authResponse.profileImageUrl,
     role: authResponse.role,
     kycStatus: authResponse.kycStatus,
+    withdrawalSuspended: authResponse.withdrawalSuspended,
     createdAt: authResponse.createdAt,
     updatedAt: authResponse.updatedAt,
   } as User : null;

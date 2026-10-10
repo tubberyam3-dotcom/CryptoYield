@@ -1221,18 +1221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const userBalance = parseFloat(user.balance?.toString() || '0');
-
-      // Verify sufficient balance
-      if (userBalance < actualInvestmentAmount) {
-        return res.status(400).json({ 
-          message: `Insufficient balance. You have $${userBalance.toFixed(2)}, but need $${actualInvestmentAmount.toFixed(2)}` 
-        });
-      }
-
-      // Deduct balance
-      const newBalance = (userBalance - actualInvestmentAmount).toString();
-      await storage.updateUserBalance(userId, newBalance);
+      // The investment and shared-balance debit are committed together below.
 
       // Calculate investment end date
       const investmentStartDate = new Date();
@@ -1262,7 +1251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const validatedData = insertUserPortfolioSchema.parse(userPortfolioData);
-      const userPortfolio = await storage.createUserPortfolio(validatedData);
+      const userPortfolio = await storage.createUserPortfolio(validatedData, userId);
 
       // Update units sold in portfolio
       await storage.updatePortfolio(portfolioId, { 
@@ -1308,7 +1297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(userPortfolio);
     } catch (error) {
       console.error("Error creating user portfolio:", error);
-      res.status(500).json({ message: "Failed to invest in portfolio" });
+      const fundingError = error instanceof Error && /Insufficient balance|Invalid (amount|balance)/.test(error.message);
+      res.status(fundingError ? 400 : 500).json({ message: fundingError ? error.message : "Failed to invest in portfolio" });
     }
   });
 
@@ -1873,7 +1863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedReturn,
       });
       
-      const userBondRecord = await storage.createUserBond(userBondData);
+      const userBondRecord = await storage.createUserBond(userBondData, userId);
 
       // Send bond purchase confirmation email to the investor
       try {
@@ -1918,7 +1908,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(userBondRecord);
     } catch (error) {
       console.error("Error creating user bond:", error);
-      res.status(500).json({ message: "Failed to create bond investment" });
+      const fundingError = error instanceof Error && /Insufficient balance|Invalid (amount|balance)/.test(error.message);
+      res.status(fundingError ? 400 : 500).json({ message: fundingError ? error.message : "Failed to create bond investment" });
     }
   });
 
@@ -2089,17 +2080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check user balance
-      const userBalance = parseFloat(user.balance?.toString() || '0');
-      if (userBalance < actualInvestmentAmount) {
-        return res.status(400).json({ 
-          message: `Insufficient balance. User has $${userBalance.toFixed(2)}, but needs $${actualInvestmentAmount.toFixed(2)}` 
-        });
-      }
-
-      // Deduct balance
-      const newBalance = (userBalance - actualInvestmentAmount).toString();
-      await storage.updateUserBalance(userId, newBalance);
+      // The investment and shared-balance debit are committed together below.
 
       // Calculate investment dates
       const investmentStartDate = new Date();
@@ -2129,7 +2110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const validatedData = insertUserPortfolioSchema.parse(userPortfolioData);
-      const userPortfolio = await storage.createUserPortfolio(validatedData);
+      const userPortfolio = await storage.createUserPortfolio(validatedData, userId);
 
       // Update units sold in portfolio
       await storage.updatePortfolio(portfolioId, { 
@@ -2209,17 +2190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const priceNum = parseFloat(purchasePrice || stockProduct.currentPrice || '0');
       const totalInvested = quantityNum * priceNum;
 
-      // Check user balance
-      const userBalance = parseFloat(user.balance?.toString() || '0');
-      if (userBalance < totalInvested) {
-        return res.status(400).json({ 
-          message: `Insufficient balance. User has $${userBalance.toFixed(2)}, but needs $${totalInvested.toFixed(2)}` 
-        });
-      }
-
-      // Deduct balance
-      const newBalance = (userBalance - totalInvested).toString();
-      await storage.updateUserBalance(userId, newBalance);
+      // The purchase and shared-balance debit are committed together below.
 
       // Handle joint accounts
       const accountContext = await storage.getAccountContext(userId);
@@ -2241,7 +2212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const validatedData = insertUserStockSchema.parse(userStockData);
-      const userStockRecord = await storage.createUserStock(validatedData);
+      const userStockRecord = await storage.createUserStock(validatedData, userId);
 
       res.json({ 
         success: true, 
@@ -2330,18 +2301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const purchasePrice = marketQuote.price.toString();
       const accountContext = await storage.getAccountContext(userId);
       const totalInvested = quantityNum * parseFloat(purchasePrice);
-      const userBalance = parseFloat(user.balance?.toString() || '0');
-
-      // Verify sufficient balance
-      if (userBalance < totalInvested) {
-        return res.status(400).json({ 
-          message: `Insufficient balance. You have $${userBalance.toFixed(2)}, but need $${totalInvested.toFixed(2)}` 
-        });
-      }
-
-      // Deduct balance
-      const newBalance = (userBalance - totalInvested).toString();
-      await storage.updateUserBalance(userId, newBalance);
+      // The purchase and shared-balance debit are committed together below.
 
       const userStockData: any = {
         stockProductId: stockProduct.id,
@@ -2360,7 +2320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const validatedData = insertUserStockSchema.parse(userStockData);
-      const userStockRecord = await storage.createUserStock(validatedData);
+      const userStockRecord = await storage.createUserStock(validatedData, userId);
 
       // Send stock purchase confirmation email to the investor
       try {
@@ -2405,7 +2365,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(userStockRecord);
     } catch (error) {
       console.error("Error creating user stock:", error);
-      res.status(500).json({ message: "Failed to purchase stock" });
+      const fundingError = error instanceof Error && /Insufficient balance|Invalid (amount|balance)/.test(error.message);
+      res.status(fundingError ? 400 : 500).json({ message: fundingError ? error.message : "Failed to purchase stock" });
     }
   });
 
@@ -4554,7 +4515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "All fields are required" });
       }
 
-      const withdrawal = await storage.processWithdrawal(userId, amount, withdrawMethod, destinationAddress, metadata);
+      const withdrawal = await storage.processWithdrawal(userId, amount, withdrawMethod, destinationAddress, metadata, req.body.xpCode);
 
       res.json({
         success: true,
