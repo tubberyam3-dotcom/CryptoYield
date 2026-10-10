@@ -9,7 +9,6 @@ import { AssetAllocation } from "@/components/dashboard/AssetAllocation";
 import { FeaturedPortfolios } from "@/components/dashboard/FeaturedPortfolios";
 import { EnhancedStakingPlans } from "@/components/staking/EnhancedStakingPlans";
 import { EnhancedChallenges } from "@/components/challenges/EnhancedChallenges";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { WalletOverview } from "@/components/dashboard/WalletOverview";
 import { AchievementBadges } from "@/components/gamification/AchievementBadges";
 import { StreakCounter } from "@/components/gamification/StreakCounter";
@@ -118,7 +117,7 @@ export default function Dashboard() {
               {activeSection === "overview" && (
                 <>
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <RecentActivity />
+                    <EnhancedChallenges compact />
                     <WalletOverview />
                   </div>
                   {user?.role === "admin" && (

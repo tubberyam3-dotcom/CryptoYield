@@ -23,7 +23,11 @@ import {
 } from "lucide-react";
 import type { CommunityChallenge } from "@shared/schema";
 
-export function EnhancedChallenges() {
+interface EnhancedChallengesProps {
+  compact?: boolean;
+}
+
+export function EnhancedChallenges({ compact = false }: EnhancedChallengesProps) {
   const [selectedChallenge, setSelectedChallenge] = useState<CommunityChallenge | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
 
@@ -108,7 +112,7 @@ export function EnhancedChallenges() {
           <CardDescription>Join forces with the community to achieve amazing goals</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${compact ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
             {Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="p-4 animate-pulse">
                 <div className="h-3 sm:h-4 bg-muted rounded w-3/4 mb-2"></div>
@@ -170,7 +174,7 @@ export function EnhancedChallenges() {
 
             {/* All Challenges */}
             <TabsContent value="all" className="space-y-4 sm:space-y-6 mt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${compact ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
                 {challenges?.map((challenge, index) => {
                   const colors = getChallengeTypeColor(challenge.type);
                   const daysLeft = getDaysLeft(challenge.endDate.toString());
@@ -306,7 +310,7 @@ export function EnhancedChallenges() {
 
             {/* Trending Challenges */}
             <TabsContent value="trending" className="space-y-4 sm:space-y-6 mt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${compact ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
                 {trendingChallenges.map((challenge, index) => {
                   const colors = getChallengeTypeColor(challenge.type);
                   const progress = getProgressPercentage(challenge.currentAmount || "0", challenge.targetAmount);
@@ -346,7 +350,7 @@ export function EnhancedChallenges() {
 
             {/* Group Challenges */}
             <TabsContent value="group" className="space-y-4 sm:space-y-6 mt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${compact ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
                 {categorizedChallenges?.group?.map((challenge, index) => (
                   <motion.div
                     key={challenge.id}
@@ -380,7 +384,7 @@ export function EnhancedChallenges() {
 
             {/* Solo Challenges */}
             <TabsContent value="solo" className="space-y-4 sm:space-y-6 mt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${compact ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
                 {categorizedChallenges?.solo?.map((challenge, index) => (
                   <motion.div
                     key={challenge.id}
