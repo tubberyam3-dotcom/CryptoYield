@@ -20,6 +20,7 @@ import { SystemSettings } from "@/components/admin/SystemSettings";
 import { PaymentSettings } from "@/components/admin/PaymentSettings";
 import { StockPurchaseApprovals } from "@/components/admin/StockPurchaseApprovals";
 import { DepositApprovals } from "@/components/admin/DepositApprovals";
+import { JointAccountJoinApprovals } from "@/components/admin/JointAccountJoinApprovals";
 import { RewardsManagement } from "@/components/admin/RewardsManagement";
 import { EmailSettings } from "@/components/admin/EmailSettings";
 import { TransactionManagement } from "@/components/admin/TransactionManagement";
@@ -312,9 +313,22 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold mb-2">Approvals</h2>
-              <p className="text-muted-foreground">Review and approve pending stock purchases and deposits</p>
+              <p className="text-muted-foreground">Review joint-account join requests, stock purchases and deposits</p>
             </div>
             <div className="grid grid-cols-1 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Joint-account join requests
+                  </CardTitle>
+                  <CardDescription>Approve or decline applicants requesting access with a join code</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <JointAccountJoinApprovals />
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

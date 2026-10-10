@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Users, Plus, Copy, Check, Heart, Shield, Link as LinkIcon } from "lucide-react";
+import { Users, Plus, Copy, Check, Heart, Shield, Link as LinkIcon, RefreshCw } from "lucide-react";
 
 export function JointAccountManager() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -26,9 +26,40 @@ export function JointAccountManager() {
     description: ""
   });
 
-  const { user, hasJointAccount, jointAccount, userRole } = useAuth();
+  const { isAuthenticated, hasJointAccount, jointAccount, userRole } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const {
+    data: joinRequests,
+    isLoading: joinRequestsLoading,
+    isError: joinRequestsError,
+    refetch: refetchJoinRequests,
+  } = useQuery<Array<{
+    id: string | number;
+    status: "pending" | "approved" | "rejected";
+    createdAt: string;
+    reviewedAt: string | null;
+    jointAccountName: string;
+  }>>({
+    queryKey: ["/api/joint-accounts/join-requests/my"],
+    enabled: isAuthenticated,
+    refetchInterval: 30_000,
+  });
+  const latestJoinRequest = joinRequests
+    ? [...joinRequests].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+    : undefined;
+  const pendingJoinRequest = joinRequests?.find((request) => request.status === "pending");
+  const handledApprovalId = useRef<string | null>(null);
+  const approvedJoinRequest = !hasJointAccount && latestJoinRequest?.status === "approved" &&
+    handledApprovalId.current !== String(latestJoinRequest.id) ? latestJoinRequest : undefined;
+  const restrictNewRequests = joinRequestsLoading || joinRequestsError || !!pendingJoinRequest || !!approvedJoinRequest;
+
+  useEffect(() => {
+    if (latestJoinRequest?.status === "approved" && handledApprovalId.current !== String(latestJoinRequest.id)) {
+      handledApprovalId.current = String(latestJoinRequest.id);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    }
+  }, [latestJoinRequest?.id, latestJoinRequest?.status, queryClient]);
 
   const createJointAccountMutation = useMutation({
     mutationFn: async (data: { name: string; description: string }) => {
@@ -66,12 +97,22 @@ export function JointAccountManager() {
       const response = await apiRequest("POST", "/api/joint-accounts/join", { joinCode });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast({
-        title: "Successfully Joined!",
-        description: "You have successfully joined the joint account.",
+        title: "Join Request Submitted",
+        description: "An administrator will review your request. You’ll get access only after it is approved.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      if (result?.request) {
+        queryClient.setQueryData(
+          ["/api/joint-accounts/join-requests/my"],
+          (current: Array<{ id: string | number; status: string; createdAt: string; reviewedAt: string | null; jointAccountName: string }> | undefined) =>
+            [result.request, ...(current ?? []).filter((request) => String(request.id) !== String(result.request.id))]
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/joint-accounts/join-requests/my"] });
+      if (result?.status !== "pending") {
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      }
       setJoinDialogOpen(false);
       setJoinCode("");
     },
@@ -162,7 +203,7 @@ export function JointAccountManager() {
           <Heart className="h-6 w-6 text-pink-500" />
           <h3 className="text-2xl font-semibold">Joint Account</h3>
         </div>
-        {!hasJointAccount && (
+        {!hasJointAccount && !restrictNewRequests && (
           <div className="flex space-x-2">
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
@@ -268,6 +309,62 @@ export function JointAccountManager() {
           </div>
         )}
       </div>
+
+      {!hasJointAccount && pendingJoinRequest && (
+        <Card className="border-amber-300 bg-amber-50 shadow-none" role="status">
+          <CardContent className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-amber-950">Join request pending</p>
+              <p className="text-sm text-amber-900/80">
+                {pendingJoinRequest.jointAccountName} · Submitted {new Date(pendingJoinRequest.createdAt).toLocaleDateString()}.
+                An administrator must approve it before you have access.
+              </p>
+            </div>
+            <Badge variant="outline" className="w-fit border-amber-400 bg-amber-100 text-amber-900">Pending</Badge>
+          </CardContent>
+        </Card>
+      )}
+
+      {!hasJointAccount && joinRequestsLoading && (
+        <div className="h-20 animate-pulse rounded-md border bg-muted/40" role="status" aria-label="Checking join request status" />
+      )}
+
+      {!hasJointAccount && joinRequestsError && (
+        <Card className="border-destructive/30 bg-destructive/5 shadow-none" role="alert">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-destructive">We couldn’t check your join-request status. Try again before creating or joining another account.</p>
+            <Button variant="outline" size="sm" onClick={() => refetchJoinRequests()}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!hasJointAccount && !pendingJoinRequest && latestJoinRequest?.status === "rejected" && (
+        <Card className="border-rose-300 bg-rose-50 shadow-none" role="status">
+          <CardContent className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-rose-950">Previous join request was declined</p>
+              <p className="text-sm text-rose-900/80">You can try another join code or ask the account owner for help.</p>
+            </div>
+            <Badge variant="outline" className="w-fit border-rose-300 bg-rose-100 text-rose-900">Rejected</Badge>
+          </CardContent>
+        </Card>
+      )}
+
+      {approvedJoinRequest && (
+        <Card className="border-emerald-300 bg-emerald-50 shadow-none" role="status">
+          <CardContent className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-emerald-950">Request approved</p>
+              <p className="text-sm text-emerald-900/80">
+                Access is being refreshed. Your account remains personal until membership is confirmed.
+              </p>
+            </div>
+            <Badge variant="outline" className="w-fit border-emerald-300 bg-emerald-100 text-emerald-900">Approved</Badge>
+          </CardContent>
+        </Card>
+      )}
 
       {hasJointAccount && jointAccount ? (
         <Card data-testid="card-joint-account-info">

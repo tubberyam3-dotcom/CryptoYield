@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Users, Heart, ArrowRight, CheckCircle2, Loader2, AlertCircle, Copy, Check } from "lucide-react";
+import { Users, Heart, ArrowRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SignupForm } from "@/components/auth/SignupForm";
@@ -25,7 +25,7 @@ export default function JoinAccount() {
   const { joinCode } = useParams<{ joinCode: string }>();
   const [, setLocation] = useLocation();
   const [authView, setAuthView] = useState<AuthView>("info");
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, hasJointAccount } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -44,14 +44,23 @@ export default function JoinAccount() {
 
   const joinMutation = useMutation({
     mutationFn: async (code: string) => {
-      return apiRequest("POST", "/api/joint-accounts/join", { joinCode: code });
+      const response = await apiRequest("POST", "/api/joint-accounts/join", { joinCode: code });
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      const alreadyMember = result?.alreadyMember === true ||
+        ["approved", "joined", "already_member"].includes(result?.status);
+      if (alreadyMember) {
+        toast({ title: "Already a member", description: "This account is already connected to your profile." });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        setLocation("/");
+        return;
+      }
       toast({
-        title: "Success!",
-        description: "You've joined the joint account successfully.",
+        title: "Join Request Pending",
+        description: "An administrator must approve your request before you can access this joint account.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/joint-accounts/join-requests/my"] });
     },
     onError: (error: any) => {
       if (error.message?.includes("already")) {
@@ -67,28 +76,33 @@ export default function JoinAccount() {
   });
 
   useEffect(() => {
-    if (isAuthenticated && jointAccountInfo?.valid && joinCode && !joinMutation.isPending && !joinMutation.isSuccess) {
+    if (isAuthenticated && hasJointAccount) {
+      setLocation("/");
+      return;
+    }
+    if (isAuthenticated && jointAccountInfo?.valid && joinCode && !joinMutation.isPending && !joinMutation.isSuccess && !joinMutation.isError) {
       joinMutation.mutate(joinCode);
     }
-  }, [isAuthenticated, jointAccountInfo, joinCode]);
+  }, [isAuthenticated, hasJointAccount, jointAccountInfo, joinCode, joinMutation.isPending, joinMutation.isSuccess, joinMutation.isError, setLocation]);
 
   if (joinMutation.isSuccess) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8 text-amber-700" />
             </div>
-            <CardTitle>You're In!</CardTitle>
+            <CardTitle>Join Request Pending</CardTitle>
             <CardDescription>
-              You've successfully joined the joint account
+              Your request to join {jointAccountInfo?.jointAccountName || "this joint account"} was sent for administrator review. You do not have access yet.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-2">
+            <p className="text-center text-sm text-muted-foreground">Your account remains personal until approval is completed.</p>
             <Button
               onClick={() => setLocation("/")}
-              className="w-full bg-[#e4fe7b] text-black hover:bg-[#d4ee6b]"
+              className="w-full"
               data-testid="button-go-to-dashboard"
             >
               Go to Dashboard
@@ -160,6 +174,36 @@ export default function JoinAccount() {
   }
 
   if (isAuthenticated) {
+    if (joinMutation.isError) {
+      return (
+        <div className="min-h-[100dvh] flex items-center justify-center bg-background p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+              </div>
+              <CardTitle>Request not sent</CardTitle>
+              <CardDescription>{joinMutation.error?.message || "We couldn't submit your join request. Check your connection and try again."}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                className="w-full"
+                disabled={!joinCode}
+                onClick={() => {
+                  joinMutation.reset();
+                  if (joinCode) joinMutation.mutate(joinCode);
+                }}
+              >
+                Try again
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setLocation("/")}>
+                Go to Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <div className="text-center">
@@ -302,7 +346,7 @@ export default function JoinAccount() {
 
             <div className="text-center pt-2">
               <p className="text-xs text-muted-foreground">
-                By joining, you'll have shared access to investments,<br />
+                Once approved, you'll have shared access to investments,<br />
                 portfolios, and account features with your partner.
               </p>
             </div>

@@ -8,6 +8,7 @@ import { MarketQuoteCache, MARKET_REFRESH_MS, CRYPTO_SYMBOLS, fetchCryptoQuote }
 import PDFDocument from "pdfkit";
 import { issueWithdrawalCode } from "./jointWithdrawalCodes";
 import { emailService } from "./email";
+import { listAdminJoinRequests, listUserJoinRequests, reviewJointAccountJoin } from "./jointAccountJoinRequests";
 
 import {
   insertPortfolioSchema,
@@ -412,12 +413,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         xpBalance: 0,
       });
       
-      // If user registered with a join code, add them to the existing joint account
+      // Join-code registration submits a request; only admin review creates membership.
       let jointAccount = null;
       if (existingJointAccount) {
         await storage.joinJointAccountByCode(user.id, joinCode!.toUpperCase());
         jointAccount = existingJointAccount;
-        console.log(`User ${user.id} joined joint account ${jointAccount.id} via join code`);
+        console.log("Joint-account join request submitted during registration");
       }
       // If creating a new joint account
       else if (accountType === 'joint') {
@@ -1680,45 +1681,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const result = await storage.joinJointAccountByCode(userId, joinCode.toUpperCase());
 
-      // Send notifications to both users
-      try {
-        const { emailService } = await import('./email');
-        const jointAccount = await storage.getJointAccountByJoinCode(joinCode.toUpperCase());
-        if (jointAccount) {
-          const members = await storage.getJointAccountMembers(jointAccount.id);
-          const partnerMember = members.find((m: any) => m.userId === userId);
-          const primaryMember = members.find((m: any) => m.role === 'primary');
-          const partnerUser = partnerMember ? await storage.getUser(userId) : null;
-          const primaryUser = primaryMember ? await storage.getUser(primaryMember.userId) : null;
-
-          const partnerName = partnerUser ? `${partnerUser.firstName || ''} ${partnerUser.lastName || ''}`.trim() || 'Your partner' : 'Your partner';
-          const primaryName = primaryUser ? `${primaryUser.firstName || ''} ${primaryUser.lastName || ''}`.trim() || 'Account owner' : 'Account owner';
-
-          if (primaryUser?.email) {
-            await emailService.sendJointAccountPartnerJoined(primaryUser.email, primaryName, partnerName, jointAccount.name);
-          }
-          if (partnerUser?.email) {
-            await emailService.sendJointAccountWelcome(partnerUser.email, partnerName, primaryName, jointAccount.name);
-          }
-        }
-      } catch (emailError) {
-        console.error('Failed to send joint account join notifications:', emailError);
-      }
-
-      res.json(result);
+      res.json({
+        success: true, status: "pending", request: result,
+        message: "Your join request is pending admin approval. Joint-account access begins only after approval.",
+      });
     } catch (error: any) {
-      console.error("Error joining joint account:", error);
-      if (error.message === 'Joint account not found') {
+      if (error.message === 'Joint account not found' || error.message === 'Invalid join code') {
         return res.status(404).json({ message: "Invalid join code" });
       }
-      if (error.message === 'User already in joint account') {
-        return res.status(409).json({ message: "You are already part of this joint account" });
+      const requestMessages = [
+        "You already belong to a joint account.",
+        "This joint account already has both members.",
+        "You already have a pending joint-account join request. Wait for admin review.",
+      ];
+      if (requestMessages.includes(error.message)) {
+        return res.status(409).json({ message: error.message });
       }
-      res.status(400).json({ message: "Failed to join joint account" });
+      res.status(400).json({ message: "Failed to submit joint-account join request" });
     }
   });
 
   // Get current user's joint account members (other party details)
+  app.get('/api/joint-accounts/join-requests/my', enhancedAuth, async (req: any, res) => {
+    try {
+      res.json(await listUserJoinRequests(req.user.claims.sub));
+    } catch {
+      res.status(500).json({ message: "Unable to load your joint-account join requests." });
+    }
+  });
+
+  app.get('/api/admin/joint-account-join-requests', adminAuth, async (_req, res) => {
+    try {
+      res.json(await listAdminJoinRequests());
+    } catch {
+      res.status(500).json({ message: "Unable to load joint-account join requests." });
+    }
+  });
+
+  app.patch('/api/admin/joint-account-join-requests/:id', adminAuth, async (req: any, res) => {
+    try {
+      const { status } = req.body;
+      if (status !== "approved" && status !== "rejected") {
+        return res.status(400).json({ message: "Choose approve or reject." });
+      }
+      const result = await reviewJointAccountJoin(req.params.id, req.user.claims.sub, status);
+      if (status === "approved") {
+        void (async () => {
+          const [joint, partner] = await Promise.all([
+          storage.getJointAccount(result.jointAccountId), storage.getUser(result.requesterId),
+        ]);
+        const owner = joint ? await storage.getUser(joint.createdBy) : null;
+        if (joint && partner && owner) {
+          const partnerName = `${partner.firstName || ""} ${partner.lastName || ""}`.trim() || "Your partner";
+          const ownerName = `${owner.firstName || ""} ${owner.lastName || ""}`.trim() || "Account owner";
+          await Promise.allSettled([
+            owner.email ? emailService.sendJointAccountPartnerJoined(owner.email, ownerName, partnerName, joint.name) : Promise.resolve(),
+            partner.email ? emailService.sendJointAccountWelcome(partner.email, partnerName, ownerName, joint.name) : Promise.resolve(),
+          ]);
+        }
+        })().catch(() => console.warn("Unable to send joint-account approval notifications."));
+      }
+      res.json({ success: true, request: result });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Unable to review this join request." });
+    }
+  });
+
   app.get('/api/joint-accounts/my/members', enhancedAuth, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.session?.user?.id;

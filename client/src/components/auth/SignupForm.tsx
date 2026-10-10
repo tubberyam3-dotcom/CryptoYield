@@ -414,8 +414,8 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
       
       if (data.jointAccount && data.joinedExisting) {
         toast({
-          title: "Welcome!",
-          description: "You've successfully joined the joint account. Awaiting approval.",
+          title: "Join Request Submitted",
+          description: "Your registration and join request are pending administrator approval. Joint-account access starts only after approval.",
         });
         setStep("pending-approval");
       } else if (data.jointAccount && formData.accountType === 'joint') {

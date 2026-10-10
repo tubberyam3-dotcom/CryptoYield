@@ -55,12 +55,14 @@ import {
   type InsertWithdrawal,
   type LoginHistory,
   type InsertLoginHistory,
+  type JointAccountJoinRequest,
 } from "@shared/schema";
 import { processWithdrawalRequest, WITHDRAWALS_SUSPENDED_MESSAGE, type WithdrawalMethod } from "./withdrawalService";
 import { db } from "./db";
 import { eq, desc, and, or, sum, count, sql, inArray } from "drizzle-orm";
 import { allocateAccountDebit } from "./accountFunds";
 import { checkAndConsumeWithdrawalCode } from "./jointWithdrawalCodes";
+import { requestJointAccountJoin } from "./jointAccountJoinRequests";
 
 type FundsTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -79,7 +81,7 @@ export interface IStorage {
   getJointAccountByJoinCode(joinCode: string): Promise<JointAccount | undefined>;
   getUserJointAccount(userId: string): Promise<UserJointAccount | undefined>;
   joinJointAccount(userJointAccount: InsertUserJointAccount): Promise<UserJointAccount>;
-  joinJointAccountByCode(userId: string, joinCode: string): Promise<UserJointAccount>;
+  joinJointAccountByCode(userId: string, joinCode: string): Promise<JointAccountJoinRequest>;
   getJointAccountMembers(jointAccountId: string): Promise<(UserJointAccount & { user: User })[]>;
   updateJointAccount(id: string, data: { name?: string; partnerEmail?: string; relationshipType?: string }): Promise<JointAccount>;
   
@@ -492,46 +494,8 @@ export class DatabaseStorage implements IStorage {
     return userJointAccount;
   }
 
-  async joinJointAccountByCode(userId: string, joinCode: string): Promise<UserJointAccount> {
-    // Normalize join code to uppercase (codes are stored as uppercase)
-    const normalizedCode = joinCode.toUpperCase();
-    
-    // Find the joint account by join code
-    const [jointAccount] = await db
-      .select()
-      .from(jointAccounts)
-      .where(eq(jointAccounts.joinCode, normalizedCode));
-
-    if (!jointAccount) {
-      throw new Error('Joint account not found');
-    }
-
-    // Check if user is already in this joint account
-    const [existingMembership] = await db
-      .select()
-      .from(userJointAccounts)
-      .where(
-        and(
-          eq(userJointAccounts.userId, userId),
-          eq(userJointAccounts.jointAccountId, jointAccount.id)
-        )
-      );
-
-    if (existingMembership) {
-      throw new Error('User already in joint account');
-    }
-
-    // Add user to the joint account with 'partner' role
-    const [userJointAccount] = await db
-      .insert(userJointAccounts)
-      .values({
-        userId,
-        jointAccountId: jointAccount.id,
-        role: 'partner',
-      })
-      .returning();
-
-    return userJointAccount;
+  async joinJointAccountByCode(userId: string, joinCode: string): Promise<JointAccountJoinRequest> {
+    return requestJointAccountJoin(userId, joinCode);
   }
 
   async getJointAccountMembers(jointAccountId: string): Promise<(UserJointAccount & { user: User })[]> {

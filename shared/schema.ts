@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   index,
+  uniqueIndex,
   jsonb,
   pgTable,
   timestamp,
@@ -90,6 +91,21 @@ export const userJointAccounts = pgTable("user_joint_accounts", {
   role: varchar("role", { enum: ['primary', 'partner'] }).notNull(), // primary created the account, partner joined
   joinedAt: timestamp("joined_at").defaultNow(),
 });
+
+// Join-code requests are not memberships and grant no shared-account access.
+export const jointAccountJoinRequests = pgTable("joint_account_join_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requesterId: varchar("requester_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  jointAccountId: varchar("joint_account_id").references(() => jointAccounts.id, { onDelete: "cascade" }).notNull(),
+  status: varchar("status", { enum: ["pending", "approved", "rejected"] }).default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+}, table => [
+  uniqueIndex("joint_join_one_pending_per_user").on(table.requesterId).where(sql`${table.status} = 'pending'`),
+]);
+
+export type JointAccountJoinRequest = typeof jointAccountJoinRequests.$inferSelect;
 
 // Investment Portfolios (stocks, ETFs, mutual funds)
 export const portfolios = pgTable("portfolios", {
