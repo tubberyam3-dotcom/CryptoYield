@@ -176,20 +176,20 @@ export default function Wallet() {
               </div>
 
               {/* action buttons */}
-              <div className="flex gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <Button onClick={() => setLocation("/deposit")} data-testid="button-deposit"
-                  className="flex-1 h-11 text-sm font-semibold">
-                  <ArrowDownLeft className="w-4 h-4 mr-2" />
+                  className="min-w-0 h-11 gap-0.5 px-1 text-[11px] sm:gap-2 sm:px-3 sm:text-sm font-semibold whitespace-nowrap">
+                  <ArrowDownLeft className="w-3.5 h-3.5 shrink-0 sm:w-4 sm:h-4" />
                   Deposit
                 </Button>
                 <Button variant="outline" onClick={() => setLocation("/withdrawal")} data-testid="button-withdraw"
-                  className="flex-1 h-11 text-sm font-semibold">
-                  <ArrowUpRight className="w-4 h-4 mr-2" />
+                  className="min-w-0 h-11 gap-0.5 px-1 text-[11px] sm:gap-2 sm:px-3 sm:text-sm font-semibold whitespace-nowrap">
+                  <ArrowUpRight className="w-3.5 h-3.5 shrink-0 sm:w-4 sm:h-4" />
                   Withdraw
                 </Button>
                 <Button variant="outline" onClick={() => setLocation("/portfolios")} data-testid="button-invest"
-                  className="flex-1 h-11 text-sm font-semibold">
-                  <TrendingUp className="w-4 h-4 mr-2" />
+                  className="min-w-0 h-11 gap-0.5 px-1 text-[11px] sm:gap-2 sm:px-3 sm:text-sm font-semibold whitespace-nowrap">
+                  <TrendingUp className="w-3.5 h-3.5 shrink-0 sm:w-4 sm:h-4" />
                   Invest
                 </Button>
               </div>
