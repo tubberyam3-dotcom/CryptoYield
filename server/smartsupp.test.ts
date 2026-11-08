@@ -40,7 +40,19 @@ test("Smartsupp loads site-wide with desktop and mobile chat hidden before initi
   assert.equal(inserted[0].src, "https://www.smartsuppchat.com/loader.js?");
   assert.equal(inserted[0].async, true);
   assert.equal(typeof browser.smartsupp, "function");
+  assert.deepEqual(Array.from(browser.smartsupp._[0]), ["chat:hide"]);
   assert.ok(html.indexOf('id="smartsupp-analytics"') < html.indexOf('src="/src/main.tsx"'));
+});
+
+test("Smartsupp chat has a persistent visual guard independent of provider settings", () => {
+  const guard = html.match(/<style id="smartsupp-chat-hidden">([\s\S]*?)<\/style>/)?.[1];
+  assert.ok(guard);
+  assert.match(guard, /#smartsupp-widget-container/);
+  assert.match(guard, /iframe\[title="Smartsupp"\]\[id\$="-application-iframe"\]/);
+  assert.match(guard, /visibility:\s*hidden\s*!important/);
+  assert.match(guard, /opacity:\s*0\s*!important/);
+  assert.match(guard, /pointer-events:\s*none\s*!important/);
+  assert.ok(html.indexOf('id="smartsupp-chat-hidden"') < html.indexOf('id="smartsupp-analytics"'));
 });
 
 test("Smartsupp bootstrap does not duplicate the loader or clear queued SDK calls", () => {
@@ -53,7 +65,9 @@ test("Smartsupp bootstrap does not duplicate the loader or clear queued SDK call
   runInNewContext(bootstrap, browser);
   assert.equal(inserted.length, 1);
   assert.equal(browser.smartsupp, originalSdk);
-  assert.equal(browser.smartsupp._.length, 1);
+  assert.equal(browser.smartsupp._.length, 3);
+  assert.deepEqual(Array.from(browser.smartsupp._[1]), ["test:queued-call"]);
+  assert.deepEqual(Array.from(browser.smartsupp._[2]), ["chat:hide"]);
   assert.equal(browser._smartsupp.cookieDomain, ".example.test");
   assert.equal(browser._smartsupp.hideWidget, true);
   assert.equal(browser._smartsupp.hideMobileWidget, true);

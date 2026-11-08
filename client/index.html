@@ -11,6 +11,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- Site-wide Smartsupp visitor analytics; no desktop or mobile chat UI. -->
+    <style id="smartsupp-chat-hidden">
+      /* Keep chat invisible even if the provider overrides its hide settings. */
+      #smartsupp-widget-container,
+      iframe[title="Smartsupp"][id$="-application-iframe"] {
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    </style>
     <script id="smartsupp-analytics" type="text/javascript">
       var _smartsupp = window._smartsupp || {};
       _smartsupp.key = 'f2e7b6645ef63d79d763cb82473cab1507a128d1';
@@ -29,6 +38,7 @@
           c.src = 'https://www.smartsuppchat.com/loader.js?';
           s.parentNode.insertBefore(c, s);
         })(document);
+        window.smartsupp('chat:hide');
       }
     </script>
   </head>
