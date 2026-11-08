@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, DollarSign } from "lucide-react";
 import { InvestmentWizard } from "./InvestmentWizard";
 import type { Portfolio } from "@shared/schema";
+import { portfolioReturns, formatReturnPercent } from "@shared/portfolioCalculations";
 
 interface QuickInvestButtonProps {
   portfolio: Portfolio;
@@ -41,7 +42,7 @@ export function QuickInvestButton({
           
           <div className="flex items-center justify-between text-sm mb-3">
             <span className="text-muted-foreground">Min. ${parseFloat(portfolio.minInvestment).toLocaleString()}</span>
-            <span className="text-green-600 font-medium">+{portfolio.currentReturn}%</span>
+            <span className="text-green-600 font-medium">{formatReturnPercent(portfolioReturns(portfolio).annualPercent)}% annualized</span>
           </div>
           
           <Button 

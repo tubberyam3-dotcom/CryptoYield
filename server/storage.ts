@@ -1,3 +1,4 @@
+import { portfolioPurchaseQuote, PortfolioPurchaseError } from "../shared/portfolioCalculations";
 import {
   users,
   portfolios,
@@ -898,10 +899,28 @@ export class DatabaseStorage implements IStorage {
 
   async createUserPortfolio(userPortfolio: InsertUserPortfolio, fundingUserId?: string): Promise<UserPortfolio> {
     if (fundingUserId) return this.withAccountFunds(fundingUserId, async (tx, members, jointAccountId) => {
+      const [portfolio] = await tx.select().from(portfolios)
+        .where(eq(portfolios.id, userPortfolio.portfolioId)).for('update');
+      if (!portfolio) throw new PortfolioPurchaseError("Portfolio not found.");
+      const quote = portfolioPurchaseQuote(portfolio, userPortfolio.investedAmount, userPortfolio.unitsPurchased);
+      if (Math.abs(quote.amount - Number(userPortfolio.investedAmount)) > 1e-8) {
+        throw new PortfolioPurchaseError("Portfolio pricing changed. Please review your purchase again.");
+      }
+      const holdings = await tx.select().from(userPortfolios).where(and(
+        eq(userPortfolios.portfolioId, portfolio.id),
+        jointAccountId ? eq(userPortfolios.jointAccountId, jointAccountId) : eq(userPortfolios.userId, fundingUserId),
+      ));
+      const heldUnits = holdings.filter(h => h.status === 'pending' || h.status === 'approved')
+        .reduce((sum, h) => sum + Number(h.unitsPurchased), 0);
+      if (heldUnits + quote.units > (portfolio.maxUnitsPerUser ?? 100)) {
+        throw new PortfolioPurchaseError(`Maximum ${portfolio.maxUnitsPerUser ?? 100} units allowed per account.`);
+      }
       await this.debitAccount(tx, members, fundingUserId, Number(userPortfolio.investedAmount).toFixed(8));
       const [investment] = await tx.insert(userPortfolios).values({
         ...userPortfolio, userId: jointAccountId ? null : fundingUserId, jointAccountId,
       }).returning();
+      await tx.update(portfolios).set({ unitsSold: (portfolio.unitsSold ?? 0) + quote.units, updatedAt: new Date() })
+        .where(eq(portfolios.id, portfolio.id));
       return investment;
     });
     const [newUserPortfolio] = await db.insert(userPortfolios).values(userPortfolio).returning();

@@ -32,6 +32,7 @@ import {
   Gauge
 } from "lucide-react";
 import type { Portfolio } from "@shared/schema";
+import { portfolioReturns, formatReturnPercent } from "@shared/portfolioCalculations";
 
 interface PortfolioFormData {
   name: string;
@@ -94,6 +95,9 @@ export function PortfolioManagement() {
     mutationFn: async (data: PortfolioFormData) => {
       const response = await apiRequest("POST", "/api/portfolios", {
         ...data,
+        termDuration: Number(data.termDuration),
+        maxUnitsPerUser: Number(data.maxUnitsPerUser),
+        totalUnitsAvailable: Number(data.totalUnitsAvailable),
         assets: { description: "Portfolio asset allocation" },
       });
       return response.json();
@@ -380,14 +384,14 @@ export function PortfolioManagement() {
                   <Percent className="w-4 h-4 text-muted-foreground" />
                   <div>
                     <p className="text-muted-foreground text-xs">Daily Interest</p>
-                    <p className="font-medium">{parseFloat(portfolio.dailyInterestRate?.toString() || '0') * 100}%</p>
+                    <p className="font-medium">{formatReturnPercent(portfolioReturns(portfolio).dailyRate * 100)}%</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
                   <div>
                     <p className="text-muted-foreground text-xs">Period</p>
-                    <p className="font-medium">{portfolio.investmentPeriodDays || 365} days</p>
+                    <p className="font-medium">{portfolioReturns(portfolio).durationDays.toLocaleString()} days</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -420,7 +424,7 @@ export function PortfolioManagement() {
                     Meter: {(portfolio as any).meterReduction}% reduction
                   </span>
                   <span className="text-muted-foreground ml-auto">
-                    Eff. {(parseFloat(portfolio.interestRate?.toString() || portfolio.dailyInterestRate?.toString() || '0') * (1 - parseFloat((portfolio as any).meterReduction || '0') / 100) * 100).toFixed(3)}%/{portfolio.interestPeriod || 'day'}
+                    Eff. {formatReturnPercent(portfolioReturns(portfolio).effectiveRate * 100)}%/{portfolio.interestPeriod || 'daily'}
                   </span>
                 </div>
               )}
@@ -496,6 +500,13 @@ function PortfolioForm({
   isLoading: boolean;
   submitLabel: string;
 }) {
+  const returnPreview = portfolioReturns({
+    interestRate: formData.interestRate || "0",
+    dailyInterestRate: null,
+    interestPeriod: formData.interestPeriod,
+    meterReduction: formData.meterReduction || "0",
+    termDuration: Number(formData.termDuration || 0),
+  });
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -648,6 +659,11 @@ function PortfolioForm({
 
       <div>
         <h4 className="font-medium mb-4">Interest & Returns (Automated)</h4>
+        <p className="text-sm text-muted-foreground mb-4" data-testid="portfolio-return-preview">
+          Daily equivalent: {formatReturnPercent(returnPreview.dailyRate * 100)}%.
+          {" "}Expected annual return: {formatReturnPercent(returnPreview.annualPercent)}% (annualized simple rate).
+          {" "}Term: {returnPreview.durationDays.toLocaleString()} days. Includes any configured meter reduction.
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="interestRate">Interest Rate per Period (decimal)</Label>

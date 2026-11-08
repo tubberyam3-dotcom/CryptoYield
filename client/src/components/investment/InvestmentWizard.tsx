@@ -26,6 +26,7 @@ import {
   Sparkles
 } from "lucide-react";
 import type { Portfolio } from "@shared/schema";
+import { portfolioReturns, formatReturnPercent, portfolioPurchaseQuote } from "@shared/portfolioCalculations";
 
 interface InvestmentWizardProps {
   portfolio: Portfolio | null;
@@ -55,6 +56,8 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
       setShowCelebration(true);
       queryClient.invalidateQueries({ queryKey: ["/api/user/portfolios"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -95,7 +98,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
     if (portfolio && investAmount) {
       investMutation.mutate({
         portfolioId: portfolio.id,
-        investedAmount: investAmount
+        investedAmount: investAmount.replace(/,/g, "")
       });
     }
   };
@@ -103,7 +106,8 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
   const validateAmount = () => {
     const amount = parseFloat(investAmount.replace(/,/g, ''));
     const minAmount = parseFloat(portfolio?.minInvestment || "0");
-    return amount >= minAmount && amount > 0;
+    if (!portfolio || amount < minAmount || amount <= 0) return false;
+    try { portfolioPurchaseQuote(portfolio, investAmount); return true; } catch { return false; }
   };
 
   const getRiskColor = (risk: string) => {
@@ -116,7 +120,8 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
   };
 
   const getInvestmentSuggestions = () => {
-    const minAmount = parseFloat(portfolio?.minInvestment || "0");
+    const unitPrice = Number(portfolio?.unitPrice ?? 100);
+    const minAmount = Math.ceil(Number(portfolio?.minInvestment || 0) / unitPrice) * unitPrice;
     return [
       minAmount,
       minAmount * 2,
@@ -133,6 +138,18 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
   };
 
   if (!portfolio) return null;
+  const returns = portfolioReturns(portfolio);
+  const annualReturn = formatReturnPercent(returns.annualPercent);
+  const purchaseAmount = (() => {
+    try { return portfolioPurchaseQuote(portfolio, investAmount).amount; } catch { return 0; }
+  })();
+  const purchaseError = (() => {
+    if (!investAmount) return "";
+    try { portfolioPurchaseQuote(portfolio, investAmount); return ""; }
+    catch (error) { return error instanceof Error ? error.message : "Enter a valid investment amount."; }
+  })();
+  const projectedValue = (days: number) => (purchaseAmount * (1 + returns.dailyRate * Math.min(days, returns.durationDays)))
+    .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <>
@@ -183,8 +200,8 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                               <span className="font-medium">${parseFloat(portfolio.minInvestment).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between items-center py-2 border-b border-border sm:border-0">
-                              <span className="text-sm text-muted-foreground">Current Return</span>
-                              <span className="text-green-600 font-medium">+{portfolio.currentReturn || 0}%</span>
+                              <span className="text-sm text-muted-foreground">Expected Annual Return</span>
+                              <span className="text-green-600 font-medium">{annualReturn}%</span>
                             </div>
                             <div className="flex justify-between items-center py-2 border-b border-border sm:border-0">
                               <span className="text-sm text-muted-foreground">Risk Level</span>
@@ -259,6 +276,14 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                     </p>
                   </div>
 
+                  {purchaseError ? (
+                    <p className="text-sm text-destructive" role="alert">{purchaseError}</p>
+                  ) : purchaseAmount > 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Whole-unit purchase: ${purchaseAmount.toLocaleString()}. Only this amount will be deducted.
+                    </p>
+                  ) : null}
+
                   {/* Quick Amount Suggestions */}
                   <div>
                     <p className="text-sm font-medium mb-3">Quick select:</p>
@@ -289,22 +314,25 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                           <div>
                             <p className="text-muted-foreground">1 Month</p>
                             <p className="font-medium">
-                              ${(parseFloat(investAmount.replace(/,/g, '')) * (1 + (parseFloat(portfolio.currentReturn || "0") / 100) / 12)).toLocaleString()}
+                              ${projectedValue(30)}
                             </p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">6 Months</p>
                             <p className="font-medium">
-                              ${(parseFloat(investAmount.replace(/,/g, '')) * (1 + (parseFloat(portfolio.currentReturn || "0") / 100) / 2)).toLocaleString()}
+                              ${projectedValue(182.5)}
                             </p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">1 Year</p>
                             <p className="font-medium">
-                              ${(parseFloat(investAmount.replace(/,/g, '')) * (1 + (parseFloat(portfolio.currentReturn || "0") / 100))).toLocaleString()}
+                              ${projectedValue(365)}
                             </p>
                           </div>
                         </div>
+                        <p className="text-xs text-muted-foreground mt-3">
+                          Simple-interest estimates, capped at the {returns.durationDays.toLocaleString()}-day term. Returns are not guaranteed.
+                        </p>
                       </CardContent>
                     </Card>
                   )}
@@ -334,7 +362,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Investment Amount</span>
-                          <span className="text-2xl font-bold">${parseFloat(investAmount.replace(/,/g, '')).toLocaleString()}</span>
+                          <span className="text-2xl font-bold">${purchaseAmount.toLocaleString()}</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between">
@@ -349,8 +377,12 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Expected Annual Return</span>
-                          <span className="font-medium text-green-600">+{portfolio.currentReturn || 0}%</span>
+                          <span className="font-medium text-green-600">{annualReturn}%</span>
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          Annualized simple rate, not a guaranteed return. {formatReturnPercent(returns.effectiveRate * 100)}% per {portfolio.interestPeriod || "daily"} period, for {returns.durationDays.toLocaleString()} days.
+                          Your purchase is ${purchaseAmount.toLocaleString()} in whole units.
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -362,7 +394,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                         <div>
                           <h4 className="font-medium text-green-800 dark:text-green-200">Ready to Invest!</h4>
                           <p className="text-sm text-green-700 dark:text-green-300">
-                            Your investment will be processed immediately and start earning returns.
+                            Your investment will be submitted for admin approval. Returns begin after approval.
                           </p>
                         </div>
                       </div>
@@ -386,7 +418,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                   <div>
                     <h3 className="text-2xl font-bold mb-2">Investment Successful! 🎉</h3>
                     <p className="text-muted-foreground">
-                      You've successfully invested ${parseFloat(investAmount.replace(/,/g, '')).toLocaleString()} in {portfolio.name}
+                      You've submitted a ${purchaseAmount.toLocaleString()} investment in {portfolio.name} for approval.
                     </p>
                   </div>
 
@@ -403,7 +435,7 @@ export function InvestmentWizard({ portfolio, open, onClose }: InvestmentWizardP
                         </div>
                         <div className="flex justify-between">
                           <span>Expected Growth</span>
-                          <span className="font-medium text-green-600">+{portfolio.currentReturn || 0}% annually</span>
+                          <span className="font-medium text-green-600">{annualReturn}% annualized</span>
                         </div>
                       </div>
                     </CardContent>

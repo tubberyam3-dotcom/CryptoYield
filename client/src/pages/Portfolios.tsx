@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { portfolioReturns, formatReturnPercent } from "@shared/portfolioCalculations";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -143,7 +144,7 @@ export default function Portfolios() {
                           {portfolio.strategyTag || 'General'}
                         </Badge>
                         <div className="text-green-500 text-sm font-medium">
-                          +{portfolio.currentReturn}%
+                          {formatReturnPercent(portfolioReturns(portfolio).annualPercent)}% annualized
                         </div>
                       </div>
                       

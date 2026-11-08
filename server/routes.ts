@@ -10,6 +10,7 @@ import { issueWithdrawalCode } from "./jointWithdrawalCodes";
 import { emailService } from "./email";
 import { listAdminJoinRequests, listUserJoinRequests, reviewJointAccountJoin } from "./jointAccountJoinRequests";
 import { resolveIpTimezone } from "./ipTimezone";
+import { portfolioPurchaseQuote, portfolioReturns, PortfolioPurchaseError } from "../shared/portfolioCalculations";
 
 import {
   insertPortfolioSchema,
@@ -1189,17 +1190,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Portfolio not found" });
       }
 
-      const investmentAmountNum = parseFloat(investedAmount);
+      const quote = portfolioPurchaseQuote(portfolio, investedAmount, unitsToPurchase);
+      const investmentAmountNum = quote.amount;
       const minInvestment = parseFloat(portfolio.minInvestment || '0');
       const unitPrice = parseFloat(portfolio.unitPrice?.toString() || '100');
       const maxUnitsPerUser = portfolio.maxUnitsPerUser || 100;
       const totalUnitsAvailable = portfolio.totalUnitsAvailable || 1000;
       const unitsSold = portfolio.unitsSold || 0;
-      const investmentPeriodDays = portfolio.investmentPeriodDays || 365;
+      const investmentPeriodDays = portfolioReturns(portfolio).durationDays;
 
       // Calculate units to purchase (either from request or calculate based on investment amount)
-      const units = unitsToPurchase ? parseFloat(unitsToPurchase) : Math.floor(investmentAmountNum / unitPrice);
-      const actualInvestmentAmount = units * unitPrice;
+      const units = quote.units;
+      const actualInvestmentAmount = quote.amount;
 
       // Validate minimum investment
       if (actualInvestmentAmount < minInvestment) {
@@ -1234,7 +1236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate investment end date
       const investmentStartDate = new Date();
       const investmentEndDate = new Date(investmentStartDate);
-      investmentEndDate.setDate(investmentEndDate.getDate() + investmentPeriodDays);
+      investmentEndDate.setTime(investmentStartDate.getTime() + investmentPeriodDays * 86400000);
 
       // Handle joint accounts
       const accountContext = await storage.getAccountContext(userId);
@@ -1260,11 +1262,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertUserPortfolioSchema.parse(userPortfolioData);
       const userPortfolio = await storage.createUserPortfolio(validatedData, userId);
-
-      // Update units sold in portfolio
-      await storage.updatePortfolio(portfolioId, { 
-        unitsSold: unitsSold + units 
-      });
 
       // Send purchase notification email
       if (user.email) {
@@ -1305,7 +1302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(userPortfolio);
     } catch (error) {
       console.error("Error creating user portfolio:", error);
-      const fundingError = error instanceof Error && /Insufficient balance|Invalid (amount|balance)/.test(error.message);
+      const fundingError = error instanceof PortfolioPurchaseError || (error instanceof Error && /Insufficient balance|Invalid (amount|balance)/.test(error.message));
       res.status(fundingError ? 400 : 500).json({ message: fundingError ? error.message : "Failed to invest in portfolio" });
     }
   });
@@ -2078,17 +2075,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Portfolio not found" });
       }
 
-      const investmentAmountNum = parseFloat(investedAmount);
+      const quote = portfolioPurchaseQuote(portfolio, investedAmount, unitsToPurchase);
+      const investmentAmountNum = quote.amount;
       const minInvestment = parseFloat(portfolio.minInvestment || '0');
       const unitPrice = parseFloat(portfolio.unitPrice?.toString() || '100');
       const maxUnitsPerUser = portfolio.maxUnitsPerUser || 100;
       const totalUnitsAvailable = portfolio.totalUnitsAvailable || 1000;
       const unitsSold = portfolio.unitsSold || 0;
-      const investmentPeriodDays = portfolio.investmentPeriodDays || 365;
+      const investmentPeriodDays = portfolioReturns(portfolio).durationDays;
 
       // Calculate units to purchase
-      const units = unitsToPurchase ? parseFloat(unitsToPurchase) : Math.floor(investmentAmountNum / unitPrice);
-      const actualInvestmentAmount = units * unitPrice;
+      const units = quote.units;
+      const actualInvestmentAmount = quote.amount;
 
       // Validate minimum investment
       if (actualInvestmentAmount < minInvestment) {
@@ -2117,7 +2115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate investment dates
       const investmentStartDate = new Date();
       const investmentEndDate = new Date(investmentStartDate);
-      investmentEndDate.setDate(investmentEndDate.getDate() + investmentPeriodDays);
+      investmentEndDate.setTime(investmentStartDate.getTime() + investmentPeriodDays * 86400000);
 
       // Handle joint accounts
       const accountContext = await storage.getAccountContext(userId);
@@ -2144,11 +2142,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertUserPortfolioSchema.parse(userPortfolioData);
       const userPortfolio = await storage.createUserPortfolio(validatedData, userId);
 
-      // Update units sold in portfolio
-      await storage.updatePortfolio(portfolioId, { 
-        unitsSold: unitsSold + units 
-      });
-
       // Send notification email
       if (user.email) {
         try {
@@ -2173,7 +2166,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error creating portfolio investment for user:", error);
-      res.status(500).json({ message: "Failed to create portfolio investment" });
+      const purchaseError = error instanceof PortfolioPurchaseError || (error instanceof Error && /Insufficient balance|Invalid (amount|balance)/.test(error.message));
+      res.status(purchaseError ? 400 : 500).json({ message: purchaseError ? error.message : "Failed to create portfolio investment" });
     }
   });
 

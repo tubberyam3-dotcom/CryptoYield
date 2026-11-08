@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { portfolioReturns, formatReturnPercent } from "@shared/portfolioCalculations";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -262,7 +263,7 @@ export default function PortfolioDetail() {
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-6 h-6 text-green-500" />
                   <span className="text-3xl font-bold text-green-500">
-                    +{portfolio.currentReturn}%
+                    {formatReturnPercent(portfolioReturns(portfolio).annualPercent)}% annualized
                   </span>
                 </div>
               </div>
@@ -484,8 +485,8 @@ export default function PortfolioDetail() {
               </h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Current Return</span>
-                  <span className="font-semibold text-green-500">+{portfolio.currentReturn}%</span>
+                  <span className="text-muted-foreground">Expected Annual Return</span>
+                  <span className="font-semibold text-green-500">{formatReturnPercent(portfolioReturns(portfolio).annualPercent)}% annualized</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center">
