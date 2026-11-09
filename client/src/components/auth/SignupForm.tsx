@@ -10,6 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { AccountType } from "@shared/schema";
+import { readVerificationDocument } from "@/lib/verificationDocuments";
+import { VERIFICATION_MIME_TYPES } from "@shared/registrationDetails";
 
 interface SignupFormProps {
   onSuccess?: () => void;
@@ -36,6 +38,10 @@ interface SignupData {
   lastName: string;
   phone: string;
   country: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
   documentType: string;
   documentNumber: string;
   documentFile: File | null;
@@ -278,6 +284,10 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
     lastName: "",
     phone: "",
     country: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
     documentType: "",
     documentNumber: "",
     documentFile: null,
@@ -298,6 +308,10 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!VERIFICATION_MIME_TYPES.includes(file.type)) {
+        toast({ title: "Unsupported file", description: "Choose a JPEG, PNG, GIF, WebP image or PDF.", variant: "destructive" });
+        return;
+      }
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -401,8 +415,13 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
         accountType: data.accountType,
         phone: data.phone,
         country: data.country,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        zipCode: data.zipCode,
         documentType: data.documentType,
         documentNumber: data.documentNumber,
+        verificationDocumentUrl: data.documentFile ? await readVerificationDocument(data.documentFile) : undefined,
         referralCode: data.referralCode || undefined,
         joinCode: joinCode || undefined,
       };
@@ -949,6 +968,32 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
                 <p className="text-sm text-destructive">{errors.phone}</p>
               )}
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="signup-address">Street Address</Label>
+              <Input id="signup-address" autoComplete="street-address" maxLength={500}
+                value={formData.address} onChange={e => updateFormData("address", e.target.value)}
+                data-testid="input-signup-address" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-city">City</Label>
+                <Input id="signup-city" autoComplete="address-level2" maxLength={100}
+                  value={formData.city} onChange={e => updateFormData("city", e.target.value)}
+                  data-testid="input-signup-city" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-state">State / Province</Label>
+                <Input id="signup-state" autoComplete="address-level1" maxLength={100}
+                  value={formData.state} onChange={e => updateFormData("state", e.target.value)}
+                  data-testid="input-signup-state" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signup-zip">ZIP / Postal Code</Label>
+              <Input id="signup-zip" autoComplete="postal-code" maxLength={30}
+                value={formData.zipCode} onChange={e => updateFormData("zipCode", e.target.value)}
+                data-testid="input-signup-zip" />
+            </div>
           </div>
         )}
 
@@ -1000,7 +1045,7 @@ export function SignupForm({ onSuccess, onSwitchToLogin, onBackToLanding, joinCo
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,.pdf"
+                accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
                 onChange={handleFileChange}
                 className="hidden"
                 data-testid="input-document-file"

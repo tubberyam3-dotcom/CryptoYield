@@ -6,6 +6,9 @@ import { startEmailScheduler } from "./emailScheduler";
 import { startMerchantScheduler } from "./merchantScheduler";
 
 const app = express();
+// Base64 encoding adds ~33% to the signup/profile document's 5MB file limit.
+// Keep the default smaller JSON limit on unrelated endpoints.
+app.use(["/api/auth/register", "/api/user/profile"], express.json({ limit: "8mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -47,6 +50,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
+    if (status < 500) return;
     throw err;
   });
 

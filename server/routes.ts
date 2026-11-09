@@ -10,6 +10,7 @@ import { issueWithdrawalCode } from "./jointWithdrawalCodes";
 import { emailService } from "./email";
 import { listAdminJoinRequests, listUserJoinRequests, reviewJointAccountJoin } from "./jointAccountJoinRequests";
 import { resolveIpTimezone } from "./ipTimezone";
+import { registrationDetailsSchema, registrationDetailsToUser } from "../shared/registrationDetails";
 import { portfolioPurchaseQuote, portfolioReturns, PortfolioPurchaseError } from "../shared/portfolioCalculations";
 
 import {
@@ -349,7 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     taxId: z.string().optional(),
     // Join code for joining an existing joint account
     joinCode: z.string().optional(),
-  });
+  }).merge(registrationDetailsSchema);
 
   const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -409,10 +410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authType: 'password',
         profileImageUrl: null,
         accountType: joinCode ? 'personal' : (accountType || 'personal'),
-        phoneNumber: phone || null,
-        country: country || null,
-        verificationDocumentType: documentType || null,
-        verificationDocumentNumber: documentNumber || null,
+        ...registrationDetailsToUser(validatedData),
         referralCode: referralCode || null,
         businessName: accountType === 'business' ? businessName : null,
         businessType: accountType === 'business' ? businessType : null,

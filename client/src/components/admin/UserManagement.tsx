@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { verificationDocumentLink, verificationDocumentExtension } from "@/lib/verificationDocuments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1147,17 +1148,20 @@ export function UserManagement() {
                       </div>
                     )}
                     <div className="border rounded-lg p-4 bg-muted/50">
-                      <img 
+                      {verificationDocumentExtension(userDetails.verificationDocumentUrl) === "pdf" ? (
+                        <iframe src={userDetails.verificationDocumentUrl} title="Verification document PDF"
+                          className="w-full h-80 rounded-lg" />
+                      ) : <img
                         src={userDetails.verificationDocumentUrl} 
                         alt="Verification Document"
                         className="max-w-full h-auto rounded-lg"
-                      />
+                      />}
                     </div>
                     <div className="flex gap-2">
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => window.open(userDetails.verificationDocumentUrl!, '_blank')}
+                        onClick={() => window.open(verificationDocumentLink(userDetails.verificationDocumentUrl!), '_blank', 'noopener,noreferrer')}
                         data-testid="button-view-document"
                       >
                         <Eye className="w-4 h-4 mr-2" />
@@ -1168,8 +1172,8 @@ export function UserManagement() {
                         size="sm"
                         onClick={() => {
                           const link = document.createElement('a');
-                          link.href = userDetails.verificationDocumentUrl!;
-                          link.download = `verification-${userDetails.firstName || 'user'}-${userDetails.lastName || userDetails.id}.${userDetails.verificationDocumentUrl!.split('.').pop() || 'pdf'}`;
+                          link.href = verificationDocumentLink(userDetails.verificationDocumentUrl!);
+                          link.download = `verification-document.${verificationDocumentExtension(userDetails.verificationDocumentUrl!)}`;
                           document.body.appendChild(link);
                           link.click();
                           document.body.removeChild(link);
