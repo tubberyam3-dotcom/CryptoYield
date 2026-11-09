@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { portfolioPurchaseQuote, portfolioReturns, formatReturnPercent } from "../shared/portfolioCalculations";
+import { portfolioPurchaseQuote, portfolioReturns, formatReturnPercent, portfolioPercentToRate, portfolioRateToPercent } from "../shared/portfolioCalculations";
 import type { Portfolio } from "../shared/schema";
 
 const portfolio = {
@@ -9,6 +9,19 @@ const portfolio = {
   interestRate: "0.01", dailyInterestRate: "0", interestPeriod: "daily",
   meterReduction: "0", termDuration: 30,
 } as Portfolio;
+
+test("admin percentages convert at save and edit boundaries without changing existing rates", () => {
+  for (const [percent, rate] of [["0.1", "0.001"], ["1", "0.01"], ["0.01", "0.0001"], ["0", "0"], ["0.0001", "0.000001"], ["9999.9999", "99.999999"]]) {
+    assert.equal(portfolioPercentToRate(percent), rate);
+    assert.equal(portfolioRateToPercent(rate), percent);
+    assert.equal(portfolioPercentToRate(portfolioRateToPercent(rate)), rate);
+  }
+  assert.equal(portfolioReturns({ ...portfolio, interestRate: portfolioPercentToRate("0.1") }).dailyRate, 0.001);
+  assert.equal(formatReturnPercent(portfolioReturns({ ...portfolio, interestRate: portfolioPercentToRate("0.1"), meterReduction: "25" }).effectiveRate * 100), "0.075");
+  for (const invalid of ["", " ", "-0.1", "Infinity", "abc", "10000", "0.00001"]) {
+    assert.throws(() => portfolioPercentToRate(invalid));
+  }
+});
 
 test("user and admin amount quotes correctly parse formatted amounts and whole units", () => {
   assert.deepEqual(portfolioPurchaseQuote(portfolio, "22,500"), { amount: 22500, units: 225 });

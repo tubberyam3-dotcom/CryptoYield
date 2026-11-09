@@ -32,7 +32,7 @@ import {
   Gauge
 } from "lucide-react";
 import type { Portfolio } from "@shared/schema";
-import { portfolioReturns, formatReturnPercent } from "@shared/portfolioCalculations";
+import { portfolioReturns, formatReturnPercent, portfolioPercentToRate, portfolioRateToPercent } from "@shared/portfolioCalculations";
 
 interface PortfolioFormData {
   name: string;
@@ -61,7 +61,7 @@ const defaultFormData: PortfolioFormData = {
   strategyTag: "",
   minInvestment: "100",
   riskLevel: "medium",
-  interestRate: "0.01",
+  interestRate: "1",
   interestPeriod: "daily",
   payoutTerm: "profit_only",
   termDuration: "30",
@@ -95,6 +95,7 @@ export function PortfolioManagement() {
     mutationFn: async (data: PortfolioFormData) => {
       const response = await apiRequest("POST", "/api/portfolios", {
         ...data,
+        interestRate: portfolioPercentToRate(data.interestRate),
         termDuration: Number(data.termDuration),
         maxUnitsPerUser: Number(data.maxUnitsPerUser),
         totalUnitsAvailable: Number(data.totalUnitsAvailable),
@@ -120,7 +121,10 @@ export function PortfolioManagement() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<PortfolioFormData> }) => {
       console.log('[Portfolio Update] Sending update for:', id, data);
-      const response = await apiRequest("PATCH", `/api/admin/portfolios/${id}`, data);
+      const response = await apiRequest("PATCH", `/api/admin/portfolios/${id}`, {
+        ...data,
+        ...(data.interestRate !== undefined ? { interestRate: portfolioPercentToRate(data.interestRate) } : {}),
+      });
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Update failed');
@@ -207,7 +211,7 @@ export function PortfolioManagement() {
       strategyTag: portfolio.strategyTag || "",
       minInvestment: portfolio.minInvestment?.toString() || "100",
       riskLevel: portfolio.riskLevel as "low" | "medium" | "high",
-      interestRate: portfolio.interestRate?.toString() || portfolio.dailyInterestRate?.toString() || "0.01",
+      interestRate: portfolioRateToPercent(portfolio.interestRate ?? portfolio.dailyInterestRate ?? "0"),
       interestPeriod: (portfolio.interestPeriod as "hourly" | "daily" | "weekly" | "monthly") || "daily",
       payoutTerm: (portfolio.payoutTerm as "term_based" | "after_maturity" | "profit_only" | "capital_and_interest") || "profit_only",
       termDuration: portfolio.termDuration?.toString() || "30",
@@ -500,8 +504,12 @@ function PortfolioForm({
   isLoading: boolean;
   submitLabel: string;
 }) {
+  let rate = "0";
+  let rateError = "";
+  try { rate = portfolioPercentToRate(formData.interestRate); }
+  catch (error) { rateError = error instanceof Error ? error.message : "Enter a valid interest percentage."; }
   const returnPreview = portfolioReturns({
-    interestRate: formData.interestRate || "0",
+    interestRate: rate,
     dailyInterestRate: null,
     interestPeriod: formData.interestPeriod,
     meterReduction: formData.meterReduction || "0",
@@ -666,18 +674,23 @@ function PortfolioForm({
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="interestRate">Interest Rate per Period (decimal)</Label>
+            <Label htmlFor="interestRate">Interest Rate per Period (%)</Label>
             <Input
               id="interestRate"
               type="number"
               step="0.0001"
-              placeholder="0.01"
+              min="0"
+              max="9999.9999"
+              placeholder="0.1"
+              aria-invalid={!!rateError}
+              aria-describedby="interest-rate-help"
               value={formData.interestRate}
               onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              e.g., 0.01 = 1% per period, 0.001 = 0.1% per period
+            <p id="interest-rate-help" className="text-xs text-muted-foreground mt-1">
+              Enter the percentage directly: 0.1 = 0.1% per period, 1 = 1% per period.
             </p>
+            {rateError && <p className="text-xs text-destructive mt-1" role="alert">{rateError}</p>}
           </div>
 
           <div>
@@ -778,11 +791,11 @@ function PortfolioForm({
             <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-3 text-sm">
               <p className="font-medium text-orange-600 dark:text-orange-400">Effective Rate Preview</p>
               <p className="text-muted-foreground mt-1">
-                Base rate: <span className="font-sans tabular-nums font-medium">{(parseFloat(formData.interestRate || '0') * 100).toFixed(4)}%</span> per {formData.interestPeriod}
+                Base rate: <span className="font-sans tabular-nums font-medium">{formatReturnPercent(Number(formData.interestRate || '0'))}%</span> per {formData.interestPeriod}
               </p>
               <p className="text-muted-foreground">
                 After {formData.meterReduction}% reduction: <span className="font-sans tabular-nums font-medium text-foreground">
-                  {(parseFloat(formData.interestRate || '0') * (1 - parseFloat(formData.meterReduction) / 100) * 100).toFixed(4)}%
+                  {formatReturnPercent(returnPreview.effectiveRate * 100)}%
                 </span> per {formData.interestPeriod}
               </p>
             </div>
@@ -804,7 +817,7 @@ function PortfolioForm({
 
         <Button 
           onClick={onSubmit}
-          disabled={isLoading || !formData.name || !formData.minInvestment}
+          disabled={isLoading || !formData.name || !formData.minInvestment || !!rateError}
         >
           {isLoading ? "Saving..." : submitLabel}
         </Button>

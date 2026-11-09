@@ -18,6 +18,22 @@ export function formatReturnPercent(percent: number) {
   return percent.toLocaleString("en-US", { maximumFractionDigits: 6 });
 }
 
+// Admin forms use percentage points; the API and accrual engine retain fractions.
+export function portfolioPercentToRate(percentInput: string): string {
+  const percent = Number(percentInput);
+  if (!percentInput.trim() || !Number.isFinite(percent) || percent < 0 || percent > 9999.9999) {
+    throw new Error("Enter an interest percentage between 0 and 9999.9999.");
+  }
+  if (Math.abs(percent * 10000 - Math.round(percent * 10000)) > 1e-6) {
+    throw new Error("Use no more than four decimal places for the interest percentage.");
+  }
+  return String(Number((percent / 100).toFixed(6)));
+}
+
+export function portfolioRateToPercent(rate: string): string {
+  return String(Number((Number(rate) * 100).toFixed(4)));
+}
+
 export class PortfolioPurchaseError extends Error {}
 
 export function parseInvestmentAmount(value: unknown): number {
