@@ -8,9 +8,9 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
-}
+// Replit OAuth is optional: outside Replit (e.g. Railway) the app runs with
+// password-based sessions only.
+const replitOAuthEnabled = Boolean(process.env.REPLIT_DOMAINS && process.env.REPL_ID);
 
 const getOidcConfig = memoize(
   async () => {
@@ -77,7 +77,7 @@ export async function setupAuth(app: Express) {
 
   let config: Awaited<ReturnType<typeof getOidcConfig>> | undefined;
   try {
-    config = await getOidcConfig();
+    if (replitOAuthEnabled) config = await getOidcConfig();
   } catch (error) {
     console.warn("Failed to setup OAuth configuration, authentication will not work:", error);
     // In development, we'll still continue without OAuth
